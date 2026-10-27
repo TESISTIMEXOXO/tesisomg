@@ -1,11 +1,10 @@
-import { demora, perfil, sinBackend } from '../mocks/datos'
+import { pedir } from '../lib/api'
 import { PerfilSchema, type DatosPerfil } from '../types/perfil'
 
-export async function obtener() {
-  await demora()
-  return PerfilSchema.parse(perfil)
+export function obtener() {
+  return pedir('/perfil', { schema: PerfilSchema })
 }
 
 export function guardar(datos: DatosPerfil) {
-  return sinBackend('perfil.guardar', datos)
+  return pedir('/perfil', { method: 'PUT', body: datos, schema: PerfilSchema })
 }
