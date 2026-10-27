@@ -1,0 +1,299 @@
+@import "tailwindcss";
+@import "./animaciones.css";
+
+/*
+ * Tokens de Pinz. Se vacían los valores por defecto de Tailwind para que
+ * solo existan utilidades del sistema: bg-coral sí, bg-red-500 no.
+ *
+ * Los pastel no cambian con el tema: son la marca y sobre ellos el texto siempre es oscuro.
+ * "static" los publica aunque ninguna clase los use: los dibujos de los pinz los piden en tiempo de ejecución.
+ */
+@theme static {
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-coral: #ff8a66;
+  --color-sol: #ffd460;
+  --color-mar: #5dd3b6;
+  --color-lavanda: #b9a6ff;
+  --color-cielo: #93cbf6;
+  --color-durazno: #ffb38a;
+  --color-rosa: #ff9fb8;
+  --color-arena: #e9cc9c;
+  --color-noche: #8c93f2;
+  --color-mostaza: #f7b23b;
+  --color-bosque: #86cf73;
+  --color-rosa-mejilla: #ff6f8e;
+  --color-emergencia: #c8352b;
+
+  --radius-*: initial;
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 26px;
+  --radius-full: 999px;
+
+  --shadow-*: initial;
+
+  --font-*: initial;
+  --font-display: "Archivo", "Figtree", system-ui, sans-serif;
+  --font-texto: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --text-*: initial;
+  --text-display-xl: 72px;
+  --text-display-xl--line-height: 70px;
+  --text-display-xl--letter-spacing: -0.03em;
+  --text-display-xl--font-weight: 900;
+  --text-display: 40px;
+  --text-display--line-height: 42px;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 900;
+  --text-titulo-1: 28px;
+  --text-titulo-1--line-height: 32px;
+  --text-titulo-1--letter-spacing: -0.01em;
+  --text-titulo-1--font-weight: 800;
+  --text-titulo-2: 20px;
+  --text-titulo-2--line-height: 26px;
+  --text-titulo-2--font-weight: 800;
+  --text-monto: 36px;
+  --text-monto--line-height: 38px;
+  --text-monto--letter-spacing: -0.02em;
+  --text-monto--font-weight: 900;
+  --text-cuerpo-lg: 18px;
+  --text-cuerpo-lg--line-height: 27px;
+  --text-cuerpo: 16px;
+  --text-cuerpo--line-height: 24px;
+  --text-etiqueta: 15px;
+  --text-etiqueta--line-height: 20px;
+  --text-etiqueta--font-weight: 800;
+  --text-meta: 13px;
+  --text-meta--line-height: 18px;
+  --text-meta--font-weight: 600;
+  --text-sobretitulo: 12px;
+  --text-sobretitulo--line-height: 16px;
+  --text-sobretitulo--letter-spacing: 0.08em;
+  --text-sobretitulo--font-weight: 800;
+
+  --spacing-toque: 44px;
+  --spacing-control: 50px;
+  --spacing-nav: 68px;
+  --spacing-avatar: 34px;
+  --spacing-lateral: 240px;
+
+  --container-contenido: 1200px;
+
+  --breakpoint-*: initial;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+
+  --ease-rebote: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/*
+ * Lo que cambia con el tema. "inline" hace que cada utilidad lea la variable
+ * en el propio elemento, así un bloque con .tema-claro vuelve a la paleta clara
+ * aunque la página esté en oscuro.
+ */
+@theme inline {
+  --color-papel: var(--papel);
+  --color-papel-elevado: var(--papel-elevado);
+  --color-papel-hundido: var(--papel-hundido);
+  --color-linea: var(--linea);
+  --color-tinta: var(--tinta);
+  --color-tinta-suave: var(--tinta-suave);
+  --color-contorno: var(--contorno);
+  --color-coral-tinte: var(--coral-tinte);
+  --color-sol-tinte: var(--sol-tinte);
+  --color-mar-tinte: var(--mar-tinte);
+  --color-lavanda-tinte: var(--lavanda-tinte);
+  --color-cielo-tinte: var(--cielo-tinte);
+  --color-durazno-tinte: var(--durazno-tinte);
+  --color-rosa-tinte: var(--rosa-tinte);
+  --color-arena-tinte: var(--arena-tinte);
+  --color-noche-tinte: var(--noche-tinte);
+  --color-mostaza-tinte: var(--mostaza-tinte);
+  --color-bosque-tinte: var(--bosque-tinte);
+  --color-positivo: var(--positivo);
+  --color-negativo: var(--negativo);
+  --color-aviso: var(--aviso);
+  --color-foco: var(--tinta);
+
+  --shadow-chica: 2px 2px 0 var(--contorno);
+  --shadow-dura: 4px 4px 0 var(--contorno);
+  --shadow-grande: 6px 6px 0 var(--contorno);
+}
+
+/*
+ * tinta es el texto; contorno, el trazo y la sombra dura. En claro son el mismo color.
+ * En oscuro un contorno negro desaparece contra el fondo: pasa a ser un gris violeta más claro
+ * que las superficies (3:1 sobre papel-elevado, el mínimo para el borde de un campo) y más
+ * apagado que el texto, así la sombra se lee como un canto y no como un brillo.
+ */
+:root,
+.tema-claro {
+  --papel: #fff8ee;
+  --papel-elevado: #ffffff;
+  --papel-hundido: #f6eedf;
+  --linea: #e8ddcb;
+  --tinta: #1c1b22;
+  --tinta-suave: #5b5866;
+  --coral-tinte: #ffe5da;
+  --sol-tinte: #fff2c7;
+  --mar-tinte: #dcf6ee;
+  --lavanda-tinte: #eee8ff;
+  --cielo-tinte: #e1f0fd;
+  --durazno-tinte: #ffeadf;
+  --rosa-tinte: #ffe6ee;
+  --arena-tinte: #f7eedd;
+  --noche-tinte: #e7e9fd;
+  --mostaza-tinte: #fdefd2;
+  --bosque-tinte: #e3f5de;
+  --positivo: #0f6e4c;
+  --negativo: #bf3a2b;
+  --aviso: #7a5200;
+  color-scheme: light;
+}
+
+/* El contorno no vuelve al claro: un botón coral en la página oscura lleva el mismo canto que las tarjetas. */
+:root {
+  --contorno: #1c1b22;
+}
+
+[data-tema="oscuro"] {
+  --papel: #1a1820;
+  --papel-elevado: #262330;
+  --papel-hundido: #141318;
+  --linea: #3d3946;
+  --tinta: #f3ece1;
+  --tinta-suave: #bbb4c5;
+  --contorno: #716a85;
+  --coral-tinte: #3e2a27;
+  --sol-tinte: #3c2f1d;
+  --mar-tinte: #1f3832;
+  --lavanda-tinte: #2f2a47;
+  --cielo-tinte: #203547;
+  --durazno-tinte: #3d2c24;
+  --rosa-tinte: #3e2633;
+  --arena-tinte: #37302a;
+  --noche-tinte: #292c4a;
+  --mostaza-tinte: #3b301c;
+  --bosque-tinte: #253624;
+  --positivo: #63d6a4;
+  --negativo: #ff9282;
+  --aviso: #f2c35a;
+  color-scheme: dark;
+}
+
+@custom-variant oscuro (&:where([data-tema="oscuro"], [data-tema="oscuro"] *));
+
+/* El contorno tinta es el rasgo del estilo: el color sale de la base y el grosor de estas utilidades. */
+@utility trazo-fino {
+  border-width: 2px;
+  border-style: solid;
+}
+@utility trazo {
+  border-width: 2.5px;
+  border-style: solid;
+}
+@utility trazo-grueso {
+  border-width: 3.5px;
+  border-style: solid;
+}
+@utility trazo-b {
+  border-bottom-width: 2.5px;
+  border-bottom-style: solid;
+}
+@utility trazo-t {
+  border-top-width: 2.5px;
+  border-top-style: solid;
+}
+@utility trazo-r {
+  border-right-width: 2.5px;
+  border-right-style: solid;
+}
+@utility trazo-grueso-b {
+  border-bottom-width: 3.5px;
+  border-bottom-style: solid;
+}
+@utility trazo-grueso-t {
+  border-top-width: 3.5px;
+  border-top-style: solid;
+}
+@utility trazo-grueso-r {
+  border-right-width: 3.5px;
+  border-right-style: solid;
+}
+
+@utility numeros {
+  font-variant-numeric: tabular-nums;
+}
+
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("/fonts/archivo-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("/fonts/archivo-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Figtree";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 900;
+  src: url("/fonts/figtree-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Figtree";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 900;
+  src: url("/fonts/figtree-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--contorno);
+  }
+
+  /* En base, para que un text-* del mismo elemento le gane. */
+  .tema-claro {
+    color: var(--tinta);
+  }
+
+  html {
+    background-color: var(--papel);
+    color: var(--tinta);
+    font-family: var(--font-texto);
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Sin esto, una fila con scroll horizontal adentro de un fieldset ensancha toda la página. */
+  fieldset {
+    min-width: 0;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--tinta);
+    outline-offset: 3px;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
