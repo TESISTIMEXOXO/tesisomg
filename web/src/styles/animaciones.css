@@ -1,0 +1,82 @@
+/*
+ * Movimiento de Pinz. Cada animación se usa con el prefijo motion-safe:
+ * (motion-safe:animate-bob), así con movimiento reducido todo queda quieto y completo.
+ * --r inclina al pinz sin que la animación le pise la rotación; --d es cuánto camina.
+ */
+@theme {
+  --animate-bob: lp-bob 3.6s ease-in-out infinite;
+  --animate-jump: lp-jump 2.8s var(--ease-rebote) infinite;
+  --animate-cinta: lp-cinta 36s linear infinite;
+  --animate-camina: lp-camina 9s linear infinite alternate;
+  --animate-sube: lp-sube 0.8s var(--ease-rebote) both;
+  --animate-asoma: pz-asoma 0.45s var(--ease-rebote) 1;
+
+  @keyframes lp-bob {
+    0%,
+    100% {
+      transform: translateY(0) rotate(var(--r, 0deg));
+    }
+    50% {
+      transform: translateY(-10px) rotate(var(--r, 0deg));
+    }
+  }
+
+  @keyframes lp-jump {
+    0%,
+    70%,
+    100% {
+      transform: translateY(0) rotate(var(--r, 0deg));
+    }
+    80% {
+      transform: translateY(-26px) rotate(var(--r, 0deg));
+    }
+    90% {
+      transform: translateY(0) rotate(var(--r, 0deg)) scaleY(0.92);
+    }
+  }
+
+  @keyframes lp-cinta {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes lp-camina {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(var(--d, 600px));
+    }
+  }
+
+  @keyframes lp-sube {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes pz-asoma {
+    from {
+      transform: translateY(6px) rotate(-6deg);
+    }
+    to {
+      transform: none;
+    }
+  }
+}
+
+/* Para frenar una animación en loop, como la cinta al pasar el mouse. */
+@utility pausada {
+  animation-play-state: paused;
+}
+
+/* El grupo de pinz del cierre salta más rápido cuando el botón está en hover. */
+@utility salto-rapido {
+  animation-duration: 1.2s;
+}
