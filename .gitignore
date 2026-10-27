@@ -2,3 +2,9 @@
 node_modules/
 dist/
 .DS_Store
+
+# Archivos personales de desarrollo (Claude Code y referencias de diseño)
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+.pinz-handoff/
