@@ -1,4 +1,4 @@
-name: px
+name: pinz
 
 services:
   db:
@@ -11,7 +11,7 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - px-mongo-data:/data/db
+      - pinz-mongo-data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 10s
@@ -40,7 +40,7 @@ services:
       - "4000:4000"
     volumes:
       - ./api:/app
-      - px-api-node-modules:/app/node_modules
+      - pinz-api-node-modules:/app/node_modules
 
   web:
     build: ./web
@@ -56,9 +56,9 @@ services:
       - "5173:5173"
     volumes:
       - ./web:/app
-      - px-web-node-modules:/app/node_modules
+      - pinz-web-node-modules:/app/node_modules
 
 volumes:
-  px-mongo-data:
-  px-api-node-modules:
-  px-web-node-modules:
+  pinz-mongo-data:
+  pinz-api-node-modules:
+  pinz-web-node-modules:
