@@ -10,6 +10,11 @@ export function useGuardarPerfil() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (datos: DatosPerfil) => perfil.guardar(datos),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['perfil'] }),
+    // La sesión también cambia: con nombre, el perfil ya está completo.
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['perfil'] }),
+        queryClient.invalidateQueries({ queryKey: ['sesion'] }),
+      ]),
   })
 }
