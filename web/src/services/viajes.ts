@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { demora, emergencias as emergenciasMock, invitacion, resumenes, sinBackend, viajes } from '../mocks/datos'
+import { pedir } from '../lib/api'
+import { demora, emergencias as emergenciasMock, invitacion, sinBackend } from '../mocks/datos'
 import {
   EmergenciasSchema,
   InvitacionSchema,
@@ -9,27 +10,20 @@ import {
 } from '../types/viaje'
 
 export async function listar() {
-  await demora()
-  return z.array(ViajeSchema).parse(viajes)
+  return pedir('/viajes', { schema: z.array(ViajeSchema) })
 }
 
 export async function obtener(id: string) {
-  await demora()
-  const viaje = viajes.find((v) => v.id === id)
-  if (!viaje) throw new Error('No encontramos ese viaje.')
-  return ViajeSchema.parse(viaje)
+  return pedir(`/viajes/${encodeURIComponent(id)}`, { schema: ViajeSchema })
 }
 
 export async function resumen(id: string) {
-  await demora()
-  const datos = resumenes.find((r) => r.viajeId === id)
-  if (!datos) throw new Error('No pudimos cargar el resumen del viaje.')
-  return ResumenViajeSchema.parse(datos)
+  return pedir(`/viajes/${encodeURIComponent(id)}/resumen`, { schema: ResumenViajeSchema })
 }
 
-/** Crea el viaje en Previaje, con quien lo crea como organizador. */
+/** Guarda el viaje asociado a la cuenta que tiene abierta la sesión. */
 export function crear(datos: NuevoViaje) {
-  return sinBackend('viajes.crear', datos)
+  return pedir('/viajes', { method: 'POST', body: datos, schema: ViajeSchema })
 }
 
 export async function verInvitacion(codigo: string) {

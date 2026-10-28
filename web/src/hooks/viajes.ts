@@ -1,17 +1,33 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useSesion } from './auth'
 import * as viajes from '../services/viajes'
-import type { NuevoViaje } from '../types/viaje'
+import type { NuevoViaje, Viaje } from '../types/viaje'
 
 export function useViajes() {
-  return useQuery({ queryKey: ['viajes'], queryFn: viajes.listar })
+  const { data: sesion } = useSesion()
+  return useQuery({
+    queryKey: ['viajes', sesion?.id],
+    queryFn: viajes.listar,
+    enabled: Boolean(sesion?.id),
+  })
 }
 
 export function useViaje(id: string) {
-  return useQuery({ queryKey: ['viajes', id], queryFn: () => viajes.obtener(id) })
+  const { data: sesion } = useSesion()
+  return useQuery({
+    queryKey: ['viajes', sesion?.id, id],
+    queryFn: () => viajes.obtener(id),
+    enabled: Boolean(sesion?.id && id),
+  })
 }
 
 export function useResumenViaje(id: string) {
-  return useQuery({ queryKey: ['viajes', id, 'resumen'], queryFn: () => viajes.resumen(id) })
+  const { data: sesion } = useSesion()
+  return useQuery({
+    queryKey: ['viajes', sesion?.id, id, 'resumen'],
+    queryFn: () => viajes.resumen(id),
+    enabled: Boolean(sesion?.id && id),
+  })
 }
 
 export function useEmergencias(id: string) {
@@ -24,9 +40,16 @@ export function useInvitacion(codigo: string) {
 
 export function useCrearViaje() {
   const queryClient = useQueryClient()
+  const { data: sesion } = useSesion()
   return useMutation({
     mutationFn: (datos: NuevoViaje) => viajes.crear(datos),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['viajes'] }),
+    onSuccess: (viaje) => {
+      const queryKey = ['viajes', sesion?.id] as const
+      queryClient.setQueryData<Viaje[]>(queryKey, (actuales) =>
+        actuales?.some((actual) => actual.id === viaje.id) ? actuales : [...(actuales ?? []), viaje],
+      )
+      return queryClient.invalidateQueries({ queryKey })
+    },
   })
 }
 
