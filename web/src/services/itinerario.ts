@@ -1,24 +1,25 @@
 import { z } from 'zod'
-import { demora, hoy as hoyMock, itinerario, sinBackend } from '../mocks/datos'
+import { bajarArchivo, pedir } from '../lib/api'
 import { HoySchema, ItemItinerarioSchema, type NuevoItemItinerario } from '../types/itinerario'
 
 export async function listar(viajeId: string) {
-  await demora()
-  return z.array(ItemItinerarioSchema).parse(itinerario.filter((item) => item.viajeId === viajeId))
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/itinerario`, { schema: z.array(ItemItinerarioSchema) })
 }
 
 /** Qué pasa hoy en el viaje: el itinerario del día, el mapa y dónde está el grupo. */
 export async function hoy(viajeId: string) {
-  await demora()
-  if (hoyMock.viajeId !== viajeId) throw new Error('No pudimos cargar el día.')
-  return HoySchema.parse(hoyMock)
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/itinerario/hoy`, { schema: HoySchema })
 }
 
 export function agregar(viajeId: string, datos: NuevoItemItinerario) {
-  return sinBackend('itinerario.agregar', { viajeId, ...datos })
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/itinerario`, {
+    method: 'POST',
+    body: datos,
+    schema: ItemItinerarioSchema,
+  })
 }
 
 /** Devuelve el archivo .ics del itinerario para sumarlo al calendario. */
 export function exportarCalendario(viajeId: string) {
-  return sinBackend('itinerario.exportarCalendario', { viajeId })
+  return bajarArchivo(`/viajes/${encodeURIComponent(viajeId)}/itinerario/calendario`)
 }

@@ -8,12 +8,12 @@ import { ItineraryItem } from '../../components/ui/ItineraryItem'
 import { Tarjeta } from '../../components/ui/Tarjeta'
 import { TextField } from '../../components/ui/TextField'
 import { useAgregarActividad, useExportarCalendario, useItinerario } from '../../hooks/itinerario'
-import { useProponerOpcion, useVotaciones } from '../../hooks/votaciones'
+import { useCrearVotacion, useProponerOpcion, useVotaciones } from '../../hooks/votaciones'
 import { useViajeActual } from '../../layouts/contextoViaje'
 import { diaCorto } from '../../lib/fechas'
 import { conMayuscula } from '../../lib/texto'
 import type { ItemItinerario } from '../../types/itinerario'
-import type { Votacion } from '../../types/votacion'
+import { CrearVotacionSchema, type Votacion } from '../../types/votacion'
 import { puedeEditar } from './nombres'
 import { TarjetaVotacion } from './TarjetaVotacion'
 
@@ -82,6 +82,59 @@ function ProponerOpcion({ viajeId, votaciones }: { viajeId: string; votaciones: 
         <Button variant="fantasma" onClick={() => setAbierto(false)}>
           Cancelar
         </Button>
+      </div>
+    </form>
+  )
+}
+
+function CrearVotacion({ viajeId }: { viajeId: string }) {
+  const crear = useCrearVotacion(viajeId)
+  const [abierto, setAbierto] = useState(false)
+  const [pregunta, setPregunta] = useState('')
+  const [categoria, setCategoria] = useState<'destino' | 'fechas' | 'alojamiento' | 'actividad' | 'comida'>('actividad')
+  const [error, setError] = useState<string>()
+
+  function enviar(evento: FormEvent) {
+    evento.preventDefault()
+    const resultado = CrearVotacionSchema.safeParse({ pregunta, categoria })
+    if (!resultado.success) {
+      setError(resultado.error.issues[0]?.message ?? 'Revisá la pregunta.')
+      return
+    }
+    setError(undefined)
+    crear.mutate(resultado.data, {
+      onSuccess: () => {
+        setPregunta('')
+        setAbierto(false)
+      },
+    })
+  }
+
+  if (!abierto) {
+    return <Button variant="secundario" icon={Plus} className="self-start" onClick={() => setAbierto(true)}>Crear votación</Button>
+  }
+
+  return (
+    <form onSubmit={enviar} noValidate className="flex flex-col gap-4 rounded-lg trazo bg-papel-hundido p-5">
+      <TextField label="¿Qué quieren decidir?" placeholder="¿Dónde nos alojamos?" value={pregunta} error={error} onChange={(evento) => setPregunta(evento.target.value)} />
+      <label className="flex flex-col gap-1.5">
+        <span className="text-etiqueta">Categoría</span>
+        <select
+          value={categoria}
+          onChange={(evento) => setCategoria(evento.target.value as typeof categoria)}
+          className="min-h-control rounded-sm trazo bg-papel-elevado px-4 font-semibold shadow-chica"
+        >
+          <option value="destino">Destino</option>
+          <option value="fechas">Fechas</option>
+          <option value="alojamiento">Alojamiento</option>
+          <option value="actividad">Actividad</option>
+          <option value="comida">Comida</option>
+        </select>
+      </label>
+      {crear.isError && <p role="alert" className="font-semibold text-negativo">No pudimos crear la votación. Revisá la conexión y probá de nuevo.</p>}
+      <div className="flex gap-3">
+        <Button type="submit" variant="secundario" disabled={crear.isPending}>{crear.isPending ? 'Guardando…' : 'Crear'}</Button>
+        <Button variant="fantasma" onClick={() => setAbierto(false)}>Cancelar</Button>
       </div>
     </form>
   )
@@ -182,6 +235,7 @@ export function Plan() {
             ))}
           </div>
         )}
+        {!soloLectura && <CrearVotacion viajeId={viaje.id} />}
         {!soloLectura && votaciones.data && <ProponerOpcion viajeId={viaje.id} votaciones={votaciones.data} />}
       </section>
 
@@ -231,7 +285,7 @@ export function Plan() {
             ))}
         </div>
         <div className="flex flex-col gap-5 lg:pt-17">
-          <MapaSlot puntos={[]} personas={[]} alto="grande" />
+          <MapaSlot puntos={[]} personas={[]} centro={viaje.ubicacion} alto="grande" />
         </div>
       </section>
     </div>

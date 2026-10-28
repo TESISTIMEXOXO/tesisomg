@@ -13,17 +13,19 @@ import { useViajeActual } from '../../layouts/contextoViaje'
 import { fechaCorta } from '../../lib/fechas'
 import { monto } from '../../lib/moneda'
 import { NuevoGastoSchema, type NuevoGasto } from '../../types/gasto'
+import type { Persona } from '../../types/persona'
 import type { Etapa } from '../../types/viaje'
 import { IrAAgregarGasto } from './IrAAgregarGasto'
 import { nombreEnElGrupo, puedeEditar } from './nombres'
 
 /** HU-15: cargar un gasto. Si falla, lo cargado no se pierde. */
-function AgregarGasto({ viajeId, etapa }: { viajeId: string; etapa: Etapa }) {
+function AgregarGasto({ viajeId, etapa, personas }: { viajeId: string; etapa: Etapa; personas: Persona[] }) {
   const agregar = useAgregarGasto(viajeId)
   const leer = useLeerComprobante(viajeId)
   const [descripcion, setDescripcion] = useState('')
   const [importe, setImporte] = useState('')
   const [division, setDivision] = useState<NuevoGasto['division']>('iguales')
+  const [participantes, setParticipantes] = useState<string[]>(() => personas.map((persona) => persona.id))
   const [errores, setErrores] = useState<Partial<Record<'descripcion' | 'monto', string>>>({})
   const formulario = useRef<HTMLFormElement>(null)
   const { hash, key } = useLocation()
@@ -41,6 +43,7 @@ function AgregarGasto({ viajeId, etapa }: { viajeId: string; etapa: Etapa }) {
       descripcion,
       monto: importe ? Number(importe.replace(/\./g, '')) : undefined,
       division,
+      participantes: division === 'consumo' ? participantes : [],
     })
     if (!resultado.success) {
       const nuevos: typeof errores = {}
@@ -82,6 +85,26 @@ function AgregarGasto({ viajeId, etapa }: { viajeId: string; etapa: Etapa }) {
               Por consumo
             </Chip>
           </div>
+          {division === 'consumo' && (
+            <fieldset className="mt-3 flex flex-col gap-2">
+              <legend className="mb-2 text-etiqueta">¿Quiénes consumieron?</legend>
+              {personas.map((persona) => (
+                <label key={persona.id} className="flex min-h-toque items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={participantes.includes(persona.id)}
+                    onChange={(evento) => setParticipantes((actuales) =>
+                      evento.target.checked
+                        ? [...actuales, persona.id]
+                        : actuales.filter((id) => id !== persona.id),
+                    )}
+                  />
+                  {persona.nombre}{persona.esVos ? ' (vos)' : ''}
+                </label>
+              ))}
+              {participantes.length === 0 && <p className="text-meta text-negativo">Elegí al menos una persona.</p>}
+            </fieldset>
+          )}
         </fieldset>
         {agregar.isError && (
           <p role="alert" className="font-semibold text-negativo">
@@ -156,7 +179,7 @@ export function Cuentas() {
           </Tarjeta>
         )}
       </div>
-      {editable && <AgregarGasto viajeId={viaje.id} etapa={etapa} />}
+      {editable && <AgregarGasto viajeId={viaje.id} etapa={etapa} personas={viaje.personas} />}
       {!editable && <p className="text-tinta-suave">Tenés rol de lector: podés ver las cuentas, pero no cargar gastos.</p>}
     </div>
   )

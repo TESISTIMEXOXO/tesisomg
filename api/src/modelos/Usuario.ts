@@ -10,6 +10,7 @@ const usuarioSchema = new mongoose.Schema(
     nombre: { type: String, default: "" },
     pinz: { type: String, enum: [...PINZ_IDS, null], default: null },
     moneda: { type: String, enum: MONEDAS, default: "ARS" },
+    tema: { type: String, enum: ["claro", "oscuro", "sistema"], default: "claro" },
     /** "sal:hash" de scrypt. null si sólo entra con Google. */
     contrasenaHash: { type: String, default: null },
     /** El id de la cuenta en cada proveedor con el que ya entró. */

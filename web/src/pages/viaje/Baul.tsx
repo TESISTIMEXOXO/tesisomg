@@ -6,7 +6,7 @@ import { Button, ButtonLink } from '../../components/ui/Button'
 import { Chip } from '../../components/ui/Chip'
 import { Tarjeta } from '../../components/ui/Tarjeta'
 import { TextField } from '../../components/ui/TextField'
-import { useAbrirDocumento, useAgregarTarea, useDocumentos, useMarcarTarea, useRequisitos, useSubirDocumento, useTareas } from '../../hooks/baul'
+import { useAbrirDocumento, useAgregarTarea, useDocumentos, useMarcarRequisito, useMarcarTarea, useRequisitos, useSubirDocumento, useTareas } from '../../hooks/baul'
 import { useViajeActual } from '../../layouts/contextoViaje'
 import { conMayuscula } from '../../lib/texto'
 import type { Persona } from '../../types/persona'
@@ -78,6 +78,7 @@ export function Baul() {
   const requisitos = useRequisitos(viaje.id)
   const documentos = useDocumentos(viaje.id)
   const subir = useSubirDocumento(viaje.id)
+  const marcarRequisito = useMarcarRequisito(viaje.id)
   const abrir = useAbrirDocumento()
   const [lista, setLista] = useState<Tarea['lista']>('compartida')
   const editable = puedeEditar(viaje.personas)
@@ -107,14 +108,20 @@ export function Baul() {
         <Tarjeta titulo="Requisitos">
           {requisitos.isPending && <p className="text-tinta-suave">Cargando los requisitos…</p>}
           {requisitos.error && <p className="text-negativo">No pudimos cargar los requisitos.</p>}
+          {requisitos.data?.length === 0 && <p className="text-tinta-suave">Todavía no hay requisitos para este viaje.</p>}
           <ul className="flex flex-col gap-2.5">
             {requisitos.data?.map((requisito) => (
               <li key={requisito.id} className="flex items-start gap-3">
-                <span
-                  className={`mt-0.5 grid size-6 flex-none place-items-center rounded-full trazo-fino ${requisito.cumplido ? 'tema-claro bg-mar' : 'bg-papel-elevado'}`}
+                <button
+                  type="button"
+                  aria-label={`${requisito.cumplido ? 'Marcar pendiente' : 'Marcar cumplido'}: ${requisito.titulo}`}
+                  aria-pressed={requisito.cumplido}
+                  disabled={!editable || marcarRequisito.isPending}
+                  onClick={() => marcarRequisito.mutate({ requisitoId: requisito.id, cumplido: !requisito.cumplido })}
+                  className={`mt-0.5 grid size-6 flex-none place-items-center rounded-full trazo-fino disabled:cursor-default ${requisito.cumplido ? 'tema-claro bg-mar' : 'bg-papel-elevado'}`}
                 >
                   {requisito.cumplido && <Check size={14} strokeWidth={2} aria-hidden />}
-                </span>
+                </button>
                 <span className="flex flex-col">
                   <span className="font-bold">
                     {requisito.titulo}
@@ -125,6 +132,7 @@ export function Baul() {
               </li>
             ))}
           </ul>
+          {marcarRequisito.isError && <p role="alert" className="text-negativo">No pudimos guardar el requisito. Probá de nuevo.</p>}
         </Tarjeta>
 
         <Tarjeta titulo="Documentos">

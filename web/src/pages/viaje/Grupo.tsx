@@ -1,5 +1,6 @@
 import { Copy, LogOut } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Cargando, NoCargo } from '../../components/marca/Estados'
 import { QrSlot } from '../../components/slots/QrSlot'
 import { AvatarStack } from '../../components/ui/AvatarStack'
@@ -39,12 +40,14 @@ function InvitarPorMail({ viajeId }: { viajeId: string }) {
           Listo, le mandamos la invitación.
         </p>
       )}
+      {invitar.isError && <p role="alert" className="text-meta font-semibold text-negativo">No pudimos enviar la invitación. Revisá el correo e intentá de nuevo.</p>}
     </form>
   )
 }
 
 /** Grupo: quiénes van, invitar, movimientos, repetir el viaje o salir. Se abre desde los avatares del encabezado. */
 export function Grupo() {
+  const navigate = useNavigate()
   const { viaje } = useViajeActual()
   const invitacion = useInvitacionGrupo(viaje.id)
   const movimientos = useMovimientos(viaje.id)
@@ -128,7 +131,12 @@ export function Grupo() {
             <div role="alertdialog" aria-label="Confirmar salida" className="flex flex-col gap-3 rounded-lg trazo bg-coral-tinte p-5">
               <p className="font-bold">¿Salís de “{viaje.nombre}”? Si tenés plata o reservas pendientes, te las mostramos antes.</p>
               <div className="flex flex-wrap gap-3">
-                <Button variant="secundario" size="sm" disabled={salir.isPending} onClick={() => salir.mutate()}>
+                <Button
+                  variant="secundario"
+                  size="sm"
+                  disabled={salir.isPending}
+                  onClick={() => salir.mutate(undefined, { onSuccess: () => navigate('/viajes') })}
+                >
                   Sí, salir del grupo
                 </Button>
                 <Button variant="fantasma" size="sm" onClick={() => setConfirmarSalida(false)}>
@@ -141,7 +149,9 @@ export function Grupo() {
               Salir del grupo
             </Button>
           )}
+          {salir.isError && <p role="alert" className="text-negativo">No pudimos salir del grupo. Si sos organizador, primero transferí la organización.</p>}
         </section>
+        {repetir.isError && <p role="alert" className="text-negativo">No pudimos crear el nuevo viaje. Probá de nuevo.</p>}
       </div>
     </div>
   )

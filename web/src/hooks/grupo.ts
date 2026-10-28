@@ -11,7 +11,14 @@ export function useMovimientos(viajeId: string) {
 }
 
 export function useInvitarPorMail(viajeId: string) {
-  return useMutation({ mutationFn: (mail: string) => grupo.invitarPorMail(viajeId, mail) })
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (mail: string) => grupo.invitarPorMail(viajeId, mail),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['viajes', viajeId] }),
+      queryClient.invalidateQueries({ queryKey: ['viajes'] }),
+    ]),
+  })
 }
 
 export function useCambiarRol(viajeId: string) {

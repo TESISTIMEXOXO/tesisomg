@@ -5,6 +5,7 @@ import { RouterProvider } from 'react-router-dom'
 import { iniciarTema } from './lib/tema'
 import { router } from './router'
 import './styles/index.css'
+import 'leaflet/dist/leaflet.css'
 
 iniciarTema()
 

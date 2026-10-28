@@ -9,12 +9,14 @@ export const GastoSchema = z.object({
   pagoId: z.string(),
   fecha: z.iso.date(),
   division: z.enum(['iguales', 'consumo']),
+  participantes: z.array(z.string()).default([]),
 })
 
 export const NuevoGastoSchema = z.object({
   descripcion: z.string().trim().min(1, 'Contanos qué fue.'),
   monto: z.number({ error: 'Poné un monto mayor a 0.' }).int().positive('Poné un monto mayor a 0.'),
   division: z.enum(['iguales', 'consumo']),
+  participantes: z.array(z.string()).default([]),
 })
 
 export type Gasto = z.infer<typeof GastoSchema>
