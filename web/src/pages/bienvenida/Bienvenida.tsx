@@ -4,6 +4,7 @@ import { ElegirPinz } from '../../components/marca/ElegirPinz'
 import { Button } from '../../components/ui/Button'
 import { Chip } from '../../components/ui/Chip'
 import { TextField } from '../../components/ui/TextField'
+import { useSesion } from '../../hooks/auth'
 import { useGuardarPerfil } from '../../hooks/perfil'
 import type { PinzId } from '../../pinz/elenco'
 import { DatosPerfilSchema, MonedaSchema, type Moneda } from '../../types/perfil'
@@ -12,7 +13,9 @@ import { DatosPerfilSchema, MonedaSchema, type Moneda } from '../../types/perfil
 export function Bienvenida() {
   const navigate = useNavigate()
   const guardar = useGuardarPerfil()
-  const [nombre, setNombre] = useState('')
+  // Si entró con Google, ya viene con el nombre de la cuenta.
+  const { data: sesion } = useSesion()
+  const [nombre, setNombre] = useState(sesion?.nombre ?? '')
   const [moneda, setMoneda] = useState<Moneda>('ARS')
   const [pinz, setPinz] = useState<PinzId | null>(null)
   const [errorNombre, setErrorNombre] = useState<string>()
