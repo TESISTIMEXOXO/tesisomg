@@ -4,6 +4,7 @@ import { Cargando, NoCargo } from '../../components/marca/Estados'
 import { PinzNote } from '../../components/marca/PinzNote'
 import { MapaSlot } from '../../components/slots/MapaSlot'
 import { Button } from '../../components/ui/Button'
+import { CampoFecha } from '../../components/ui/CampoFecha'
 import { ItineraryItem } from '../../components/ui/ItineraryItem'
 import { Tarjeta } from '../../components/ui/Tarjeta'
 import { TextField } from '../../components/ui/TextField'
@@ -179,7 +180,7 @@ function AgregarActividad({ viajeId }: { viajeId: string }) {
   return (
     <form onSubmit={enviar} noValidate className="flex flex-col gap-4 rounded-lg trazo bg-papel-hundido p-5">
       <div className="grid gap-4 md:grid-cols-2">
-        <TextField label="Día" type="date" value={datos.fecha} onChange={(evento) => cambiar('fecha', evento.target.value)} />
+        <CampoFecha label="Día" value={datos.fecha} onChange={(fecha) => cambiar('fecha', fecha)} />
         <TextField label="Hora" type="time" value={datos.hora} onChange={(evento) => cambiar('hora', evento.target.value)} />
       </div>
       <TextField label="Qué van a hacer" value={datos.titulo} error={error} onChange={(evento) => cambiar('titulo', evento.target.value)} />

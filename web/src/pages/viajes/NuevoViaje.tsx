@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
+import { CampoFecha } from '../../components/ui/CampoFecha'
 import { TextField } from '../../components/ui/TextField'
 import { TripCard } from '../../components/ui/TripCard'
 import { useBuscarLugares, useCrearViaje } from '../../hooks/viajes'
@@ -112,14 +113,13 @@ export function NuevoViaje() {
           <legend className="mb-2 text-etiqueta">Fechas</legend>
           {!sinFechas && (
             <div className="grid gap-4 md:grid-cols-2">
-              <TextField label="Ida" type="date" value={fechaIda} onChange={(evento) => setFechaIda(evento.target.value)} />
-              <TextField
+              <CampoFecha label="Ida" value={fechaIda} onChange={setFechaIda} />
+              <CampoFecha
                 label="Vuelta"
-                type="date"
                 min={fechaIda || undefined}
                 value={fechaVuelta}
                 error={errores.fechaVuelta}
-                onChange={(evento) => setFechaVuelta(evento.target.value)}
+                onChange={setFechaVuelta}
               />
             </div>
           )}
