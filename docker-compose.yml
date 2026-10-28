@@ -35,6 +35,7 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       SMTP_URL: ${SMTP_URL:-}
       MAIL_FROM: ${MAIL_FROM:-}
+      CONTACTO_EQUIPO: ${CONTACTO_EQUIPO:-}
       CHOKIDAR_USEPOLLING: "true"
     ports:
       - "4000:4000"

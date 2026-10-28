@@ -69,6 +69,49 @@ export async function mandarInvitacion(email: string, viaje: { nombre: string; d
   });
 }
 
+/**
+ * El acuse de "Escribinos". El texto es fijo, sin nada de lo que escribió la persona: así nadie puede
+ * usar el formulario para mandarle su propio mensaje a un mail ajeno.
+ */
+export async function mandarConfirmacionConsulta(email: string) {
+  if (!transporte) {
+    console.info(`[mail sin SMTP] Confirmación de consulta para ${email}`);
+    return;
+  }
+  await transporte.sendMail({
+    from: config.mail.remitente,
+    to: email,
+    subject: "¡Recibimos tu consulta!",
+    text: "¡Recibimos tu consulta! Te responderemos a la brevedad.\n\n¡Gracias por usar Pinz!",
+    html: `<p style="font-size:20px;font-weight:bold">¡Recibimos tu consulta!</p>
+<p>Te responderemos a la brevedad.</p>
+<p>¡Gracias por usar Pinz!</p>`,
+  });
+}
+
+function escaparHtml(texto: string) {
+  return texto.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
+/** Avisa al equipo de una consulta nueva. Con "Responder" en el mail se le contesta directo a la persona. */
+export async function avisarConsultaAlEquipo(consulta: { email: string; asunto: string; descripcion: string }) {
+  if (!transporte) {
+    console.info(`[mail sin SMTP] Consulta nueva de ${consulta.email}: ${consulta.asunto}`);
+    return;
+  }
+  // Sin saltos de línea en el asunto: no se pueden colar encabezados.
+  const asunto = consulta.asunto.replace(/\s+/g, " ");
+  await transporte.sendMail({
+    from: config.mail.remitente,
+    to: config.mail.equipo,
+    replyTo: consulta.email,
+    subject: `Consulta nueva: ${asunto}`,
+    text: `De: ${consulta.email}\nAsunto: ${asunto}\n\n${consulta.descripcion}`,
+    html: `<p><strong>De:</strong> ${escaparHtml(consulta.email)}<br><strong>Asunto:</strong> ${escaparHtml(asunto)}</p>
+<p style="white-space:pre-wrap">${escaparHtml(consulta.descripcion)}</p>`,
+  });
+}
+
 export type ResultadoVerificacion =
   | { ok: true; email: string; contrasenaHash: string | null }
   | { ok: false; motivo: "codigo-vencido" | "sin-intentos" }

@@ -4,6 +4,7 @@ import cors from "cors";
 import mongoose from "mongoose";
 import { config } from "./config.js";
 import { rutasAuth } from "./rutas/auth.js";
+import { rutasContacto } from "./rutas/contacto.js";
 import { rutasArchivo, rutasDocumentosPersonales, rutasDocumentosViaje } from "./rutas/documentos.js";
 import { rutasGastos } from "./rutas/gastos.js";
 import { rutasItinerario } from "./rutas/itinerario.js";
@@ -22,6 +23,7 @@ app.use(cookieParser());
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 app.use("/auth", rutasAuth);
+app.use("/contacto", rutasContacto);
 app.use("/perfil", rutasPerfil);
 app.use("/lugares", requiereSesion, rutasLugares);
 app.use("/documentos-personales", requiereSesion, rutasDocumentosPersonales);
