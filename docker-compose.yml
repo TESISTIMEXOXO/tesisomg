@@ -28,7 +28,8 @@ services:
     environment:
       NODE_ENV: development
       PORT: 4000
-      MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@db:27017/${MONGO_DB}?authSource=admin
+      # Con MONGODB_URI en el .env se usa esa base (p. ej. Atlas); si no, el Mongo local de este compose.
+      MONGODB_URI: ${MONGODB_URI:-mongodb://${MONGO_USER}:${MONGO_PASSWORD}@db:27017/${MONGO_DB}?authSource=admin}
       WEB_URL: http://localhost:5173
       SESION_SECRETO: ${SESION_SECRETO:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
