@@ -1,27 +1,22 @@
-import { Banda, TituloBanda } from './Banda'
+import type { ReactNode } from 'react'
+import { Seccion } from './Seccion'
 
-const ETIQUETAS = [
-  { texto: 'Con amigos', fondo: 'bg-sol' },
-  { texto: 'En familia', fondo: 'bg-papel-elevado' },
-  { texto: 'Egresados', fondo: 'bg-mar' },
-  { texto: 'Mochileros', fondo: 'bg-papel-elevado' },
-  { texto: 'Finde largo', fondo: 'bg-lavanda' },
-  { texto: 'Despedidas', fondo: 'bg-papel-elevado' },
-  { texto: 'Escapadas', fondo: 'bg-coral' },
-  { texto: 'Viajes largos', fondo: 'bg-cielo' },
-]
+function Etiqueta({ fondo, children }: { fondo: string; children: ReactNode }) {
+  return (
+    <span className={`mx-1 inline-block rounded-full trazo px-6 pt-1 pb-2 align-middle text-frase-etiqueta whitespace-nowrap shadow-dura ${fondo}`}>
+      {children}
+    </span>
+  )
+}
 
 export function ParaQuienes() {
   return (
-    <Banda className="flex flex-col gap-8">
-      <TituloBanda>Para cualquier viaje en grupo.</TituloBanda>
-      <ul className="flex flex-wrap gap-3.5">
-        {ETIQUETAS.map((etiqueta) => (
-          <li key={etiqueta.texto} className={`rounded-full trazo px-6 py-3 font-display text-titulo-2 font-black shadow-dura ${etiqueta.fondo}`}>
-            {etiqueta.texto}
-          </li>
-        ))}
-      </ul>
-    </Banda>
+    <Seccion className="pt-17.5 pb-5 text-center lg:py-15">
+      <p className="mx-auto max-w-295 font-display text-frase text-balance">
+        Para viajar <Etiqueta fondo="bg-sol -rotate-3">con amigos</Etiqueta> o <Etiqueta fondo="bg-mar rotate-2">en familia</Etiqueta>, de{' '}
+        <Etiqueta fondo="bg-lavanda rotate-3">mochileros</Etiqueta>, a un <Etiqueta fondo="bg-coral -rotate-2">finde largo</Etiqueta> o a una{' '}
+        <Etiqueta fondo="bg-cielo rotate-2">despedida</Etiqueta>.
+      </p>
+    </Seccion>
   )
 }
