@@ -1,83 +1,57 @@
-import { useState } from 'react'
+import { ChevronRight } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { Pin } from '../../components/marca/Pin'
-import { ELENCO, PINZ_IDS, type PinzId } from '../../pinz/elenco'
-import { FONDO, FONDO_TINTE } from '../../pinz/tonos'
-import { Banda, Sobretitulo, TituloBanda } from './Banda'
-import { inclinado } from './movimiento'
+import { ButtonLink } from '../../components/ui/Button'
+import { ELENCO, PINZ_IDS } from '../../pinz/elenco'
+import { FONDO_TINTE } from '../../pinz/tonos'
+import { Seccion, Titular } from './Seccion'
 
-/** La ficha corta del pinz elegido: nombre, apodo, qué es y su frase. */
-function Ficha({ pinz }: { pinz: PinzId }) {
-  const personaje = ELENCO[pinz]
-  const numero = String(PINZ_IDS.indexOf(pinz) + 1).padStart(2, '0')
-  const seccion = personaje.acompana.split(' · ')[0]
+/* Cada card va apenas girada. El patrón se repite por fila: tres columnas en mobile, cinco en desktop. */
+const GIRO_MOBILE = [-2, 1.5, -1]
+const GIRO_DESKTOP = [-2, 1.5, -1, 2, -1.5]
+
+function HaceElTest({ className }: { className: string }) {
   return (
-    <article
-      aria-live="polite"
-      className="flex flex-col gap-2.5 rounded-lg trazo-grueso bg-papel-elevado px-7 pt-5.5 pb-7 shadow-grande lg:w-100 lg:flex-none"
-    >
-      <span className={`self-start rounded-full trazo-fino px-3 py-1 text-sobretitulo uppercase ${FONDO[personaje.tono]}`}>
-        {numero} · {seccion}
-      </span>
-      <div className={`flex justify-center rounded-lg trazo ${FONDO_TINTE[personaje.tono]}`}>
-        <span key={pinz} className="motion-safe:animate-jump" style={inclinado(-4)}>
-          <Pin pinz={pinz} size={250} label="" />
-        </span>
-      </div>
-      <h3 className="font-display text-display font-black">{personaje.nombre}</h3>
-      <p className="-mt-1.5 text-cuerpo-lg font-extrabold text-tinta-suave">{personaje.apodo}</p>
-      <p className="font-semibold">{personaje.descripcion}</p>
-      <p className={`mt-1 rounded-md rounded-bl-sm trazo-fino px-3.5 py-2.5 font-extrabold ${FONDO_TINTE[personaje.tono]}`}>
-        «{personaje.frase}»
-      </p>
-    </article>
+    <ButtonLink to="/ingresar" variant="secundario" iconRight={ChevronRight} className={className}>
+      Hacé el test
+    </ButtonLink>
   )
 }
 
+/**
+ * "Cada uno, su pinz.": las diez personalidades. En mobile van nueve, sin Cumbre, para cerrar tres filas de tres.
+ * Entre 1024 y 1280 las cinco columnas son angostas y los pinz se achican.
+ */
 export function ElegiTuPinz() {
-  const [elegido, setElegido] = useState<PinzId>('vuelto')
-
   return (
-    <Banda id="tu-pinz" fondo="bg-lavanda" className="flex flex-col gap-11">
-      <div className="flex max-w-195 flex-col gap-3.5">
-        <Sobretitulo>Tu pinz · diez personalidades de viaje</Sobretitulo>
-        <TituloBanda>Cada uno, su pinz.</TituloBanda>
-        <p className="text-cuerpo-lg font-semibold">
-          Elegí tu personalidad o hacé el test de tres preguntas. Así te ve el grupo: en cada votación, en cada gasto y en el mapa.
+    <Seccion id="tu-pinz" className="py-5 lg:flex lg:items-center lg:gap-15 lg:py-10">
+      <div className="flex flex-col items-start gap-4 lg:w-105 lg:flex-none lg:gap-5.5">
+        <Titular>Cada uno, su pinz.</Titular>
+        <p className="text-cuerpo-lg font-semibold lg:text-bajada">
+          Diez personalidades de viaje. Elegí la tuya o hacé el test de tres preguntas
+          <span className="max-lg:hidden">: así te ve el grupo en cada votación, en cada gasto y en el mapa</span>.
         </p>
+        <HaceElTest className="max-lg:hidden" />
       </div>
-      <div className="flex flex-col gap-7 lg:flex-row lg:items-start">
-        <Ficha pinz={elegido} />
-        <ul aria-label="Las diez personalidades" className="grid flex-1 grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
-          {PINZ_IDS.map((pinz) => {
-            const activo = pinz === elegido
-            return (
-              <li key={pinz}>
-                <button
-                  type="button"
-                  aria-pressed={activo}
-                  onClick={() => setElegido(pinz)}
-                  className={`group flex w-full flex-col items-center gap-0.5 rounded-lg trazo px-1.5 pt-1 pb-3 transition-[translate,box-shadow] duration-250 ease-rebote motion-reduce:transition-none ${
-                    activo ? `translate-0.5 shadow-none ${FONDO_TINTE[ELENCO[pinz].tono]}` : 'bg-papel-elevado shadow-dura hover:-translate-y-1'
-                  }`}
-                >
-                  <span
-                    className={`transition-transform duration-250 ease-rebote motion-reduce:transition-none ${
-                      activo ? 'scale-110' : 'group-hover:-translate-y-2.5 group-hover:-rotate-4 motion-reduce:group-hover:translate-0 motion-reduce:group-hover:rotate-0'
-                    }`}
-                  >
-                    <Pin pinz={pinz} size={120} label="" />
-                  </span>
-                  <span className="font-display text-titulo-2 font-black">{ELENCO[pinz].nombre}</span>
-                  <span className="text-meta font-bold text-tinta-suave">{ELENCO[pinz].apodo}</span>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      </div>
-      <p className="self-center rounded-full trazo bg-papel-elevado px-6 py-3 text-center text-cuerpo-lg font-extrabold shadow-dura">
-        Y el grupo muestra su mezcla: «dos madrugadores, un trasnoche y una precavida».
-      </p>
-    </Banda>
+      <ul aria-label="Las diez personalidades" className="mt-6.5 grid grid-cols-3 gap-x-3 gap-y-3.5 lg:mt-0 lg:flex-1 lg:grid-cols-5 lg:gap-x-4.5 lg:gap-y-5.5">
+        {PINZ_IDS.map((pinz, i) => {
+          const personaje = ELENCO[pinz]
+          return (
+            <li
+              key={pinz}
+              className={`flex flex-col items-center rounded-lg trazo-grueso px-1 pt-0.5 pb-2.5 shadow-dura transition-transform duration-200 ease-rebote motion-reduce:transition-none lg:px-2.5 lg:pt-1.5 lg:pb-3.5 rotate-(--giro) lg:rotate-(--giro-lg) lg:hover:-translate-y-1.5 lg:hover:-rotate-2 ${
+                FONDO_TINTE[personaje.tono]
+              } ${pinz === 'cumbre' ? 'max-lg:hidden' : ''}`}
+              style={{ '--giro': `${GIRO_MOBILE[i % 3]}deg`, '--giro-lg': `${GIRO_DESKTOP[i % 5]}deg` } as CSSProperties}
+            >
+              <Pin pinz={pinz} size={120} label="" className="max-lg:size-21 lg:max-xl:size-20" />
+              <span className="-mt-1 font-display text-etiqueta font-black xl:-mt-1.5 xl:text-titulo-2">{personaje.nombre}</span>
+              <span className="text-meta font-bold text-tinta-suave max-lg:hidden">{personaje.apodo}</span>
+            </li>
+          )
+        })}
+      </ul>
+      <HaceElTest className="mt-5.5 w-full lg:hidden" />
+    </Seccion>
   )
 }

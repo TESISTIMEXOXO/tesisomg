@@ -161,7 +161,8 @@ export const DIBUJOS: Record<PinzId, Dibujo> = {
       linea('M94.5 84 Q106 90 112 98', 5),
     ],
     recortado: [
-      forma('M0 40 Q60 10 120 40 L120 28 Q60 -2 0 28 Z', 'mar', 4),
+      forma('M-10 -20 H130 V40 Q60 22 -10 40 Z', 'mar', 4),
+      linea('M60 8 V30', 3),
     ],
     delante: [
       ojo(46, 57, 5, 7),
@@ -169,7 +170,7 @@ export const DIBUJOS: Record<PinzId, Dibujo> = {
       linea('M48 71 Q60 83 72 71', 5),
       mejilla(36, 69),
       mejilla(84, 69),
-      forma('M28 39 Q60 25 92 39 Q60 51 28 39 Z', DETALLE.visera, 4),
+      forma('M14 38 Q60 22 106 38 Q60 60 14 38 Z', DETALLE.visera, 4.5),
       grupo('rotate(-8 -10 96)', [
         forma('M-24 72 H0 V120 L-4 116 L-8 120 L-12 116 L-16 120 L-20 116 L-24 120 Z', 'papel-elevado', 4),
         linea('M-19 82 H-5 M-19 90 H-5 M-19 98 H-9 M-19 106 H-5', 3, 'tinta-suave'),

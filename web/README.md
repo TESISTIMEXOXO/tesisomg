@@ -55,6 +55,7 @@ web/
       ui/               el design system: Button, Chip, StageSwitch, TextField, PollOption, BalanceRow,
                         ItineraryItem, TripCard, AvatarStack, BottomNav, BarraLateral y Tarjeta
       marca/            Logo, Pin, PinzNote, ElegirPinz y los estados Cargando / NoCargo
+      landing/          Camino: la ruta celeste que recorre la landing
       slots/            MapaSlot, SaldosSlot, AuthSlot, ArchivosSlot, ComprobanteSlot, QrSlot y EsperaSlot
     pinz/
       elenco.ts         los 10 personajes: nombre, apodo, tono, sección, descripción y frase
@@ -73,14 +74,14 @@ web/
     services/           una función async por operación; hoy devuelven los mocks
     hooks/              React Query sobre cada servicio; las pantallas solo usan hooks
     mocks/datos.ts      todos los datos de ejemplo ("Bariloche con los chicos")
-    lib/                etapa (por fechas), fechas, moneda ($ 48.200), saldos y textos
+    lib/                etapa (por fechas), fechas, moneda ($ 48.200), saldos, textos y el camino de la landing
 ```
 
 ## 4. Pantallas
 
 | Ruta | Archivo | Qué usa |
 | --- | --- | --- |
-| `/` | `pages/landing/Landing.tsx` (una sección por banda en la misma carpeta) | `Pin`, `Logo`, `Button`, `PollOption`, `BalanceRow`, `ItineraryItem` |
+| `/` | `pages/landing/Landing.tsx` (una sección por archivo en la misma carpeta; ver "La landing") | `Camino`, `Pin`, `Logo`, `Button`, `PollOption`, `BalanceRow`, `ItineraryItem`, `AvatarStack` |
 | `/ingresar` | `pages/ingresar/Ingresar.tsx` (bypass temporal: en desarrollo, cualquier proveedor lleva a `/viajes`) | `AuthSlot`, `useIngresar` |
 | `/bienvenida` | `pages/bienvenida/Bienvenida.tsx` | `TextField`, `Chip`, `ElegirPinz`, `useGuardarPerfil` |
 | `/unirse` | `pages/unirse/Unirse.tsx` | `TextField`, `Button` |
@@ -118,7 +119,7 @@ Cada pantalla resuelve sus estados de carga, vacío y error con `Cargando`, `NoC
 | `BottomNav` | `components/ui/BottomNav.tsx` | `items` (`{ id, label, icon, to, end }`) | Navegación flotante de mobile (hasta 4) |
 | `BarraLateral` | `components/ui/BarraLateral.tsx` | `items`, `pie`, `cuenta` | La navegación desde 1024px |
 | `Tarjeta` / `Etiqueta` | `components/ui/Tarjeta.tsx` | `titulo`, `extra`, `fondo` | El bloque de contenido de la app y su badge |
-| `Logo` | `components/marca/Logo.tsx` | `variant` (`marca` · `simbolo` · `icono`), `size`, `ink`, `color` | La marca, en curvas: en `marca`, el pin a la izquierda y "pinz" a la derecha |
+| `Logo` | `components/marca/Logo.tsx` | `variant` (`marca` · `simbolo` · `icono`), `size` (en `marca`, el alto de la palabra), `ink`, `label` | La marca: el pinz genérico coral pegado a "pinz" en Archivo 900. El pin es siempre coral. Las versiones en curvas (`pinz-logo.svg`) son para documentos y Open Graph; en la interfaz se usa el componente |
 | `Pin` | `components/marca/Pin.tsx` | `pinz` (elenco o `generico`), `color`, `size`, `label` | El pinz ilustrado |
 | `PinzNote` | `components/marca/PinzNote.tsx` | `tipo` (`tip` · `vacio` · `error` · `festejo`), `pinz`, `title`, `action` + `onAction` o `actionTo`, `onClose` | El único lugar con pinz dentro de la app |
 | `ElegirPinz` | `components/marca/ElegirPinz.tsx` | `valor`, `onElegir` | La grilla para elegir personalidad |
@@ -131,14 +132,15 @@ Los tokens viven en `src/styles/index.css`, dentro de `@theme`, y salen de `toke
 | Grupo | Ejemplos de uso |
 | --- | --- |
 | Colores (con tintes y tonos del elenco) | `bg-coral`, `text-tinta`, `bg-sol-tinte`, `fill-durazno`, `text-positivo` |
-| Radios | `rounded-sm` (12), `rounded-md` (18), `rounded-lg` (26), `rounded-full` (pill) |
-| Sombras duras | `shadow-chica`, `shadow-dura`, `shadow-grande` |
+| Radios | `rounded-sm` (12), `rounded-md` (18), `rounded-lg` (26), `rounded-xl` (40, el celular de la landing), `rounded-full` (pill) |
+| Sombras duras | `shadow-chica`, `shadow-dura`, `shadow-grande`; `shadow-cinta` (solo hacia abajo, las cintas de la landing) |
 | Tipografías | `font-display` (Archivo), `font-texto` (Figtree, la base) |
 | Escala de texto | `text-display-xl`, `text-display`, `text-titulo-1`, `text-titulo-2`, `text-monto`, `text-cuerpo-lg`, `text-cuerpo`, `text-etiqueta`, `text-meta`, `text-sobretitulo` |
+| Titulares de la landing | `text-portada` / `lg:text-portada-lg` (el hero), `text-titular` (cada sección), `text-cierre`, `text-frase` y `text-frase-etiqueta` ("Para quiénes"), `text-bajada` (21px). Crecen con la pantalla (`clamp`) hasta el tamaño del diseño en 1440px. `tracking-marca` (−0,045em) es la interletra del logo y de los titulares; `contorno-texto` pone el contorno tinta a letras de color ("Organícenlo") |
 | Espaciado (grilla de 4px) | `p-4` = `espacio-4`, `gap-8` = `espacio-8`; medidas: `min-h-toque` (44), `min-h-control` (50), `h-nav` (68), `w-lateral` (240) |
 | Contornos | `trazo-fino` (2px), `trazo` (2,5px), `trazo-grueso` (3,5px) y por lado: `trazo-b`, `trazo-t`, `trazo-r`, `trazo-grueso-b`… El color es siempre tinta |
 | Breakpoints | `md` (768), `lg` (1024, barra lateral), `xl` (1280); contenido con `max-w-contenido` (1200) |
-| Movimiento | `motion-safe:animate-bob`, `animate-jump`, `animate-cinta`, `animate-camina`, `animate-sube`, `animate-asoma`; `ease-rebote` |
+| Movimiento | `motion-safe:animate-bob`, `animate-jump`, `animate-cinta`, `animate-asoma`; en la landing también `animate-camino` (los pinz que caminan), `animate-repisa` (la repisa del cierre y Vuelto en Gastos) y `barras-se-llenan` (las barras de votación); `ease-rebote` |
 
 **Regla:** nunca se escriben valores a mano (`bg-[#ff8a66]`, `p-[13px]`, hex sueltos). Si falta algo, se suma como token en `@theme` o como `@utility`. Las paletas de Tailwind están vaciadas, así que `bg-red-500` ni siquiera existe. La única excepción son los colores de accesorios de los pinz que no son de la paleta, que viven solo en `pinz/dibujos.ts`.
 
@@ -155,7 +157,37 @@ Las clases que dependen de un dato (el tono de un pinz, el color de una etapa) s
   - En avatares va siempre la silueta con la inicial (`AvatarStack`).
   - Los grandes son solo de la landing y de la grilla para elegir personalidad.
 
-## 8. Cómo conectar el backend
+## 8. La landing
+
+Es la única página donde los pinz son protagonistas. El fondo es `papel` de punta a punta y las secciones no llevan color propio: las separan las cintas de destinos y el camino. Mobile primero; desde `lg` (1024) cada sección pasa a su versión desktop.
+
+| Sección | Archivo |
+| --- | --- |
+| Barra superior | `BarraLanding.tsx` (en mobile, solo Ingresar) |
+| Hero: titular, botones, navegador y celular con Hoy | `Hero.tsx` (en mobile, solo el celular) |
+| Cintas de destinos cruzadas | `CintaDestinos.tsx` |
+| Del caos del chat a un solo lugar | `ElProblema.tsx` |
+| Todo el viaje, ordenado (bento) | `Funciones.tsx` (en mobile, sin la card de Hoy) |
+| Pinz cambia con el viaje | `TresEtapas.tsx` |
+| Cada uno, su pinz | `ElegiTuPinz.tsx` (en mobile, nueve pinz en tres columnas) |
+| Para quiénes | `ParaQuienes.tsx` |
+| ¿Dudas? | `Preguntas.tsx` (en mobile, el bloque de contacto va al final) |
+| Cierre y repisa | `Cierre.tsx` |
+| Pie | `Pie.tsx` |
+
+`Seccion.tsx` tiene las piezas comunes: `Seccion` (ancho de contenido y por encima del camino), `Pausa`, `Titular`, `Bajada`, `Sobretitulo` y la clase `TARJETA`.
+
+### El camino
+
+La ruta celeste que recorre la página por detrás del contenido y termina en una plataforma bajo el botón "Organizá tu viaje".
+
+- **Componente:** `components/landing/Camino.tsx`. Mide la landing, arma el `path` y lo dibuja en tres trazos (sombra, borde y relleno `cielo`) intercalados con la plataforma. Se recalcula con un `ResizeObserver` sobre la landing; desde 1024px usa los datos de desktop y por debajo los de mobile.
+- **Cálculo:** `lib/camino.ts` (`armarCamino`), una función pura: guía → remuestreo → suavizado gaussiano → nodos → Catmull-Rom. Las x se escalan del ancho del diseño al de la pantalla.
+- **Datos:** `lib/caminoDatos.ts`, los puntos guía del diseño, los grosores y quiénes caminan.
+- **Anclas:** cada tramo sigue a un elemento con `data-camino`: las pausas `banda1`…`banda5` (los espacios vacíos entre secciones, `Pausa` en `Seccion.tsx`), las cards `b-iti` y `b-hoy` del bento y el botón `cta`. Si una sección cambia de alto, el camino se acomoda solo. En mobile no hay `banda4` (entre el elenco y "Para quiénes") y la pausa del cierre es `banda5`, igual que en desktop.
+- **Pinz que caminan:** van con `offset-path` sobre el mismo `path`, en grupos de uno, dos o tres. Con `prefers-reduced-motion` el camino queda dibujado y cada grupo, quieto en su tramo.
+
+## 9. Cómo conectar el backend
 
 ### Servicios
 
@@ -236,7 +268,7 @@ Una escritura igual: `crear(datos)` pasa de `sinBackend('viajes.crear', datos)` 
 
 Mientras no estén conectados, muestran `EsperaSlot`: un recuadro punteado que dice qué va ahí. Nunca simulan el contenido real. La librería de mapas se monta en el elemento de `contenedorRef`, que tiene tamaño fijo. El cálculo de saldos lo hace siempre el backend; el front solo los ordena (primero lo que tenés que poner, después lo que te deben, al final con quién estás a mano).
 
-## 9. Convenciones
+## 10. Convenciones
 
 - **Nombres:** los del dominio van en español (`viaje`, `gasto`, `saldo`, `votacion`). Los componentes del design system conservan su nombre y sus props (`Button`, `variant`).
 - **Tipos:** sin `any`. Los datos de dominio se tipan con `z.infer` de sus esquemas.
@@ -252,9 +284,11 @@ Mientras no estén conectados, muestran `EsperaSlot`: un recuadro punteado que d
   - La plata, sin culpa: "te falta poner" y "te tiene que devolver", nunca "debe".
   - Mayúscula solo al inicio.
 
-## 10. Pendientes
+## 11. Pendientes
 
 - **"¿Es gratis?"** en la landing (`pages/landing/Preguntas.tsx`): falta definir el modelo de precios. Está marcado como pendiente en la interfaz y con un comentario en el código.
+- **"Escribinos"** en la landing (`pages/landing/Preguntas.tsx`): falta definir el canal de contacto (mail o formulario). Hasta entonces el botón está deshabilitado.
+- **Privacidad y Términos:** el diseño los pone en el pie de la landing, pero todavía no hay páginas. Se suman a `Pie.tsx` cuando existan.
 - **Mapa, QR, lectura de comprobantes, login y archivos:** son slots. Esperan la librería o el backend.
 - **Roles:** `cambiarRol` y `useCambiarRol` están listos, pero falta la interfaz para el organizador (HU-08).
 - **Funciones sin flujo propio todavía:**

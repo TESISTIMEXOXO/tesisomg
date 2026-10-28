@@ -1,14 +1,15 @@
 /*
  * Movimiento de Pinz. Cada animación se usa con el prefijo motion-safe:
  * (motion-safe:animate-bob), así con movimiento reducido todo queda quieto y completo.
- * --r inclina al pinz sin que la animación le pise la rotación; --d es cuánto camina.
+ * --r inclina al pinz sin que la animación le pise la rotación.
  */
 @theme {
   --animate-bob: lp-bob 3.6s ease-in-out infinite;
   --animate-jump: lp-jump 2.8s var(--ease-rebote) infinite;
   --animate-cinta: lp-cinta 36s linear infinite;
-  --animate-camina: lp-camina 9s linear infinite alternate;
-  --animate-sube: lp-sube 0.8s var(--ease-rebote) both;
+  /* La duración y el desfase de cada pinz que camina salen del largo del camino. */
+  --animate-camino: lp-camino 1s linear infinite;
+  --animate-repisa: lp-repisa 3.2s ease-in-out infinite;
   --animate-asoma: pz-asoma 0.45s var(--ease-rebote) 1;
 
   @keyframes lp-bob {
@@ -41,23 +42,22 @@
     }
   }
 
-  @keyframes lp-camina {
+  @keyframes lp-camino {
     from {
-      transform: translateX(0);
+      offset-distance: 0%;
     }
     to {
-      transform: translateX(var(--d, 600px));
+      offset-distance: 100%;
     }
   }
 
-  @keyframes lp-sube {
-    from {
-      opacity: 0;
-      transform: translateY(16px);
+  @keyframes lp-repisa {
+    0%,
+    100% {
+      transform: translateY(18%) rotate(var(--r, 0deg));
     }
-    to {
-      opacity: 1;
-      transform: none;
+    50% {
+      transform: translateY(0) rotate(var(--r, 0deg));
     }
   }
 
@@ -76,7 +76,21 @@
   animation-play-state: paused;
 }
 
-/* El grupo de pinz del cierre salta más rápido cuando el botón está en hover. */
-@utility salto-rapido {
-  animation-duration: 1.2s;
+@keyframes lp-barra {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* En las votaciones de la landing, la barra de cada opción se llena al cargar. */
+@utility barras-se-llenan {
+  @media (prefers-reduced-motion: no-preference) {
+    & button > span:first-child {
+      transform-origin: left;
+      animation: lp-barra 1.4s var(--ease-rebote) 0.3s both;
+    }
+  }
 }

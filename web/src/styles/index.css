@@ -29,6 +29,8 @@
   --radius-sm: 12px;
   --radius-md: 18px;
   --radius-lg: 26px;
+  /* El celular dibujado de la landing. */
+  --radius-xl: 40px;
   --radius-full: 999px;
 
   --shadow-*: initial;
@@ -71,6 +73,41 @@
   --text-sobretitulo--line-height: 16px;
   --text-sobretitulo--letter-spacing: 0.08em;
   --text-sobretitulo--font-weight: 800;
+
+  /*
+   * Los titulares de la landing. Crecen con la pantalla hasta el tamaño del diseño (390 y 1440px):
+   * en mobile "Organícenlo" entra en 360px y en desktop "Viajen juntos." entra en una línea desde 1024px.
+   */
+  --text-portada: clamp(44px, 14vw, 60px);
+  --text-portada--line-height: 0.92;
+  --text-portada--letter-spacing: -0.045em;
+  --text-portada--font-weight: 900;
+  --text-portada-lg: clamp(110px, 11.6vw, 168px);
+  --text-portada-lg--line-height: 0.92;
+  --text-portada-lg--letter-spacing: -0.045em;
+  --text-portada-lg--font-weight: 900;
+  --text-titular: clamp(50px, 7.2vw, 104px);
+  --text-titular--line-height: 0.92;
+  --text-titular--letter-spacing: -0.045em;
+  --text-titular--font-weight: 900;
+  --text-cierre: clamp(54px, 8.9vw, 128px);
+  --text-cierre--line-height: 0.92;
+  --text-cierre--letter-spacing: -0.045em;
+  --text-cierre--font-weight: 900;
+  --text-frase: clamp(40px, 5vw, 72px);
+  --text-frase--line-height: 1.4;
+  --text-frase--letter-spacing: -0.035em;
+  --text-frase--font-weight: 900;
+  /* Las etiquetas dentro de la frase de "Para quiénes", un poco más chicas que la frase. */
+  --text-frase-etiqueta: clamp(31px, 3.9vw, 56px);
+  --text-frase-etiqueta--line-height: 1.4;
+  --text-frase-etiqueta--letter-spacing: -0.035em;
+  --text-frase-etiqueta--font-weight: 800;
+
+  --text-bajada: 21px;
+  --text-bajada--line-height: 31px;
+
+  --tracking-marca: -0.045em;
 
   --spacing-toque: 44px;
   --spacing-control: 50px;
@@ -120,6 +157,8 @@
   --shadow-chica: 2px 2px 0 var(--contorno);
   --shadow-dura: 4px 4px 0 var(--contorno);
   --shadow-grande: 6px 6px 0 var(--contorno);
+  /* Las cintas de destinos de la landing: de borde a borde, la sombra cae solo hacia abajo. */
+  --shadow-cinta: 0 6px 0 var(--contorno);
 }
 
 /*
@@ -221,6 +260,12 @@
 @utility trazo-grueso-r {
   border-right-width: 3.5px;
   border-right-style: solid;
+}
+
+/* Letras de color con el contorno tinta por fuera, como "Organícenlo" en la portada. */
+@utility contorno-texto {
+  -webkit-text-stroke: max(2.5px, 0.024em) var(--tinta);
+  paint-order: stroke fill;
 }
 
 @utility numeros {
