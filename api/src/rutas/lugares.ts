@@ -28,6 +28,11 @@ async function consultarGeocodificador(url: URL) {
   }
 }
 
+/* Algunas redes no llegan a Nominatim. Si falla, se usa Photon (también OpenStreetMap) por un rato
+   para no esperar el timeout en cada búsqueda. */
+const PAUSA_NOMINATIM_MS = 10 * 60 * 1000;
+let nominatimFalloEn = 0;
+
 rutasLugares.get("/", async (req, res) => {
   const consulta = z.string().trim().min(3).max(100).safeParse(req.query.q);
   if (!consulta.success) {
@@ -35,8 +40,21 @@ rutasLugares.get("/", async (req, res) => {
     return;
   }
 
+  if (Date.now() - nominatimFalloEn > PAUSA_NOMINATIM_MS) {
+    try {
+      res.json(await buscarEnNominatim(consulta.data));
+      return;
+    } catch (error) {
+      nominatimFalloEn = Date.now();
+      console.warn("Nominatim no respondió, se usa Photon", error);
+    }
+  }
+  res.json(await buscarEnPhoton(consulta.data));
+});
+
+async function buscarEnNominatim(consulta: string) {
   const url = new URL("https://nominatim.openstreetmap.org/search");
-  url.searchParams.set("q", consulta.data);
+  url.searchParams.set("q", consulta);
   url.searchParams.set("format", "jsonv2");
   url.searchParams.set("addressdetails", "1");
   url.searchParams.set("limit", "6");
@@ -57,11 +75,50 @@ rutasLugares.get("/", async (req, res) => {
   if (!resultado.success) {
     throw new Error("El servicio de mapas devolvió resultados con un formato inesperado.");
   }
-  res.json(resultado.data.map((lugar) => ({
+  return resultado.data.map((lugar) => ({
     id: lugar.place_id.toString(),
     nombre: lugar.name || lugar.address?.city || lugar.address?.town || lugar.address?.village || lugar.address?.municipality || lugar.display_name.split(",")[0],
     detalle: lugar.display_name,
     lat: Number(lugar.lat),
     lng: Number(lugar.lon),
-  })));
-});
+  }));
+}
+
+/** Solo ciudades, provincias y países: sin las capas chicas aparecen campos y barrios antes que la ciudad. */
+async function buscarEnPhoton(consulta: string) {
+  const url = new URL("https://photon.komoot.io/api/");
+  url.searchParams.set("q", consulta);
+  url.searchParams.set("limit", "6");
+  for (const capa of ["city", "state", "country"]) url.searchParams.append("layer", capa);
+
+  const respuesta = await fetch(url, {
+    headers: { "User-Agent": "PinzTravelPlanner/1.0 (https://pinz.app)" },
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!respuesta.ok) throw new Error(`El servicio de mapas respondió HTTP ${respuesta.status}.`);
+
+  const resultado = z.object({
+    features: z.array(z.object({
+      properties: z.object({
+        osm_type: z.string(),
+        osm_id: z.number(),
+        name: z.string().optional(),
+        state: z.string().optional(),
+        country: z.string().optional(),
+      }),
+      geometry: z.object({ coordinates: z.tuple([z.number(), z.number()]) }),
+    })),
+  }).safeParse(await respuesta.json());
+  if (!resultado.success) {
+    throw new Error("El servicio de mapas devolvió resultados con un formato inesperado.");
+  }
+  return resultado.data.features
+    .filter((lugar) => lugar.properties.name)
+    .map(({ properties: p, geometry }) => ({
+      id: `${p.osm_type}${p.osm_id}`,
+      nombre: p.name!,
+      detalle: [p.name, p.state, p.country].filter((parte, i, partes) => parte && partes.indexOf(parte) === i).join(", "),
+      lat: geometry.coordinates[1],
+      lng: geometry.coordinates[0],
+    }));
+}
