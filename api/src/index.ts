@@ -1,20 +1,28 @@
 import express from "express";
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import mongoose from "mongoose";
+import { config } from "./config.js";
+import { rutasAuth } from "./rutas/auth.js";
+import { rutasPerfil } from "./rutas/perfil.js";
+import { rutasViajes } from "./rutas/viajes.js";
 
 const app = express();
-app.use(cors({ origin: process.env.CORS_ORIGIN }));
+// credentials: el front manda la cookie de sesión en cada pedido.
+app.use(cors({ origin: config.webUrl, credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
-
-const port = Number(process.env.PORT) || 4000;
+app.use("/auth", rutasAuth);
+app.use("/perfil", rutasPerfil);
+app.use("/viajes", rutasViajes);
 
 mongoose
-  .connect(process.env.MONGODB_URI as string)
+  .connect(config.mongoUri)
   .then(() => {
     console.log("Mongo conectado");
-    app.listen(port, () => console.log(`API en puerto ${port}`));
+    app.listen(config.puerto, () => console.log(`API en puerto ${config.puerto}`));
   })
   .catch((err) => {
     console.error("No se pudo conectar a Mongo", err);
