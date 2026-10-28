@@ -26,6 +26,15 @@ export function useMarcarTarea(viajeId: string) {
   })
 }
 
+export function useMarcarRequisito(viajeId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ requisitoId, cumplido }: { requisitoId: string; cumplido: boolean }) =>
+      baul.marcarRequisito(viajeId, requisitoId, cumplido),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['viajes', viajeId, 'requisitos'] }),
+  })
+}
+
 export function useAgregarTarea(viajeId: string) {
   const queryClient = useQueryClient()
   return useMutation({

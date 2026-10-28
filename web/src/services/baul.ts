@@ -1,46 +1,57 @@
 import { z } from 'zod'
-import { demora, documentos as documentosMock, requisitos as requisitosMock, sinBackend, tareas as tareasMock } from '../mocks/datos'
+import { bajarArchivo, pedir } from '../lib/api'
 import { DocumentoSchema } from '../types/documento'
 import { RequisitoSchema, TareaSchema, type NuevaTarea } from '../types/tarea'
 
 export async function tareas(viajeId: string) {
-  await demora()
-  return z.array(TareaSchema).parse(tareasMock.filter((t) => t.viajeId === viajeId))
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/tareas`, { schema: z.array(TareaSchema) })
 }
 
 export async function requisitos(viajeId: string) {
-  await demora()
-  return z.array(RequisitoSchema).parse(requisitosMock.filter((r) => r.viajeId === viajeId))
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/tareas/requisitos`, { schema: z.array(RequisitoSchema) })
 }
 
 /** Los documentos del viaje y los personales de quien usa la app. */
 export async function documentos(viajeId: string) {
-  await demora()
-  return z.array(DocumentoSchema).parse(documentosMock.filter((d) => d.viajeId === viajeId || d.personal))
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/documentos`, { schema: z.array(DocumentoSchema) })
 }
 
 export async function documentosPersonales() {
-  await demora()
-  return z.array(DocumentoSchema).parse(documentosMock.filter((d) => d.personal))
+  return pedir('/documentos-personales', { schema: z.array(DocumentoSchema) })
 }
 
 export function marcarTarea(viajeId: string, tareaId: string, hecha: boolean) {
-  return sinBackend('baul.marcarTarea', { viajeId, tareaId, hecha })
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/tareas/${encodeURIComponent(tareaId)}`, { method: 'PATCH', body: { hecha } })
+}
+
+export function marcarRequisito(viajeId: string, requisitoId: string, cumplido: boolean) {
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/tareas/requisitos/${encodeURIComponent(requisitoId)}`, {
+    method: 'PATCH',
+    body: { cumplido },
+  })
 }
 
 export function agregarTarea(viajeId: string, datos: NuevaTarea) {
-  return sinBackend('baul.agregarTarea', { viajeId, ...datos })
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/tareas`, { method: 'POST', body: datos, schema: TareaSchema })
 }
 
 export function subirDocumento(viajeId: string, archivo: File) {
-  return sinBackend('baul.subirDocumento', { viajeId, archivo: archivo.name })
+  const form = new FormData()
+  form.set('archivo', archivo)
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/documentos`, {
+    method: 'POST',
+    body: form,
+    schema: DocumentoSchema,
+  })
 }
 
 export function subirDocumentoPersonal(archivo: File) {
-  return sinBackend('baul.subirDocumentoPersonal', { archivo: archivo.name })
+  const form = new FormData()
+  form.set('archivo', archivo)
+  return pedir('/documentos-personales', { method: 'POST', body: form, schema: DocumentoSchema })
 }
 
 /** El backend devuelve el link (o la copia guardada en el dispositivo, sin conexión). */
 export function abrirDocumento(id: string) {
-  return sinBackend('baul.abrirDocumento', { id })
+  return bajarArchivo(`/documentos/${encodeURIComponent(id)}`)
 }

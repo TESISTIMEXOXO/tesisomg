@@ -31,6 +31,12 @@ export const NuevaOpcionSchema = z.object({
   detalle: z.string().nullable(),
 })
 
+export const CrearVotacionSchema = z.object({
+  pregunta: z.string().trim().min(1, 'Escribí la pregunta.'),
+  categoria: z.enum(['destino', 'fechas', 'alojamiento', 'actividad', 'comida']),
+})
+
 export type Opcion = z.infer<typeof OpcionSchema>
 export type Votacion = z.infer<typeof VotacionSchema>
 export type NuevaOpcion = z.infer<typeof NuevaOpcionSchema>
+export type CrearVotacion = z.infer<typeof CrearVotacionSchema>

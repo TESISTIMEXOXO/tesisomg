@@ -54,6 +54,21 @@ export async function mandarCodigo(email: string, proposito: Proposito, contrase
   });
 }
 
+export async function mandarInvitacion(email: string, viaje: { nombre: string; destino: string; codigo: string }, invita: string) {
+  const link = `${config.webUrl}/unirse/${viaje.codigo}`;
+  if (!transporte) {
+    console.info(`[invitación sin SMTP] Enlace para ${email}: ${link}`);
+    return;
+  }
+  await transporte.sendMail({
+    from: config.mail.remitente,
+    to: email,
+    subject: `${invita} te invitó a ${viaje.nombre}`,
+    text: `${invita} te invitó a organizar ${viaje.nombre} (${viaje.destino}) en Pinz.\n\nUnite desde este enlace: ${link}`,
+    html: `<p>${invita} te invitó a organizar <strong>${viaje.nombre}</strong> (${viaje.destino}) en Pinz.</p><p><a href="${link}">Unirme al viaje</a></p>`,
+  });
+}
+
 export type ResultadoVerificacion =
   | { ok: true; email: string; contrasenaHash: string | null }
   | { ok: false; motivo: "codigo-vencido" | "sin-intentos" }

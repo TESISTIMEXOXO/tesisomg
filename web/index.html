@@ -7,14 +7,6 @@
     <meta name="description" content="Pinz organiza el viaje del grupo: qué día se sale, dónde se duerme, qué se votó y quién puso cuánta plata." />
     <meta name="theme-color" content="#ff8a66" />
     <title>Pinz</title>
-    <script>
-      /* Antes de pintar, para que el modo oscuro no parpadee. La lógica completa está en src/lib/tema.ts. */
-      try {
-        var tema = localStorage.getItem('pinz-tema')
-        var oscuro = tema === 'oscuro' || (tema === 'sistema' && matchMedia('(prefers-color-scheme: dark)').matches)
-        if (oscuro && location.pathname !== '/') document.documentElement.dataset.tema = 'oscuro'
-      } catch (e) {}
-    </script>
   </head>
   <body>
     <div id="root"></div>

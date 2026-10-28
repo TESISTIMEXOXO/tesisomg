@@ -3,6 +3,17 @@ import { PersonaSchema } from './persona'
 
 export const EtapaSchema = z.enum(['previaje', 'viaje', 'post'])
 
+export const LugarViajeSchema = z.object({
+  nombre: z.string(),
+  lat: z.number(),
+  lng: z.number(),
+})
+
+export const SugerenciaLugarSchema = LugarViajeSchema.extend({
+  id: z.string(),
+  detalle: z.string(),
+})
+
 export const ViajeSchema = z.object({
   id: z.string(),
   nombre: z.string(),
@@ -10,6 +21,7 @@ export const ViajeSchema = z.object({
   /** Fechas en formato AAAA-MM-DD. Sin fechas, el grupo todavía no las decidió. */
   fechaIda: z.iso.date().nullable(),
   fechaVuelta: z.iso.date().nullable(),
+  ubicacion: LugarViajeSchema.nullable().default(null),
   personas: z.array(PersonaSchema),
   /** Lo que le falta hacer a quien está usando la app, en una línea. */
   pendiente: z.string().nullable(),
@@ -23,6 +35,7 @@ export const NuevoViajeSchema = z
     destino: z.string().trim().min(1, 'Contanos a dónde van.'),
     fechaIda: z.iso.date().nullable(),
     fechaVuelta: z.iso.date().nullable(),
+    ubicacion: LugarViajeSchema.nullable(),
   })
   .refine((v) => !v.fechaIda || !v.fechaVuelta || v.fechaVuelta >= v.fechaIda, {
     message: 'La vuelta tiene que ser después de la ida.',
@@ -67,6 +80,8 @@ export const EmergenciasSchema = z.object({
 
 export type Etapa = z.infer<typeof EtapaSchema>
 export type Viaje = z.infer<typeof ViajeSchema>
+export type LugarViaje = z.infer<typeof LugarViajeSchema>
+export type SugerenciaLugar = z.infer<typeof SugerenciaLugarSchema>
 export type NuevoViaje = z.infer<typeof NuevoViajeSchema>
 export type Invitacion = z.infer<typeof InvitacionSchema>
 export type ResumenViaje = z.infer<typeof ResumenViajeSchema>

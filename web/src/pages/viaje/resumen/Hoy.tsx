@@ -29,7 +29,7 @@ export function Hoy() {
             {hoy.aviso}
           </p>
         )}
-        <MapaSlot puntos={hoy.puntos} personas={hoy.ubicaciones} />
+        <MapaSlot puntos={hoy.puntos} personas={hoy.ubicaciones} centro={viaje.ubicacion} />
         {enElLugar > 0 && (
           <p className="text-meta text-tinta-suave">
             {enElLugar} de {viaje.personas.length} compartiendo su ubicación

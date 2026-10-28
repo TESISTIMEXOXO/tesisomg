@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import * as lugares from '../services/viajes'
 import { useSesion } from './auth'
 import * as viajes from '../services/viajes'
 import type { NuevoViaje, Viaje } from '../types/viaje'
@@ -9,6 +10,16 @@ export function useViajes() {
     queryKey: ['viajes', sesion?.id],
     queryFn: viajes.listar,
     enabled: Boolean(sesion?.id),
+  })
+}
+
+export function useBuscarLugares(consulta: string) {
+  return useQuery({
+    queryKey: ['lugares', consulta],
+    queryFn: () => lugares.buscarLugares(consulta),
+    enabled: consulta.trim().length >= 3,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
   })
 }
 

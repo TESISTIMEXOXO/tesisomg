@@ -1,11 +1,12 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { TextField } from '../../components/ui/TextField'
 import { TripCard } from '../../components/ui/TripCard'
-import { useCrearViaje } from '../../hooks/viajes'
+import { useBuscarLugares, useCrearViaje } from '../../hooks/viajes'
 import { rangoDeFechas } from '../../lib/fechas'
 import { NuevoViajeSchema } from '../../types/viaje'
+import type { SugerenciaLugar } from '../../types/viaje'
 
 type Errores = Partial<Record<'nombre' | 'destino' | 'fechaVuelta', string>>
 
@@ -15,14 +16,27 @@ export function NuevoViaje() {
   const crear = useCrearViaje()
   const [nombre, setNombre] = useState('')
   const [destino, setDestino] = useState('')
+  const [ubicacion, setUbicacion] = useState<SugerenciaLugar | null>(null)
+  const [consulta, setConsulta] = useState('')
   const [fechaIda, setFechaIda] = useState('')
   const [fechaVuelta, setFechaVuelta] = useState('')
   const [sinFechas, setSinFechas] = useState(false)
   const [errores, setErrores] = useState<Errores>({})
+  const sugerencias = useBuscarLugares(consulta)
+
+  useEffect(() => {
+    const texto = destino.trim()
+    const temporizador = window.setTimeout(
+      () => setConsulta(texto.length >= 3 && ubicacion?.nombre !== destino ? texto : ''),
+      450,
+    )
+    return () => window.clearTimeout(temporizador)
+  }, [destino, ubicacion])
 
   const datos = {
     nombre,
-    destino,
+    destino: ubicacion?.nombre ?? destino,
+    ubicacion: ubicacion ? { nombre: ubicacion.nombre, lat: ubicacion.lat, lng: ubicacion.lng } : null,
     fechaIda: sinFechas || !fechaIda ? null : fechaIda,
     fechaVuelta: sinFechas || !fechaVuelta ? null : fechaVuelta,
   }
@@ -39,6 +53,10 @@ export function NuevoViaje() {
       setErrores(nuevos)
       return
     }
+    if (!resultado.data.ubicacion) {
+      setErrores({ destino: 'Elegí una ubicación de la lista para mostrarla en el mapa.' })
+      return
+    }
     setErrores({})
     crear.mutate(resultado.data, { onSuccess: () => navigate('/viajes') })
   }
@@ -52,8 +70,36 @@ export function NuevoViaje() {
           placeholder="Bariloche"
           value={destino}
           error={errores.destino}
-          onChange={(evento) => setDestino(evento.target.value)}
+          onChange={(evento) => {
+            setDestino(evento.target.value)
+            setUbicacion(null)
+          }}
         />
+        {consulta && (
+          <div className="-mt-4 rounded-md trazo bg-papel-elevado p-2" role="listbox" aria-label="Lugares sugeridos">
+            {sugerencias.isPending && <p className="p-3 text-meta text-tinta-suave">Buscando lugares…</p>}
+            {sugerencias.error && <p role="alert" className="p-3 text-meta text-negativo">No pudimos buscar lugares. Revisá la conexión y probá de nuevo.</p>}
+            {sugerencias.data?.map((lugar) => (
+              <button
+                key={lugar.id}
+                type="button"
+                role="option"
+                aria-selected={ubicacion?.id === lugar.id}
+                onClick={() => {
+                  setDestino(lugar.nombre)
+                  setUbicacion(lugar)
+                  setConsulta('')
+                  setErrores((actuales) => ({ ...actuales, destino: undefined }))
+                }}
+                className="flex min-h-toque w-full flex-col items-start rounded-sm px-3 py-2 text-left hover:bg-papel-hundido"
+              >
+                <span className="font-bold">{lugar.nombre}</span>
+                <span className="text-meta text-tinta-suave">{lugar.detalle}</span>
+              </button>
+            ))}
+            {sugerencias.data?.length === 0 && <p className="p-3 text-meta text-tinta-suave">No encontramos lugares con ese nombre.</p>}
+          </div>
+        )}
         <TextField
           label="¿Cómo se llama el viaje?"
           hint="Como lo nombrarían en el grupo."
@@ -100,7 +146,7 @@ export function NuevoViaje() {
         <p className="text-sobretitulo uppercase">Así se va a ver</p>
         <TripCard
           title={nombre || 'Tu viaje'}
-          place={destino || 'Destino'}
+          place={ubicacion?.nombre || destino || 'Destino'}
           dates={rangoDeFechas(datos.fechaIda, datos.fechaVuelta)}
           stage="previaje"
         />

@@ -1,25 +1,11 @@
-/*
- * El tema es una preferencia del dispositivo, no del perfil: vive en localStorage y no pasa por el backend.
- * index.html repite esta resolución en un script en línea para aplicarla antes de pintar.
- */
 export const PREFERENCIAS_TEMA = ['claro', 'oscuro', 'sistema'] as const
 export type PreferenciaTema = (typeof PREFERENCIAS_TEMA)[number]
 
-const CLAVE = 'pinz-tema'
 const sistemaOscuro = window.matchMedia('(prefers-color-scheme: dark)')
 const suscriptores = new Set<() => void>()
 
-let preferencia = leerGuardada()
+let preferencia: PreferenciaTema = 'claro'
 let soloClaro = false
-
-function leerGuardada(): PreferenciaTema {
-  try {
-    const guardada = localStorage.getItem(CLAVE)
-    return PREFERENCIAS_TEMA.find((opcion) => opcion === guardada) ?? 'claro'
-  } catch {
-    return 'claro'
-  }
-}
 
 function aplicar() {
   const oscuro = !soloClaro && (preferencia === 'oscuro' || (preferencia === 'sistema' && sistemaOscuro.matches))
@@ -38,11 +24,6 @@ export function preferenciaTema() {
 
 export function elegirTema(nueva: PreferenciaTema) {
   preferencia = nueva
-  try {
-    localStorage.setItem(CLAVE, nueva)
-  } catch {
-    // Sin almacenamiento el tema dura lo que la pestaña.
-  }
   aplicar()
   suscriptores.forEach((avisar) => avisar())
 }
