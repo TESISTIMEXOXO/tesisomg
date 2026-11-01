@@ -24,5 +24,7 @@ export const config = {
     /** smtp://usuario:clave@host:587. Sin esto, el código de ingreso se muestra en la consola. */
     smtpUrl: process.env.SMTP_URL,
     remitente: process.env.MAIL_FROM || "Pinz <hola@pinz.app>",
+    /** A dónde llega el aviso de cada consulta de "Escribinos". Sin esto, al mismo remitente. */
+    equipo: process.env.CONTACTO_EQUIPO || process.env.MAIL_FROM || "Pinz <hola@pinz.app>",
   },
 };

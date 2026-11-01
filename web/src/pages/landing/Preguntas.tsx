@@ -1,6 +1,5 @@
-import { ChevronRight } from 'lucide-react'
 import { Pin } from '../../components/marca/Pin'
-import { Button } from '../../components/ui/Button'
+import { FormularioContacto } from './FormularioContacto'
 import { Bajada, Seccion, TARJETA, Titular } from './Seccion'
 import { inclinado } from './movimiento'
 
@@ -49,10 +48,7 @@ function Contacto() {
     <aside className={`relative flex flex-col items-start gap-3.5 bg-sol px-7 py-8 max-lg:order-last lg:w-85 lg:flex-none ${TARJETA}`}>
       <h3 className="font-display text-titulo-1 font-black lg:text-display lg:tracking-marca">¿Te quedó alguna duda?</h3>
       <p className="text-cuerpo-lg font-semibold">Escribinos y te respondemos.</p>
-      {/* PENDIENTE: falta definir el canal de contacto (mail o formulario). Hasta entonces el botón queda deshabilitado. */}
-      <Button variant="secundario" iconRight={ChevronRight} disabled>
-        Escribinos
-      </Button>
+      <FormularioContacto />
       <span
         className="absolute right-2.5 -bottom-5 motion-safe:animate-bob lg:static lg:mt-auto lg:self-center"
         style={inclinado(-6)}
