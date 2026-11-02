@@ -12,7 +12,7 @@ const PREGUNTAS = [
   },
   {
     pregunta: '¿Tienen que registrarse todos?',
-    respuesta: 'Para votar y cargar gastos, sí. Se entra con Google, Apple o el mail, sin crear otra contraseña.',
+    respuesta: 'Para votar y cargar gastos, sí. Se entra con Google o con tu mail.',
     giro: 0.8,
     signo: 'bg-mar rotate-6',
   },
@@ -34,10 +34,9 @@ const PREGUNTAS = [
     giro: -0.5,
     signo: 'bg-cielo -rotate-6',
   },
-  // PENDIENTE: el equipo todavía no definió el modelo de precios. No inventar una respuesta.
   {
-    pregunta: '¿Es gratis?',
-    respuesta: '[Definir el modelo de precios]',
+    pregunta: '¿Hay que instalar algo?',
+    respuesta: 'No. Pinz es una web: la abrís desde el navegador, en el celu o en la compu.',
     giro: 1,
     signo: 'bg-durazno rotate-5',
   },
@@ -69,7 +68,7 @@ export function Preguntas() {
       </div>
       <div className="mt-6.5 flex flex-col gap-6.5 lg:mt-14 lg:flex-row">
         <Contacto />
-        <div className="grid flex-1 items-start gap-3.5 lg:grid-cols-2 lg:gap-6.5">
+        <div className="grid flex-1 gap-3.5 lg:grid-cols-2 lg:gap-6.5">
           {PREGUNTAS.map(({ pregunta, respuesta, giro, signo }) => (
             <article
               key={pregunta}

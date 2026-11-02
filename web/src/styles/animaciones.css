@@ -9,8 +9,16 @@
   --animate-cinta: lp-cinta 36s linear infinite;
   /* La duración y el desfase de cada pinz que camina salen del largo del camino. */
   --animate-camino: lp-camino 1s linear infinite;
+  --animate-paso: lp-paso 0.7s ease-in-out infinite;
+  /* steps: si el navegador no entiende el linear() que les pone Camino, no hay explosión y nada se rompe. */
+  --animate-llegada: lp-llegada 1s steps(1, end) infinite;
+  --animate-humo: lp-humo-crece 1s steps(1, end) infinite, lp-humo-aparece 1s steps(1, end) infinite;
   --animate-repisa: lp-repisa 3.2s ease-in-out infinite;
   --animate-asoma: pz-asoma 0.45s var(--ease-rebote) 1;
+  --animate-ventana: pz-ventana 0.25s var(--ease-rebote) 1;
+  --animate-fundido: pz-fundido 0.2s ease-out 1 both;
+  /* Arranca lento: el tramo que se ve al entrar se dibuja con calma y el resto de la página, de corrido. */
+  --animate-trazar: lp-trazar 3s cubic-bezier(0.55, 0.055, 0.675, 0.19) 1 backwards;
 
   @keyframes lp-bob {
     0%,
@@ -51,6 +59,51 @@
     }
   }
 
+  @keyframes lp-paso {
+    0%,
+    100% {
+      transform: translateY(0) rotate(-4deg);
+    }
+    25% {
+      transform: translateY(-9%) rotate(0deg);
+    }
+    50% {
+      transform: translateY(0) rotate(4deg);
+    }
+    75% {
+      transform: translateY(-9%) rotate(0deg);
+    }
+  }
+
+  @keyframes lp-llegada {
+    from {
+      transform: scale(1);
+      opacity: 1;
+    }
+    to {
+      transform: scale(1.25);
+      opacity: 0;
+    }
+  }
+
+  @keyframes lp-humo-crece {
+    from {
+      transform: scale(0.35);
+    }
+    to {
+      transform: translateY(-12%) scale(1);
+    }
+  }
+
+  @keyframes lp-humo-aparece {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 0.55;
+    }
+  }
+
   @keyframes lp-repisa {
     0%,
     100% {
@@ -58,6 +111,38 @@
     }
     50% {
       transform: translateY(0) rotate(var(--r, 0deg));
+    }
+  }
+
+  @keyframes pz-ventana {
+    from {
+      transform: translateY(12px) scale(0.96);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+
+  /* El guion va solo en los keyframes: al terminar el trazo queda entero, sin guion que repintar. Usa pathLength="1". */
+  @keyframes lp-trazar {
+    from {
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dasharray: 1;
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes pz-fundido {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
     }
   }
 
@@ -69,11 +154,6 @@
       transform: none;
     }
   }
-}
-
-/* Para frenar una animación en loop, como la cinta al pasar el mouse. */
-@utility pausada {
-  animation-play-state: paused;
 }
 
 @keyframes lp-barra {

@@ -19,7 +19,7 @@ type CintaProps = {
 function Cinta({ destinos, className, giro, animacion }: CintaProps) {
   return (
     <div className={`absolute -inset-x-20 -translate-y-1/2 overflow-hidden trazo-grueso-t trazo-grueso-b shadow-cinta ${className}`} style={{ rotate: `${giro}deg` }}>
-      <div className="flex w-max motion-safe:animate-cinta hover:pausada" style={animacion}>
+      <div className="flex w-max motion-safe:animate-cinta" style={animacion}>
         {[0, 1].map((vuelta) => (
           <ul
             key={vuelta}

@@ -1,4 +1,5 @@
-import { useRef } from 'react'
+import { useState } from 'react'
+import { Outlet } from 'react-router-dom'
 import { Camino } from '../../components/landing/Camino'
 import { useSoloClaro } from '../../hooks/tema'
 import { BarraLanding } from './BarraLanding'
@@ -21,11 +22,13 @@ import { TresEtapas } from './TresEtapas'
  */
 export function Landing() {
   useSoloClaro()
-  const landingRef = useRef<HTMLDivElement>(null)
+  /* En estado y no en un ref: así el camino se mide antes del primer cuadro y aparece junto con el texto. */
+  const [landing, setLanding] = useState<HTMLDivElement | null>(null)
 
   return (
-    <div ref={landingRef} className="relative overflow-clip bg-papel">
-      <Camino contenedorRef={landingRef} />
+    <div ref={setLanding} className="relative overflow-clip bg-papel">
+      <Outlet />
+      <Camino contenedor={landing} />
       <BarraLanding />
       <main>
         <Hero />

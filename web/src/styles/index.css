@@ -113,7 +113,6 @@
   --spacing-control: 50px;
   --spacing-nav: 68px;
   --spacing-avatar: 34px;
-  --spacing-lateral: 240px;
 
   --container-contenido: 1200px;
 
@@ -154,21 +153,24 @@
   --color-aviso: var(--aviso);
   --color-foco: var(--tinta);
 
-  --shadow-chica: 2px 2px 0 var(--contorno);
-  --shadow-dura: 4px 4px 0 var(--contorno);
-  --shadow-grande: 6px 6px 0 var(--contorno);
+  --shadow-chica: 2px 2px 0 var(--sombra);
+  --shadow-dura: 4px 4px 0 var(--sombra);
+  --shadow-grande: 6px 6px 0 var(--sombra);
   /* Las cintas de destinos de la landing: de borde a borde, la sombra cae solo hacia abajo. */
-  --shadow-cinta: 0 6px 0 var(--contorno);
+  --shadow-cinta: 0 6px 0 var(--sombra);
 }
 
 /*
- * tinta es el texto; contorno, el trazo y la sombra dura. En claro son el mismo color.
- * En oscuro un contorno negro desaparece contra el fondo: pasa a ser un gris violeta más claro
- * que las superficies (3:1 sobre papel-elevado, el mínimo para el borde de un campo) y más
- * apagado que el texto, así la sombra se lee como un canto y no como un brillo.
+ * tinta es el texto; contorno, el trazo; sombra, la sombra dura. En claro son el mismo color.
+ * En oscuro la app es negra y un contorno negro desaparecería: el trazo pasa a un gris neutro
+ * (3:1 sobre papel-elevado, el mínimo para el borde de un campo) y la sombra a uno más apagado,
+ * así se lee como un canto y no como un brillo.
+ * Los colores no cambian con el tema: contrastan con el negro. Por eso lo que tiene fondo de tinte
+ * es una isla clara, con el mismo tinte y el mismo texto oscuro que en el tema claro.
  */
 :root,
-.tema-claro {
+.tema-claro,
+[data-tema="oscuro"] [class*="-tinte"] {
   --papel: #fff8ee;
   --papel-elevado: #ffffff;
   --papel-hundido: #f6eedf;
@@ -192,30 +194,21 @@
   color-scheme: light;
 }
 
-/* El contorno no vuelve al claro: un botón coral en la página oscura lleva el mismo canto que las tarjetas. */
+/* El contorno y la sombra no vuelven al claro: un botón coral en la página oscura lleva el mismo canto que las tarjetas. */
 :root {
   --contorno: #1c1b22;
+  --sombra: #1c1b22;
 }
 
 [data-tema="oscuro"] {
-  --papel: #1a1820;
-  --papel-elevado: #262330;
-  --papel-hundido: #141318;
-  --linea: #3d3946;
-  --tinta: #f3ece1;
-  --tinta-suave: #bbb4c5;
-  --contorno: #716a85;
-  --coral-tinte: #3e2a27;
-  --sol-tinte: #3c2f1d;
-  --mar-tinte: #1f3832;
-  --lavanda-tinte: #2f2a47;
-  --cielo-tinte: #203547;
-  --durazno-tinte: #3d2c24;
-  --rosa-tinte: #3e2633;
-  --arena-tinte: #37302a;
-  --noche-tinte: #292c4a;
-  --mostaza-tinte: #3b301c;
-  --bosque-tinte: #253624;
+  --papel: #000000;
+  --papel-elevado: #161616;
+  --papel-hundido: #0d0d0d;
+  --linea: #2b2b2b;
+  --tinta: #f5f5f5;
+  --tinta-suave: #a3a3a3;
+  --contorno: #6b6b6b;
+  --sombra: #3d3d3d;
   --positivo: #63d6a4;
   --negativo: #ff9282;
   --aviso: #f2c35a;
@@ -313,11 +306,16 @@
   }
 
   /* En base, para que un text-* del mismo elemento le gane. */
-  .tema-claro {
+  .tema-claro,
+  [data-tema="oscuro"] [class*="-tinte"] {
     color: var(--tinta);
   }
 
   html {
+    /* El lugar de la barra de scroll, siempre: sin esto la página y la navegación se corren entre pantallas cortas y largas. */
+    scrollbar-gutter: stable;
+    /* iOS ignora user-scalable=no del viewport: esto frena el pellizco y el doble toque. */
+    touch-action: pan-x pan-y;
     background-color: var(--papel);
     color: var(--tinta);
     font-family: var(--font-texto);
@@ -325,6 +323,15 @@
     line-height: 24px;
     font-weight: 500;
     -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+   * Con una ventana abierta el fondo no scrollea.
+   * El oscurecido del dialog no llega al gutter: el color es el mismo que da tinta/50 sobre el papel.
+   */
+  html:has(dialog[open]) {
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--tinta) 50%, var(--papel));
   }
 
   /* Sin esto, una fila con scroll horizontal adentro de un fieldset ensancha toda la página. */

@@ -1,8 +1,8 @@
-import { Check, Siren } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Cargando, NoCargo } from '../../components/marca/Estados'
 import { ArchivosSlot } from '../../components/slots/ArchivosSlot'
-import { Button, ButtonLink } from '../../components/ui/Button'
+import { Button } from '../../components/ui/Button'
 import { Chip } from '../../components/ui/Chip'
 import { Tarjeta } from '../../components/ui/Tarjeta'
 import { TextField } from '../../components/ui/TextField'
@@ -141,12 +141,6 @@ export function Baul() {
             <ArchivosSlot archivos={documentosDelViaje} onSubir={(archivo) => subir.mutate(archivo)} onAbrir={(id) => abrir.mutate(id)} />
           )}
         </Tarjeta>
-
-        {etapa !== 'viaje' && (
-          <ButtonLink to={`/viajes/${viaje.id}/emergencias`} variant="secundario" icon={Siren} className="self-start">
-            Datos de emergencia
-          </ButtonLink>
-        )}
       </div>
     </div>
   )

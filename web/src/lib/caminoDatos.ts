@@ -13,13 +13,15 @@ export const CAMINO_DESKTOP: DatosCamino = {
   cada: 6,
   velocidad: 90,
   plaza: { ancla: 'cta', extraAncho: 70, extraAlto: 44 },
-  caminantes: [['chispa'], ['siesta', 'vuelto'], ['postal'], ['cumbre', 'trasnoche', 'morfi'], ['nono'], ['valija', 'brujula']],
+  rodeo: { entrada: 213, caida: 300, aire: 10, esquivaTitulo: true, caminantes: [['valija', 'brujula'], ['morfi']] },
+  caminantes: [['chispa'], ['siesta', 'vuelto'], ['postal'], ['cumbre', 'trasnoche', 'morfi'], ['nono']],
+  separacionGrupos: 0.6,
   grupos: [
     {
       ancla: null,
       borde: null,
       yOriginal: 0,
-      puntos: [[-80, 690], [48, 669.8], [92.7, 669.8], [137.3, 684.3], [182, 710], [226.6, 735.6], [271.3, 770.2], [315.9, 813.8], [360.6, 910.9], [739, 1421], [828.3, 1471.3], [917.6, 1518.1], [1006.9, 1538.2], [1078.3, 1562.8], [1184.4, 1747], [1273.7, 1770.4], [1318.3, 1798.3], [1363, 1846.3], [1407.6, 1897.7], [1520, 1980]],
+      puntos: [[-320, 638], [-200, 638], [-80, 642], [0, 650], [48, 659], [92.7, 671], [137.3, 688], [182, 710], [226.6, 735.6], [271.3, 770.2], [315.9, 813.8], [360.6, 910.9], [739, 1421], [828.3, 1471.3], [917.6, 1518.1], [1006.9, 1538.2], [1078.3, 1562.8], [1184.4, 1747], [1273.7, 1770.4], [1318.3, 1798.3], [1363, 1846.3], [1407.6, 1897.7], [1520, 1980]],
     },
     { fuera: 1700 },
     {
@@ -87,13 +89,15 @@ export const CAMINO_MOBILE: DatosCamino = {
   cada: 6,
   velocidad: 60,
   plaza: { ancla: 'cta', extraAncho: 40, extraAlto: 30 },
+  rodeo: { entrada: 100, caida: 130, aire: 6, esquivaTitulo: false, caminantes: [['valija', 'brujula'], ['morfi']] },
   caminantes: [['chispa'], ['siesta', 'vuelto'], ['postal'], ['cumbre', 'trasnoche', 'morfi']],
+  separacionGrupos: 1,
   grupos: [
     {
       ancla: null,
       borde: null,
       yOriginal: 0,
-      puntos: [[-60, 600], [10, 604], [60, 625], [110, 690], [250, 960], [320, 1120], [350, 1270], [380, 1300], [470, 1330]],
+      puntos: [[-200, 585], [-120, 590], [-60, 596], [0, 606], [40, 622], [80, 655], [110, 690], [250, 960], [320, 1120], [350, 1270], [380, 1300], [470, 1330]],
     },
     { fuera: 560 },
     {

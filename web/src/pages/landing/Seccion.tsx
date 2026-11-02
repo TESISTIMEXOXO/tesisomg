@@ -10,7 +10,7 @@ type SeccionProps = {
 /** Una sección de la landing: sin fondo propio (el papel es continuo) y por encima del camino. */
 export function Seccion({ id, className = '', children, ...resto }: SeccionProps) {
   return (
-    <section id={id} className="relative z-10 scroll-mt-6 px-4 md:px-6" {...resto}>
+    <section id={id} className="relative z-10 scroll-mt-20 lg:scroll-mt-24px-4 md:px-6" {...resto}>
       <div className={`mx-auto max-w-contenido ${className}`}>{children}</div>
     </section>
   )

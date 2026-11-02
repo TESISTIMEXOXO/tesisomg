@@ -1,7 +1,8 @@
-import { ChevronRight, X } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { useId, useRef, useState, type FormEvent } from 'react'
 import { Button } from '../../components/ui/Button'
 import { TextField } from '../../components/ui/TextField'
+import { Ventana } from '../../components/ui/Ventana'
 import { useEnviarConsulta } from '../../hooks/contacto'
 import { codigoDeError } from '../../services/auth'
 import { ConsultaSchema } from '../../types/contacto'
@@ -61,24 +62,7 @@ export function FormularioContacto() {
       <Button variant="secundario" iconRight={ChevronRight} onClick={abrir}>
         Escribinos
       </Button>
-      <dialog
-        ref={ventana}
-        aria-labelledby={idTitulo}
-        onClose={alCerrar}
-        onClick={(evento) => evento.target === ventana.current && cerrar()}
-        className="m-auto w-full max-w-none bg-transparent p-4 backdrop:bg-tinta/50"
-      >
-        {/* El dialog ocupa todo el ancho y el padding es el margen en mobile; un click ahí cierra. */}
-        <div className="relative mx-auto flex max-w-136 flex-col gap-5 rounded-lg trazo-grueso bg-papel-elevado p-6 text-tinta shadow-grande md:p-8">
-          <button
-            type="button"
-            onClick={cerrar}
-            aria-label="Cerrar"
-            className="absolute top-3 right-3 grid size-11 place-items-center rounded-full hover:bg-papel-hundido"
-          >
-            <X size={22} aria-hidden />
-          </button>
-
+      <Ventana ventanaRef={ventana} idTitulo={idTitulo} onClose={alCerrar}>
           {enviar.isSuccess ? (
             <div role="status" className="flex flex-col items-start gap-4 pr-10">
               <h2 id={idTitulo} className="font-display text-titulo-1 font-black">
@@ -146,8 +130,7 @@ export function FormularioContacto() {
               </Button>
             </form>
           )}
-        </div>
-      </dialog>
+      </Ventana>
     </>
   )
 }
