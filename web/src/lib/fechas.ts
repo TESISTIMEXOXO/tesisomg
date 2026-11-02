@@ -56,3 +56,55 @@ export function diasHasta(fecha: string, hoy = new Date()) {
   const inicioDeHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
   return Math.round((leerFecha(fecha).getTime() - inicioDeHoy.getTime()) / UN_DIA)
 }
+
+function aISO(fecha: Date) {
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0')
+  const dia = String(fecha.getDate()).padStart(2, '0')
+  return `${fecha.getFullYear()}-${mes}-${dia}`
+}
+
+export function hoyISO(hoy = new Date()) {
+  return aISO(hoy)
+}
+
+export function sumarDias(fecha: string, dias: number) {
+  const d = leerFecha(fecha)
+  d.setDate(d.getDate() + dias)
+  return aISO(d)
+}
+
+/** El mismo día en otro mes; si no existe (31 de febrero), el último del mes. */
+export function sumarMeses(fecha: string, meses: number) {
+  const d = leerFecha(fecha)
+  const destino = new Date(d.getFullYear(), d.getMonth() + meses, 1)
+  const ultimo = new Date(destino.getFullYear(), destino.getMonth() + 1, 0).getDate()
+  destino.setDate(Math.min(d.getDate(), ultimo))
+  return aISO(destino)
+}
+
+/** Los siete días de la semana de esa fecha, de lunes a domingo. */
+export function diasDeLaSemana(fecha: string) {
+  const lunes = sumarDias(fecha, -((leerFecha(fecha).getDay() + 6) % 7))
+  return Array.from({ length: 7 }, (_, i) => sumarDias(lunes, i))
+}
+
+/** Todos los días de la grilla del mes, con las semanas completas. */
+export function semanasDelMes(fecha: string) {
+  const d = leerFecha(fecha)
+  const ultimo = aISO(new Date(d.getFullYear(), d.getMonth() + 1, 0))
+  const dias: string[] = []
+  let lunes = diasDeLaSemana(aISO(new Date(d.getFullYear(), d.getMonth(), 1)))[0] as string
+  while (lunes <= ultimo) {
+    dias.push(...diasDeLaSemana(lunes))
+    lunes = sumarDias(lunes, 7)
+  }
+  return dias
+}
+
+/** "Faltan 12 días": el título de Inicio antes de salir. */
+export function tituloPrevaje(fechaIda: string | null, hoy = new Date()) {
+  if (!fechaIda) return 'Todavía sin fechas'
+  const faltan = diasHasta(fechaIda, hoy)
+  if (faltan <= 0) return 'Hoy'
+  return faltan === 1 ? 'Falta 1 día' : `Faltan ${faltan} días`
+}

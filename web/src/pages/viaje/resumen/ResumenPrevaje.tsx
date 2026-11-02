@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Cargando, NoCargo } from '../../../components/marca/Estados'
+import { TituloPantalla } from '../../../components/marca/TituloPantalla'
 import { PinzNote } from '../../../components/marca/PinzNote'
 import { BalanceRow } from '../../../components/ui/BalanceRow'
 import { Tarjeta } from '../../../components/ui/Tarjeta'
@@ -9,6 +10,7 @@ import { useSaldos } from '../../../hooks/gastos'
 import { useResumenViaje } from '../../../hooks/viajes'
 import { useVotaciones } from '../../../hooks/votaciones'
 import { useViajeActual } from '../../../layouts/contextoViaje'
+import { tituloPrevaje } from '../../../lib/fechas'
 import { direccionDe } from '../../../lib/saldo'
 import { conMayuscula } from '../../../lib/texto'
 import { IrAAgregarGasto } from '../IrAAgregarGasto'
@@ -35,7 +37,9 @@ export function ResumenPrevaje() {
   const pendienteDePlata = saldos.data?.saldos.find((s) => direccionDe(s.monto) === 'pendiente')
 
   return (
-    <div className="grid gap-8 lg:grid-cols-3 lg:gap-7">
+    <>
+      <TituloPantalla titulo={tituloPrevaje(viaje.fechaIda)} />
+      <div className="grid gap-8 lg:grid-cols-3 lg:gap-7">
       <div className="flex flex-col gap-8 lg:col-span-2 lg:gap-7">
         {resumen.data.pendientes.length > 0 && (
           <section aria-label="Tus pendientes" className="rounded-lg trazo bg-sol-tinte p-4 shadow-dura">
@@ -53,8 +57,8 @@ export function ResumenPrevaje() {
         {principal ? (
           <TarjetaVotacion votacion={principal} personas={viaje.personas} soloLectura={!puedeEditar(viaje.personas)} />
         ) : (
-          <Tarjeta titulo="Decidir">
-            <p className="text-tinta-suave">No hay votaciones abiertas. Proponé algo desde Plan.</p>
+          <Tarjeta titulo="Por decidir">
+            <p className="text-tinta-suave">No hay votaciones abiertas. Proponé algo desde Listas.</p>
           </Tarjeta>
         )}
       </div>
@@ -65,10 +69,10 @@ export function ResumenPrevaje() {
             Tocá un avatar del encabezado para ver qué le falta a cada uno.
           </PinzNote>
         )}
-        <Tarjeta titulo="Checklist" extra={<span className="font-display text-titulo-1 font-black numeros">{hechas}/{total}</span>}>
+        <Tarjeta titulo="Para llevar" extra={<span className="font-display text-titulo-1 font-black numeros">{hechas}/{total}</span>}>
           <div
             role="progressbar"
-            aria-label="Checklist del viaje"
+            aria-label="Lo que falta llevar"
             aria-valuemin={0}
             aria-valuemax={total}
             aria-valuenow={hechas}
@@ -84,8 +88,8 @@ export function ResumenPrevaje() {
               </li>
             ))}
           </ul>
-          <Link to={`/viajes/${viaje.id}/baul`} className="self-start rounded-sm font-extrabold underline decoration-2 underline-offset-4">
-            Ver el Baúl
+          <Link to={`/viajes/${viaje.id}/listas`} className="self-start rounded-sm font-extrabold underline decoration-2 underline-offset-4">
+            Ver las listas
           </Link>
         </Tarjeta>
         <Tarjeta titulo="Cuentas" fondo="bg-lavanda-tinte">
@@ -97,6 +101,7 @@ export function ResumenPrevaje() {
           <IrAAgregarGasto viajeId={viaje.id} personas={viaje.personas} />
         </Tarjeta>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

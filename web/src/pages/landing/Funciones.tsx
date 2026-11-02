@@ -132,7 +132,7 @@ export function Funciones() {
           </span>
           <Asoma pinz="vuelto" grados={-6} size={84} className="-top-7.5 -right-2.5 lg:hidden" />
         </Card>
-        <Card ancla="b-iti" sobretitulo="Plan" titulo="Día por día." texto="El itinerario del grupo, con aviso si dos planes se pisan." className="bg-papel-elevado">
+        <Card ancla="b-iti" sobretitulo="Agenda" titulo="Día por día." texto="El itinerario del grupo, con aviso si dos planes se pisan." className="bg-papel-elevado">
           <ol>
             <ItineraryItem time="09:40" title="Salida a la aerosilla" place="Base Cerro Catedral" done />
             <ItineraryItem time="13:30" title="Almuerzo en el refugio" place="Refugio Lynch" current last />

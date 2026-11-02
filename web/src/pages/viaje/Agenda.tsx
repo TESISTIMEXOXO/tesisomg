@@ -1,25 +1,22 @@
-import { CalendarPlus, Plus } from 'lucide-react'
+import { CalendarPlus, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { Cargando, NoCargo } from '../../components/marca/Estados'
-import { PinzNote } from '../../components/marca/PinzNote'
+import { NoCargo } from '../../components/marca/Estados'
+import { TituloPantalla } from '../../components/marca/TituloPantalla'
 import { MapaSlot } from '../../components/slots/MapaSlot'
 import { Button } from '../../components/ui/Button'
 import { CampoFecha } from '../../components/ui/CampoFecha'
+import { Chip } from '../../components/ui/Chip'
 import { ItineraryItem } from '../../components/ui/ItineraryItem'
 import { SelectorLugar } from '../../components/ui/SelectorLugar'
-import { Tarjeta } from '../../components/ui/Tarjeta'
 import { TextField } from '../../components/ui/TextField'
 import { useAgregarActividad, useExportarCalendario, useItinerario } from '../../hooks/itinerario'
 import { useActualizarEtapas } from '../../hooks/viajes'
-import { useCrearVotacion, useProponerOpcion, useVotaciones } from '../../hooks/votaciones'
 import { useViajeActual } from '../../layouts/contextoViaje'
-import { diaCorto } from '../../lib/fechas'
+import { diaCorto, diasDeLaSemana, hoyISO, leerFecha, mesYAnio, semanasDelMes, sumarDias, sumarMeses } from '../../lib/fechas'
 import { conMayuscula } from '../../lib/texto'
-import type { ItemItinerario, PuntoMapa } from '../../types/itinerario'
+import type { PuntoMapa } from '../../types/itinerario'
 import type { EtapaViaje, LugarViaje } from '../../types/viaje'
-import { CrearVotacionSchema, type Votacion } from '../../types/votacion'
 import { puedeEditar } from './nombres'
-import { TarjetaVotacion } from './TarjetaVotacion'
 
 type EtapaBorrador = Omit<EtapaViaje, 'id' | 'ubicacion'> & { ubicacion: LugarViaje | null }
 
@@ -166,129 +163,6 @@ function EditarEtapas({
   )
 }
 
-function ProponerOpcion({ viajeId, votaciones }: { viajeId: string; votaciones: Votacion[] }) {
-  const proponer = useProponerOpcion(viajeId)
-  const abiertas = votaciones.filter((v) => v.estado === 'abierta')
-  const [abierto, setAbierto] = useState(false)
-  const [votacionId, setVotacionId] = useState(abiertas[0]?.id ?? '')
-  const [nombre, setNombre] = useState('')
-  const [error, setError] = useState<string>()
-
-  if (abiertas.length === 0) return null
-
-  function enviar(evento: FormEvent) {
-    evento.preventDefault()
-    if (!nombre.trim()) {
-      setError('Contanos qué proponés.')
-      return
-    }
-    setError(undefined)
-    proponer.mutate(
-      { votacionId, nombre, detalle: null },
-      {
-        onSuccess: () => {
-          setNombre('')
-          setAbierto(false)
-        },
-      },
-    )
-  }
-
-  if (!abierto) {
-    return (
-      <Button variant="secundario" icon={Plus} className="self-start" onClick={() => setAbierto(true)}>
-        Proponer una opción
-      </Button>
-    )
-  }
-
-  return (
-    <form onSubmit={enviar} noValidate className="flex flex-col gap-4 rounded-lg trazo bg-papel-hundido p-5">
-      <label className="flex flex-col gap-1.5">
-        <span className="text-etiqueta">¿Para qué votación?</span>
-        <select
-          value={votacionId}
-          onChange={(evento) => setVotacionId(evento.target.value)}
-          className="min-h-control rounded-sm trazo bg-papel-elevado px-4 font-semibold shadow-chica"
-        >
-          {abiertas.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.pregunta}
-            </option>
-          ))}
-        </select>
-      </label>
-      <TextField label="Tu propuesta" value={nombre} error={error} onChange={(evento) => setNombre(evento.target.value)} />
-      {proponer.isError && (
-        <p role="alert" className="font-semibold text-negativo">
-          No pudimos guardar la propuesta. Revisá la conexión y probá de nuevo.
-        </p>
-      )}
-      <div className="flex gap-3">
-        <Button type="submit" variant="secundario" disabled={proponer.isPending}>
-          Proponer
-        </Button>
-        <Button variant="fantasma" onClick={() => setAbierto(false)}>
-          Cancelar
-        </Button>
-      </div>
-    </form>
-  )
-}
-
-function CrearVotacion({ viajeId }: { viajeId: string }) {
-  const crear = useCrearVotacion(viajeId)
-  const [abierto, setAbierto] = useState(false)
-  const [pregunta, setPregunta] = useState('')
-  const [categoria, setCategoria] = useState<'destino' | 'fechas' | 'alojamiento' | 'actividad' | 'comida'>('actividad')
-  const [error, setError] = useState<string>()
-
-  function enviar(evento: FormEvent) {
-    evento.preventDefault()
-    const resultado = CrearVotacionSchema.safeParse({ pregunta, categoria })
-    if (!resultado.success) {
-      setError(resultado.error.issues[0]?.message ?? 'Revisá la pregunta.')
-      return
-    }
-    setError(undefined)
-    crear.mutate(resultado.data, {
-      onSuccess: () => {
-        setPregunta('')
-        setAbierto(false)
-      },
-    })
-  }
-
-  if (!abierto) {
-    return <Button variant="secundario" icon={Plus} className="self-start" onClick={() => setAbierto(true)}>Crear votación</Button>
-  }
-
-  return (
-    <form onSubmit={enviar} noValidate className="flex flex-col gap-4 rounded-lg trazo bg-papel-hundido p-5">
-      <TextField label="¿Qué quieren decidir?" placeholder="¿Dónde nos alojamos?" value={pregunta} error={error} onChange={(evento) => setPregunta(evento.target.value)} />
-      <label className="flex flex-col gap-1.5">
-        <span className="text-etiqueta">Categoría</span>
-        <select
-          value={categoria}
-          onChange={(evento) => setCategoria(evento.target.value as typeof categoria)}
-          className="min-h-control rounded-sm trazo bg-papel-elevado px-4 font-semibold shadow-chica"
-        >
-          <option value="destino">Destino</option>
-          <option value="fechas">Fechas</option>
-          <option value="alojamiento">Alojamiento</option>
-          <option value="actividad">Actividad</option>
-          <option value="comida">Comida</option>
-        </select>
-      </label>
-      {crear.isError && <p role="alert" className="font-semibold text-negativo">No pudimos crear la votación. Revisá la conexión y probá de nuevo.</p>}
-      <div className="flex gap-3">
-        <Button type="submit" variant="secundario" disabled={crear.isPending}>{crear.isPending ? 'Guardando…' : 'Crear'}</Button>
-        <Button variant="fantasma" onClick={() => setAbierto(false)}>Cancelar</Button>
-      </div>
-    </form>
-  )
-}
-
 function AgregarActividad({ viajeId }: { viajeId: string }) {
   const agregar = useAgregarActividad(viajeId)
   const [abierto, setAbierto] = useState(false)
@@ -369,24 +243,49 @@ function AgregarActividad({ viajeId }: { viajeId: string }) {
   )
 }
 
-function porDia(items: ItemItinerario[]) {
-  const dias = new Map<string, ItemItinerario[]>()
-  for (const item of items) dias.set(item.fecha, [...(dias.get(item.fecha) ?? []), item])
-  return [...dias.entries()]
+type Vista = 'dia' | 'semana' | 'mes'
+
+const VISTAS: { id: Vista; nombre: string }[] = [
+  { id: 'dia', nombre: 'Día' },
+  { id: 'semana', nombre: 'Semana' },
+  { id: 'mes', nombre: 'Mes' },
+]
+
+function CeldaDia({ fecha, cantidad, elegido, mesActual = true, onElegir }: { fecha: string; cantidad: number; elegido: boolean; mesActual?: boolean; onElegir: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={`${diaCorto(fecha)}: ${cantidad === 1 ? '1 actividad' : `${cantidad} actividades`}`}
+      aria-pressed={elegido}
+      onClick={onElegir}
+      className={`flex min-h-toque flex-col items-center justify-center rounded-sm trazo-fino numeros ${elegido ? 'tema-claro bg-coral' : 'bg-papel-elevado'} ${mesActual ? '' : 'opacity-50'}`}
+    >
+      <span className="font-bold">{leerFecha(fecha).getDate()}</span>
+      {cantidad > 0 && <span aria-hidden className="size-1.5 rounded-full bg-tinta" />}
+    </button>
+  )
 }
 
-/** Plan: Decidir (votaciones), el itinerario día por día y el mapa. En Post-viaje queda como recuerdo. */
-export function Plan() {
+/** Agenda: el plan día por día, con vistas de semana y mes y el mapa del día elegido. */
+export function Agenda() {
   const { viaje, etapa } = useViajeActual()
-  const votaciones = useVotaciones(viaje.id)
   const itinerario = useItinerario(viaje.id)
   const exportar = useExportarCalendario(viaje.id)
+  const [vista, setVista] = useState<Vista>('dia')
+  const [fechaElegida, setFechaElegida] = useState<string | null>(null)
   const soloLectura = etapa === 'post' || !puedeEditar(viaje.personas)
   const etapas = viaje.etapas.length
     ? viaje.etapas
     : viaje.ubicacion
       ? [{ id: 'destino', destino: viaje.destino, fechaIda: viaje.fechaIda, fechaVuelta: viaje.fechaVuelta, ubicacion: viaje.ubicacion }]
       : []
+  const actividades = itinerario.data ?? []
+  const fechas = actividades.map((actividad) => actividad.fecha).sort()
+  const hoy = hoyISO()
+  const primera = fechas.includes(hoy) ? hoy : (fechas[0] ?? viaje.fechaIda ?? hoy)
+  const fecha = fechaElegida ?? primera
+  const delDia = actividades.filter((actividad) => actividad.fecha === fecha)
+  const cantidad = (dia: string) => actividades.filter((actividad) => actividad.fecha === dia).length
   const centroMapa = etapas[0]?.ubicacion ?? viaje.ubicacion
   const puntosMapa: PuntoMapa[] = [
     ...etapas.map((etapaViaje) => ({
@@ -396,7 +295,7 @@ export function Plan() {
       lng: etapaViaje.ubicacion.lng,
       tipo: 'alojamiento' as const,
     })),
-    ...(itinerario.data ?? []).flatMap((actividad) => actividad.lat !== null && actividad.lng !== null
+    ...delDia.flatMap((actividad) => actividad.lat !== null && actividad.lng !== null
       ? [{
           id: actividad.id,
           nombre: actividad.lugar ?? actividad.titulo,
@@ -407,73 +306,48 @@ export function Plan() {
       : []),
   ]
 
-  return (
-    <div className="flex flex-col gap-12">
-      <section aria-labelledby="destinos" className="flex flex-col gap-5">
-        <h2 id="destinos" className="font-display text-display font-black">Destinos y fechas</h2>
-        <ol className="flex flex-wrap gap-3">
-          {etapas.map((etapaViaje, indice) => (
-            <li key={etapaViaje.id} className="rounded-full trazo-fino bg-papel-hundido px-4 py-2 font-semibold">
-              {indice + 1}. {etapaViaje.destino}
-              {etapaViaje.fechaIda && etapaViaje.fechaVuelta && ` · ${diaCorto(etapaViaje.fechaIda)}–${diaCorto(etapaViaje.fechaVuelta)}`}
-            </li>
-          ))}
-        </ol>
-        {!soloLectura && <EditarEtapas viaje={viaje} soloLectura={soloLectura} />}
-      </section>
-      <section aria-labelledby="decidir" className="flex flex-col gap-5">
-        <h2 id="decidir" className="font-display text-display font-black">
-          Decidir
-        </h2>
-        {votaciones.isPending && <Cargando pinz="chispa" />}
-        {votaciones.error && <NoCargo error={votaciones.error} onReintentar={() => votaciones.refetch()} />}
-        {votaciones.data?.length === 0 && (
-          <PinzNote tipo="vacio" pinz="chispa" title="Todavía no hay ideas">
-            Guarden acá los planes que aparezcan y después los votan.
-          </PinzNote>
-        )}
-        {votaciones.data && votaciones.data.length > 0 && (
-          <div className="grid gap-6 lg:grid-cols-2">
-            {votaciones.data.map((votacion) => (
-              <TarjetaVotacion key={votacion.id} votacion={votacion} personas={viaje.personas} soloLectura={soloLectura} />
-            ))}
-          </div>
-        )}
-        {!soloLectura && <CrearVotacion viajeId={viaje.id} />}
-        {!soloLectura && votaciones.data && <ProponerOpcion viajeId={viaje.id} votaciones={votaciones.data} />}
-      </section>
+  function mover(direccion: 1 | -1) {
+    if (vista === 'dia') setFechaElegida(sumarDias(fecha, direccion))
+    else if (vista === 'semana') setFechaElegida(sumarDias(fecha, direccion * 7))
+    else setFechaElegida(sumarMeses(fecha, direccion))
+  }
 
-      <section aria-labelledby="itinerario" className="grid gap-6 lg:grid-cols-2">
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 id="itinerario" className="font-display text-display font-black">
-              Itinerario
-            </h2>
-            <Button
-              variant="secundario"
-              size="sm"
-              icon={CalendarPlus}
-              disabled={exportar.isPending || !itinerario.data?.length}
-              onClick={() => exportar.mutate()}
-            >
-              Sincronizar con el calendario
-            </Button>
-          </div>
-          {itinerario.isPending && <p className="text-tinta-suave">Cargando el itinerario…</p>}
-          {itinerario.error && (
-            <p role="alert" className="text-negativo">
-              No pudimos cargar el itinerario.
-            </p>
-          )}
-          {!soloLectura && <AgregarActividad viajeId={viaje.id} />}
-          {itinerario.data?.length === 0 && (
-            <p className="text-tinta-suave">Todavía no hay actividades. Sumá al menos una para armar el día.</p>
-          )}
-          {itinerario.data &&
-            porDia(itinerario.data).map(([fecha, items]) => (
-              <Tarjeta key={fecha} titulo={conMayuscula(diaCorto(fecha))}>
-                <ol>
-                  {items.map((item, i) => (
+  function abrirDia(dia: string) {
+    setFechaElegida(dia)
+    setVista('dia')
+  }
+
+  return (
+    <>
+      <TituloPantalla titulo="El plan, día por día" pinz="brujula" />
+      <div className="flex flex-col gap-12">
+        <section aria-labelledby="itinerario" className="grid gap-6 lg:grid-cols-2">
+          <div className="flex flex-col gap-5">
+            <h3 id="itinerario" className="sr-only">Actividades</h3>
+            <div className="flex gap-2" role="group" aria-label="Cómo ver la agenda">
+              {VISTAS.map(({ id, nombre }) => (
+                <Chip key={id} tone={etapa} selected={vista === id} onClick={() => setVista(id)}>
+                  {nombre}
+                </Chip>
+              ))}
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <Button variant="fantasma" size="sm" icon={ChevronLeft} aria-label="Anterior" onClick={() => mover(-1)} />
+              <p aria-live="polite" className="font-bold">
+                {vista === 'dia' && conMayuscula(diaCorto(fecha))}
+                {vista === 'semana' && `Semana del ${diaCorto(diasDeLaSemana(fecha)[0] ?? fecha)}`}
+                {vista === 'mes' && mesYAnio(fecha)}
+              </p>
+              <Button variant="fantasma" size="sm" icon={ChevronRight} aria-label="Siguiente" onClick={() => mover(1)} />
+            </div>
+            {itinerario.isPending && <p className="text-tinta-suave">Cargando el itinerario…</p>}
+            {itinerario.error && <NoCargo error={itinerario.error} onReintentar={() => itinerario.refetch()} />}
+            {vista === 'dia' && itinerario.data && (
+              delDia.length === 0 ? (
+                <p className="text-tinta-suave">No hay actividades para este día.</p>
+              ) : (
+                <ol aria-label="El día">
+                  {delDia.map((item, i) => (
                     <ItineraryItem
                       key={item.id}
                       time={item.hora}
@@ -481,17 +355,54 @@ export function Plan() {
                       place={item.lugar}
                       done={item.estado === 'hecho'}
                       current={etapa === 'viaje' && item.estado === 'ahora'}
-                      last={i === items.length - 1}
+                      last={i === delDia.length - 1}
                     />
                   ))}
                 </ol>
-              </Tarjeta>
-            ))}
-        </div>
-        <div className="flex flex-col gap-5 lg:pt-17">
+              )
+            )}
+            {vista === 'semana' && (
+              <div className="grid grid-cols-7 gap-1">
+                {diasDeLaSemana(fecha).map((dia) => (
+                  <CeldaDia key={dia} fecha={dia} cantidad={cantidad(dia)} elegido={dia === fecha} onElegir={() => abrirDia(dia)} />
+                ))}
+              </div>
+            )}
+            {vista === 'mes' && (
+              <div className="grid grid-cols-7 gap-1">
+                {semanasDelMes(fecha).map((dia) => (
+                  <CeldaDia key={dia} fecha={dia} cantidad={cantidad(dia)} elegido={dia === fecha} mesActual={dia.slice(0, 7) === fecha.slice(0, 7)} onElegir={() => abrirDia(dia)} />
+                ))}
+              </div>
+            )}
+            {!soloLectura && <AgregarActividad viajeId={viaje.id} />}
+            <Button
+              variant="secundario"
+              size="sm"
+              icon={CalendarPlus}
+              className="self-start"
+              disabled={exportar.isPending || !actividades.length}
+              onClick={() => exportar.mutate()}
+            >
+              Sincronizar con el calendario
+            </Button>
+          </div>
           <MapaSlot puntos={puntosMapa} personas={[]} centro={centroMapa} alto="grande" />
-        </div>
-      </section>
-    </div>
+        </section>
+
+        <section aria-labelledby="destinos" className="flex flex-col gap-5">
+          <h3 id="destinos" className="font-display text-titulo-1 font-black">Destinos y fechas</h3>
+          <ol className="flex flex-wrap gap-3">
+            {etapas.map((etapaViaje, indice) => (
+              <li key={etapaViaje.id} className="rounded-full trazo-fino bg-papel-hundido px-4 py-2 font-semibold">
+                {indice + 1}. {etapaViaje.destino}
+                {etapaViaje.fechaIda && etapaViaje.fechaVuelta && ` · ${diaCorto(etapaViaje.fechaIda)}–${diaCorto(etapaViaje.fechaVuelta)}`}
+              </li>
+            ))}
+          </ol>
+          {!soloLectura && <EditarEtapas viaje={viaje} soloLectura={soloLectura} />}
+        </section>
+      </div>
+    </>
   )
 }

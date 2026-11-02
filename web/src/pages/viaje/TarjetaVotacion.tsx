@@ -10,7 +10,7 @@ import { nombreEnElGrupo } from './nombres'
 type TarjetaVotacionProps = {
   votacion: Votacion
   personas: Persona[]
-  /** Sin edición: votación de solo lectura (lectores, o el Plan como recuerdo en Post-viaje). */
+  /** Sin edición: votación de solo lectura (lectores, o Listas como recuerdo en Post-viaje). */
   soloLectura?: boolean
 }
 

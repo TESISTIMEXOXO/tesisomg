@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Cargando, NoCargo } from '../../components/marca/Estados'
+import { TituloPantalla } from '../../components/marca/TituloPantalla'
 import { PinzNote } from '../../components/marca/PinzNote'
 import { SaldosSlot } from '../../components/slots/SaldosSlot'
 import { Button } from '../../components/ui/Button'
@@ -70,7 +71,9 @@ export function Cuentas() {
   if (gastos.error) return <NoCargo error={gastos.error} onReintentar={() => gastos.refetch()} />
 
   return (
-    <div className="grid gap-8 lg:grid-cols-2 lg:gap-7">
+    <>
+      <TituloPantalla titulo="Cuentas claras" pinz="vuelto" />
+      <div className="grid gap-8 lg:grid-cols-2 lg:gap-7">
       <div className="flex flex-col gap-8 lg:gap-7">
         <Tarjeta titulo="Cómo quedás" fondo="bg-lavanda-tinte">
           {saldos.error ? (
@@ -156,6 +159,7 @@ export function Cuentas() {
         />
       )}
       {!editable && <p className="text-tinta-suave">Tenés rol de lector: podés ver las cuentas, pero no cargar gastos.</p>}
-    </div>
+      </div>
+    </>
   )
 }
