@@ -5,12 +5,12 @@ import {
   calcularNetos,
   dividirIguales,
   dividirPorConsumo,
-  partesPorReglaVieja,
   saldosPara,
   transferenciasDirectas,
   transferenciasSimplificadas,
   type Parte,
 } from "../cuentas/calculo.js";
+import { gastosDe, pagosDe, partesDe } from "../cuentas/delViaje.js";
 import { Usuario } from "../modelos/Usuario.js";
 import { esOrganizador, puedeEditarViaje, registrarMovimiento, viajeDelMiembro } from "../viajePublico.js";
 
@@ -44,24 +44,6 @@ const GastoSchema = z.discriminatedUnion("division", [
 type ViajeConGastos = NonNullable<Awaited<ReturnType<typeof viajeDelMiembro>>>;
 
 type Gasto = ViajeConGastos["gastos"][number];
-
-/** Las partes de un gasto. Los guardados antes de la migración se calculan con la regla vieja. */
-function partesDe(viaje: ViajeConGastos, gasto: Gasto) {
-  if (gasto.partes.length > 0) {
-    return gasto.partes.map((parte) => ({ personaId: parte.personaId.toString(), monto: parte.monto }));
-  }
-  return partesPorReglaVieja(
-    gasto.monto,
-    gasto.division,
-    gasto.participantes.map((id) => id.toString()),
-    viaje.miembros.map((miembro) => miembro.usuarioId.toString()),
-    gasto.pagoId.toString(),
-  );
-}
-
-function gastosDe(viaje: ViajeConGastos) {
-  return viaje.gastos.map((gasto) => ({ pagoId: gasto.pagoId.toString(), partes: partesDe(viaje, gasto) }));
-}
 
 function gastoPublico(viaje: ViajeConGastos, gasto: Gasto) {
   return {
@@ -144,15 +126,6 @@ function armarGasto(viaje: ViajeConGastos, usuarioId: string, datos: z.infer<typ
 function puedeCambiarGasto(viaje: ViajeConGastos, gasto: Gasto, usuarioId: string) {
   if (!puedeEditarViaje(viaje, usuarioId)) return false;
   return (gasto.creadoPorId ?? gasto.pagoId).toString() === usuarioId || esOrganizador(viaje, usuarioId);
-}
-
-function pagosDe(viaje: ViajeConGastos) {
-  return viaje.pagos.map((pago) => ({
-    deudorId: pago.deudorId.toString(),
-    acreedorId: pago.acreedorId.toString(),
-    monto: pago.monto,
-    estado: pago.estado,
-  }));
 }
 
 function transferenciasDe(viaje: ViajeConGastos) {

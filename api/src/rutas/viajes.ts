@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { z } from "zod";
 import { mandarInvitacion } from "../auth/mail.js";
 import { requiereSesion } from "../auth/sesion.js";
+import { netosDe } from "../cuentas/delViaje.js";
 import { Usuario } from "../modelos/Usuario.js";
 import { Viaje } from "../modelos/Viaje.js";
 import { filtroMiembro, puedeEditarViaje, registrarMovimiento, viajeDelMiembro, viajePublico } from "../viajePublico.js";
@@ -235,6 +236,10 @@ rutasViajes.delete("/:id/miembros/yo", async (req, res) => {
   }
   if (miembro.rol === "organizador" && viaje.miembros.length > 1) {
     res.status(409).json({ error: "transferir-organizacion-antes-de-salir" });
+    return;
+  }
+  if ((netosDe(viaje).get(usuarioId) ?? 0) !== 0) {
+    res.status(409).json({ error: "saldo-pendiente" });
     return;
   }
   if (viaje.miembros.length === 1) await viaje.deleteOne();

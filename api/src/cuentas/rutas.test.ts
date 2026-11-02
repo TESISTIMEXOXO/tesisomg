@@ -380,3 +380,40 @@ test("los saldos usan la moneda del viaje, no la de quien mira, y crear un viaje
   const { cuerpo } = await api<{ moneda: string }>("Nacho", "GET", `/viajes/${viaje.id}/gastos/saldos`);
   assert.equal(cuerpo.moneda, "USD");
 });
+
+test("cuando el último saldo llega a 0 queda todos a mano, y recién ahí se puede salir del viaje", async () => {
+  const viajeId = await viajeVacio();
+  const ruta = `/viajes/${viajeId}/gastos`;
+  const estado = async () => (await api<{ estadoCuentas: string | null }>("Nacho", "GET", `/viajes/${viajeId}`)).cuerpo.estadoCuentas;
+  assert.equal(await estado(), null);
+
+  await api("Santi", "POST", ruta, { descripcion: "Taxi", monto: 400, division: "iguales", participantes: [idDe("Santi"), idDe("Pedro")] });
+  assert.equal(await estado(), null);
+  const salida = await api("Pedro", "DELETE", `/viajes/${viajeId}/miembros/yo`);
+  assert.equal(salida.status, 409);
+  assert.deepEqual(salida.cuerpo, { error: "saldo-pendiente" });
+
+  const { cuerpo: pago } = await api<Pago>("Pedro", "POST", `${ruta}/pagos`, { personaId: idDe("Santi") });
+  assert.equal((await api("Pedro", "DELETE", `/viajes/${viajeId}/miembros/yo`)).status, 409);
+  await api("Santi", "POST", `${ruta}/pagos/${pago.id}/confirmar`);
+  assert.equal(await estado(), "todos a mano");
+  assert.equal((await api("Pedro", "DELETE", `/viajes/${viajeId}/miembros/yo`)).status, 204);
+});
+
+test("cada cambio en las cuentas deja una línea en los movimientos", async () => {
+  const viajeId = await viajeVacio();
+  const ruta = `/viajes/${viajeId}/gastos`;
+  const { cuerpo: gasto } = await api<GastoApi>("Santi", "POST", ruta, { descripcion: "Taxi", monto: 400, division: "iguales", participantes: [idDe("Santi"), idDe("Pedro")] });
+  await api("Santi", "PATCH", `${ruta}/${gasto.id}`, { descripcion: "Remís", monto: 600, division: "iguales", participantes: [idDe("Santi"), idDe("Pedro")] });
+  const { cuerpo: pago } = await api<Pago>("Pedro", "POST", `${ruta}/pagos`, { personaId: idDe("Santi") });
+  await api("Santi", "POST", `${ruta}/pagos/${pago.id}/rechazar`);
+  await api("Santi", "DELETE", `${ruta}/${gasto.id}`);
+  const viaje = await Viaje.findById(viajeId);
+  assert.deepEqual(viaje?.movimientos.map((movimiento) => movimiento.texto), [
+    "Santi cargó “Taxi”",
+    "Santi editó “Remís”",
+    "Pedro registró un pago a Santi",
+    "Santi rechazó el pago de Pedro",
+    "Santi borró “Remís”",
+  ]);
+});

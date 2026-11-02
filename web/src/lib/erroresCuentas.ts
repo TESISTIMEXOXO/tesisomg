@@ -12,9 +12,19 @@ const MENSAJES: Record<string, string> = {
   'no-existe': 'Eso ya no está. Actualizá la pantalla.',
 }
 
+function codigoDe(error: unknown) {
+  const cuerpo = error instanceof ErrorApi ? (error.cuerpo as { error?: unknown } | null) : null
+  return typeof cuerpo?.error === 'string' ? cuerpo.error : ''
+}
+
+/** Por qué no se pudo salir del grupo. */
+export function mensajeAlSalir(error: unknown) {
+  return codigoDe(error) === 'saldo-pendiente'
+    ? 'Todavía tenés plata pendiente en Cuentas: quedá a mano y salí del grupo.'
+    : 'No pudimos salir del grupo. Si sos organizador, primero transferí la organización.'
+}
+
 /** El mensaje para cada código de error de las cuentas. */
 export function mensajeDeCuentas(error: unknown) {
-  const cuerpo = error instanceof ErrorApi ? (error.cuerpo as { error?: unknown } | null) : null
-  const codigo = typeof cuerpo?.error === 'string' ? cuerpo.error : ''
-  return MENSAJES[codigo] ?? 'No pudimos guardar el cambio. Revisá la conexión y probá de nuevo.'
+  return MENSAJES[codigoDe(error)] ?? 'No pudimos guardar el cambio. Revisá la conexión y probá de nuevo.'
 }
