@@ -1,6 +1,7 @@
 import { Router } from "express";
 import mongoose from "mongoose";
 import { z } from "zod";
+import { calcularNetos, dividirIguales, saldosPara, transferenciasDirectas, transferenciasSimplificadas } from "../cuentas/calculo.js";
 import { Usuario } from "../modelos/Usuario.js";
 import { puedeEditarViaje, registrarMovimiento, viajeDelMiembro } from "../viajePublico.js";
 
@@ -13,31 +14,28 @@ const GastoSchema = z.object({
   participantes: z.array(z.string().min(1)).default([]),
 });
 
-function calcularNetos(viaje: NonNullable<Awaited<ReturnType<typeof viajeDelMiembro>>>) {
-  const netos = new Map(viaje.miembros.map((miembro) => [miembro.usuarioId.toString(), 0]));
-  for (const gasto of viaje.gastos) {
-    const pagadorId = gasto.pagoId.toString();
-    const miembros = gasto.division === "consumo" && gasto.participantes.length > 0
-      ? viaje.miembros.filter((miembro) => gasto.participantes.some((id) => id.toString() === miembro.usuarioId.toString()))
-      : viaje.miembros;
-    if (miembros.length === 0) continue;
-    netos.set(pagadorId, (netos.get(pagadorId) ?? 0) + gasto.monto);
-    const parte = Math.floor(gasto.monto / miembros.length);
-    let resto = gasto.monto - parte * miembros.length;
-    for (const miembro of miembros) {
-      const porcion = parte + (resto > 0 ? 1 : 0);
-      if (resto > 0) resto -= 1;
-      const usuarioId = miembro.usuarioId.toString();
-      netos.set(usuarioId, (netos.get(usuarioId) ?? 0) - porcion);
-    }
-  }
-  for (const pago of viaje.pagos) {
-    const deudorId = pago.deudorId.toString();
-    const acreedorId = pago.acreedorId.toString();
-    netos.set(deudorId, (netos.get(deudorId) ?? 0) + pago.monto);
-    netos.set(acreedorId, (netos.get(acreedorId) ?? 0) - pago.monto);
-  }
-  return netos;
+type ViajeConGastos = NonNullable<Awaited<ReturnType<typeof viajeDelMiembro>>>;
+
+/** Los gastos guardados todavía no tienen partes: se calculan con la regla de hoy. */
+function gastosDe(viaje: ViajeConGastos) {
+  const miembros = viaje.miembros.map((miembro) => miembro.usuarioId.toString());
+  return viaje.gastos.map((gasto) => {
+    const participantes = gasto.participantes.map((id) => id.toString());
+    const entre = gasto.division === "consumo" && participantes.length > 0
+      ? miembros.filter((id) => participantes.includes(id))
+      : miembros;
+    const pagoId = gasto.pagoId.toString();
+    return { pagoId, partes: dividirIguales(gasto.monto, entre, pagoId) };
+  });
+}
+
+function pagosDe(viaje: ViajeConGastos) {
+  return viaje.pagos.map((pago) => ({
+    deudorId: pago.deudorId.toString(),
+    acreedorId: pago.acreedorId.toString(),
+    monto: pago.monto,
+    estado: "confirmado" as const,
+  }));
 }
 
 rutasGastos.get("/", async (req, res) => {
@@ -112,16 +110,17 @@ rutasGastos.get("/saldos", async (req, res) => {
     res.status(404).json({ error: "no-existe" });
     return;
   }
-  const netos = calcularNetos(viaje);
-  const usuarioActual = await Usuario.findById(res.locals.usuarioId).select("moneda").exec();
+  const usuarioId = res.locals.usuarioId as string;
+  const conVos = saldosPara(usuarioId, transferenciasDirectas(gastosDe(viaje), pagosDe(viaje)));
+  const usuarioActual = await Usuario.findById(usuarioId).select("moneda").exec();
   res.json({
     viajeId: viaje._id.toString(),
     moneda: usuarioActual?.moneda ?? "ARS",
     saldos: viaje.miembros
-      .filter((miembro) => miembro.usuarioId.toString() !== (res.locals.usuarioId as string))
+      .filter((miembro) => miembro.usuarioId.toString() !== usuarioId)
       .map((miembro) => ({
         persona: { id: miembro.usuarioId.toString(), nombre: miembro.nombre, pinz: miembro.pinz ?? null },
-        monto: netos.get(miembro.usuarioId.toString()) ?? 0,
+        monto: conVos.get(miembro.usuarioId.toString()) ?? 0,
       })),
   });
 });
@@ -148,7 +147,7 @@ rutasGastos.post("/pagos", async (req, res) => {
     res.status(403).json({ error: "sin-permiso" });
     return;
   }
-  const netos = calcularNetos(viaje);
+  const netos = calcularNetos(gastosDe(viaje), pagosDe(viaje));
   const monto = Math.min(
     Math.max(0, -(netos.get(deudor.usuarioId.toString()) ?? 0)),
     Math.max(0, netos.get(acreedor.usuarioId.toString()) ?? 0),
@@ -174,27 +173,6 @@ rutasGastos.post("/simplificar", async (req, res) => {
     res.status(404).json({ error: "no-existe" });
     return;
   }
-  const netos = calcularNetos(viaje);
-  const personas = viaje.miembros.map((miembro) => ({
-    id: miembro.usuarioId.toString(),
-    nombre: miembro.nombre,
-    saldo: netos.get(miembro.usuarioId.toString()) ?? 0,
-  }));
-  const deudores = personas.filter((persona) => persona.saldo < 0).sort((a, b) => a.saldo - b.saldo);
-  const acreedores = personas.filter((persona) => persona.saldo > 0).sort((a, b) => b.saldo - a.saldo);
-  const transferencias: { de: string; a: string; monto: number }[] = [];
-  let i = 0;
-  let j = 0;
-  while (i < deudores.length && j < acreedores.length) {
-    const deudor = deudores[i];
-    const acreedor = acreedores[j];
-    if (!deudor || !acreedor) break;
-    const monto = Math.min(-deudor.saldo, acreedor.saldo);
-    if (monto > 0) transferencias.push({ de: deudor.id, a: acreedor.id, monto });
-    deudor.saldo += monto;
-    acreedor.saldo -= monto;
-    if (deudor.saldo === 0) i += 1;
-    if (acreedor.saldo === 0) j += 1;
-  }
+  const transferencias = transferenciasSimplificadas(calcularNetos(gastosDe(viaje), pagosDe(viaje)));
   res.json({ viajeId: viaje._id.toString(), transferencias });
 });
