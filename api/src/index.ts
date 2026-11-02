@@ -13,6 +13,7 @@ import { rutasPerfil } from "./rutas/perfil.js";
 import { rutasTareas } from "./rutas/tareas.js";
 import { rutasViajes } from "./rutas/viajes.js";
 import { rutasVotaciones } from "./rutas/votaciones.js";
+import { rutasUbicaciones } from "./rutas/ubicaciones.js";
 import { requiereSesion } from "./auth/sesion.js";
 
 const app = express();
@@ -21,7 +22,10 @@ app.use(cors({ origin: config.webUrl, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-app.get("/health", (_req, res) => res.json({ ok: true }));
+app.get("/health", (_req, res) => {
+  const conectado = mongoose.connection.readyState === 1;
+  res.status(conectado ? 200 : 503).json({ ok: conectado, database: conectado ? "connected" : "disconnected" });
+});
 app.use("/auth", rutasAuth);
 app.use("/contacto", rutasContacto);
 app.use("/perfil", rutasPerfil);
@@ -31,17 +35,22 @@ app.use("/documentos", requiereSesion, rutasArchivo);
 app.use("/viajes/:id/documentos", requiereSesion, rutasDocumentosViaje);
 app.use("/viajes/:id/votaciones", requiereSesion, rutasVotaciones);
 app.use("/viajes/:id/itinerario", requiereSesion, rutasItinerario);
+app.use("/viajes/:id/ubicaciones", requiereSesion, rutasUbicaciones);
 app.use("/viajes/:id/tareas", requiereSesion, rutasTareas);
 app.use("/viajes/:id/gastos", requiereSesion, rutasGastos);
 app.use("/viajes", rutasViajes);
 
-mongoose
-  .connect(config.mongoUri)
-  .then(() => {
-    console.log("Mongo conectado");
-    app.listen(config.puerto, () => console.log(`API en puerto ${config.puerto}`));
-  })
-  .catch((err) => {
-    console.error("No se pudo conectar a Mongo", err);
-    process.exit(1);
-  });
+async function iniciar() {
+  while (mongoose.connection.readyState !== 1) {
+    try {
+      await mongoose.connect(config.mongoUri, { serverSelectionTimeoutMS: 8000 });
+    } catch (error) {
+      console.error("No se pudo conectar a Mongo; se reintentará en 5 segundos", error);
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+  }
+  console.log("Mongo conectado");
+  app.listen(config.puerto, () => console.log(`API en puerto ${config.puerto}`));
+}
+
+void iniciar();

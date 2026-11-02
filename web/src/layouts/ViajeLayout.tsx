@@ -2,6 +2,7 @@ import { Briefcase, House, Plus, Route, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { Outlet, useMatch, useParams } from 'react-router-dom'
 import { Cargando, NoCargo } from '../components/marca/Estados'
+import { CompartirUbicacion } from '../components/slots/CompartirUbicacion'
 import { BottomNav, type ItemNav } from '../components/ui/BottomNav'
 import { ButtonLink } from '../components/ui/Button'
 import { useViaje } from '../hooks/viajes'
@@ -45,6 +46,7 @@ export function ViajeLayout() {
     contenido = (
       <>
         <EncabezadoViaje viaje={viaje} etapa={etapa} onCambiarEtapa={(nueva) => setEtapaElegida({ viajeId: viaje.id, etapa: nueva })} />
+        {etapa === 'viaje' && <CompartirUbicacion key={viaje.id} viajeId={viaje.id} />}
         <div className="pt-8 lg:pt-12">
           <Outlet context={contexto} />
         </div>

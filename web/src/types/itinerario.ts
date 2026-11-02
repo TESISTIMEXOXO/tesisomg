@@ -9,6 +9,8 @@ export const ItemItinerarioSchema = z.object({
   hora: z.iso.time({ precision: -1 }),
   titulo: z.string(),
   lugar: z.string().nullable(),
+  lat: z.number().nullable().default(null),
+  lng: z.number().nullable().default(null),
   /** Lo calcula el backend con la hora local: hecho, ahora (uno solo) o pendiente. */
   estado: z.enum(['hecho', 'ahora', 'pendiente']),
 })
@@ -18,6 +20,11 @@ export const NuevoItemItinerarioSchema = ItemItinerarioSchema.pick({
   hora: true,
   titulo: true,
   lugar: true,
+}).extend({
+  lat: z.number().min(-90).max(90).nullable().default(null),
+  lng: z.number().min(-180).max(180).nullable().default(null),
+}).refine((item) => (item.lat === null) === (item.lng === null), {
+  message: 'La latitud y longitud deben informarse juntas.',
 })
 
 /** Una parada del mapa: lo que contrata el slot de mapa. */

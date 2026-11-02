@@ -3,6 +3,7 @@ import * as lugares from '../services/viajes'
 import { useSesion } from './auth'
 import * as viajes from '../services/viajes'
 import type { NuevoViaje, Viaje } from '../types/viaje'
+import type { EtapaViaje } from '../types/viaje'
 
 export function useViajes() {
   const { data: sesion } = useSesion()
@@ -61,6 +62,14 @@ export function useCrearViaje() {
       )
       return queryClient.invalidateQueries({ queryKey })
     },
+  })
+}
+
+export function useActualizarEtapas(viajeId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (etapas: Omit<EtapaViaje, 'id'>[]) => viajes.actualizarEtapas(viajeId, etapas),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['viajes'] }),
   })
 }
 
