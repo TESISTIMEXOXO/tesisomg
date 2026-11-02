@@ -100,6 +100,7 @@ rutasViajes.post("/", async (req, res) => {
   const viaje = await Viaje.create({
     ...datos.data,
     creadoPor: usuario._id,
+    moneda: usuario.moneda,
     codigoInvitacion,
     miembros: [
       {
@@ -268,6 +269,7 @@ rutasViajes.post("/:id/repetir", async (req, res) => {
     fechaVuelta: null,
     ubicacion: original.ubicacion,
     creadoPor: usuario._id,
+    moneda: usuario.moneda,
     codigoInvitacion: crypto.randomUUID().replaceAll("-", "").slice(0, 6).toUpperCase(),
     miembros: pedido.data.modo === "mismas-personas"
       ? original.miembros.map((persona) => ({

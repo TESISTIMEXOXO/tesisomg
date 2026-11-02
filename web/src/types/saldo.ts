@@ -13,6 +13,8 @@ export const SaldoSchema = z.object({
 export const SaldosSchema = z.object({
   viajeId: z.string(),
   moneda: z.string(),
+  /** Si el viaje ya simplificó las cuentas: los saldos salen de la menor cantidad de pagos. */
+  simplificadas: z.boolean(),
   saldos: z.array(SaldoSchema),
 })
 

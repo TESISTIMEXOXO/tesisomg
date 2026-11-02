@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { Usuario } from "../modelos/Usuario.js";
 import { Viaje } from "../modelos/Viaje.js";
 import { partesPorReglaVieja } from "./calculo.js";
 
@@ -36,7 +37,9 @@ export async function migrarCuentas() {
       estado: pago.estado ?? "confirmado",
       resueltoEn: pago.resueltoEn ?? null,
     }));
-    await Viaje.collection.updateOne({ _id: viaje._id }, { $set: { gastos, pagos } });
+    const creador = await Usuario.findById(viaje.creadoPor).select("moneda").exec();
+    const moneda = viaje.moneda ?? creador?.moneda ?? "ARS";
+    await Viaje.collection.updateOne({ _id: viaje._id }, { $set: { gastos, pagos, moneda } });
   }
   return viajes.length;
 }

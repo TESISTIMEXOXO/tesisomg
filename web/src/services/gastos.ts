@@ -43,10 +43,7 @@ export function rechazarPago(viajeId: string, pagoId: string) {
 }
 
 export function simplificar(viajeId: string) {
-  return pedir(`/viajes/${encodeURIComponent(viajeId)}/gastos/simplificar`, {
-    method: 'POST',
-    schema: z.object({ viajeId: z.string(), transferencias: z.array(z.object({ de: z.string(), a: z.string(), monto: z.number().int() })) }),
-  })
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/gastos/simplificar`, { method: 'POST', schema: SaldosSchema })
 }
 
 /** Manda el comprobante para que el backend arme el gasto (HU-22). */

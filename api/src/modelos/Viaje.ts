@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { PINZ_IDS } from "./Usuario.js";
+import { MONEDAS, PINZ_IDS } from "./Usuario.js";
 
 type RolViaje = "organizador" | "miembro" | "lector";
 type CategoriaVotacion = "destino" | "fechas" | "alojamiento" | "actividad" | "comida";
@@ -31,6 +31,8 @@ export type ViajeData = {
   ubicacion: UbicacionDoc | null;
   creadoPor: mongoose.Types.ObjectId;
   miembros: MiembroDoc[];
+  moneda: (typeof MONEDAS)[number];
+  cuentasSimplificadas: boolean;
   codigoInvitacion: string;
   votaciones: VotacionDoc[];
   itinerario: ActividadDoc[];
@@ -179,6 +181,8 @@ const viajeSchema = new mongoose.Schema<ViajeData>(
     ubicacion: { type: ubicacionSchema, default: null },
     creadoPor: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario", required: true },
     miembros: { type: [miembroSchema], default: [] },
+    moneda: { type: String, enum: MONEDAS, default: "ARS" },
+    cuentasSimplificadas: { type: Boolean, default: false },
     codigoInvitacion: { type: String, required: true, unique: true, index: true },
     votaciones: { type: [votacionSchema], default: [] },
     itinerario: { type: [actividadSchema], default: [] },

@@ -156,7 +156,33 @@ function pagosDe(viaje: ViajeConGastos) {
 }
 
 function transferenciasDe(viaje: ViajeConGastos) {
-  return transferenciasDirectas(gastosDe(viaje), pagosDe(viaje));
+  const gastos = gastosDe(viaje);
+  const pagos = pagosDe(viaje);
+  return viaje.cuentasSimplificadas
+    ? transferenciasSimplificadas(calcularNetos(gastos, pagos))
+    : transferenciasDirectas(gastos, pagos);
+}
+
+/** Cómo está cada persona del viaje con quien pregunta. */
+function saldosPublicos(viaje: ViajeConGastos, usuarioId: string) {
+  const conVos = saldosPara(usuarioId, transferenciasDe(viaje));
+  return {
+    viajeId: viaje._id.toString(),
+    moneda: viaje.moneda,
+    simplificadas: viaje.cuentasSimplificadas,
+    saldos: viaje.miembros
+      .filter((miembro) => miembro.usuarioId.toString() !== usuarioId)
+      .map((miembro) => {
+        const personaId = miembro.usuarioId.toString();
+        const enviado = viaje.pagos.find((pago) =>
+          pago.estado === "pendiente" && pago.deudorId.toString() === usuarioId && pago.acreedorId.toString() === personaId);
+        return {
+          persona: { id: personaId, nombre: miembro.nombre, pinz: miembro.pinz ?? null },
+          monto: conVos.get(personaId) ?? 0,
+          pagoEnviado: enviado ? { id: enviado.id, monto: enviado.monto } : null,
+        };
+      }),
+  };
 }
 
 function hoy() {
@@ -267,30 +293,13 @@ rutasGastos.delete("/:gastoId", async (req, res) => {
 });
 
 rutasGastos.get("/saldos", async (req, res) => {
-  const viaje = await viajeDelMiembro((req.params as { id: string }).id, res.locals.usuarioId as string);
+  const usuarioId = res.locals.usuarioId as string;
+  const viaje = await viajeDelMiembro((req.params as { id: string }).id, usuarioId);
   if (!viaje) {
     res.status(404).json({ error: "no-existe" });
     return;
   }
-  const usuarioId = res.locals.usuarioId as string;
-  const conVos = saldosPara(usuarioId, transferenciasDe(viaje));
-  const usuarioActual = await Usuario.findById(usuarioId).select("moneda").exec();
-  res.json({
-    viajeId: viaje._id.toString(),
-    moneda: usuarioActual?.moneda ?? "ARS",
-    saldos: viaje.miembros
-      .filter((miembro) => miembro.usuarioId.toString() !== usuarioId)
-      .map((miembro) => {
-        const personaId = miembro.usuarioId.toString();
-        const enviado = viaje.pagos.find((pago) =>
-          pago.estado === "pendiente" && pago.deudorId.toString() === usuarioId && pago.acreedorId.toString() === personaId);
-        return {
-          persona: { id: personaId, nombre: miembro.nombre, pinz: miembro.pinz ?? null },
-          monto: conVos.get(personaId) ?? 0,
-          pagoEnviado: enviado ? { id: enviado.id, monto: enviado.monto } : null,
-        };
-      }),
-  });
+  res.json(saldosPublicos(viaje, usuarioId));
 });
 
 rutasGastos.get("/pagos", async (req, res) => {
@@ -380,11 +389,21 @@ rutasGastos.post("/pagos/:pagoId/confirmar", (req, res) => resolverPago(req, res
 rutasGastos.post("/pagos/:pagoId/rechazar", (req, res) => resolverPago(req, res, "rechazado"));
 
 rutasGastos.post("/simplificar", async (req, res) => {
-  const viaje = await viajeDelMiembro((req.params as { id: string }).id, res.locals.usuarioId as string);
+  const usuarioId = res.locals.usuarioId as string;
+  const viaje = await viajeDelMiembro((req.params as { id: string }).id, usuarioId);
   if (!viaje) {
     res.status(404).json({ error: "no-existe" });
     return;
   }
-  const transferencias = transferenciasSimplificadas(calcularNetos(gastosDe(viaje), pagosDe(viaje)));
-  res.json({ viajeId: viaje._id.toString(), transferencias });
+  if (!puedeEditarViaje(viaje, usuarioId)) {
+    res.status(403).json({ error: "sin-permiso" });
+    return;
+  }
+  if (!viaje.cuentasSimplificadas) {
+    viaje.cuentasSimplificadas = true;
+    const nombre = viaje.miembros.find((miembro) => miembro.usuarioId.toString() === usuarioId)?.nombre ?? "Alguien";
+    registrarMovimiento(viaje, `${nombre} simplificó las cuentas`);
+    await viaje.save();
+  }
+  res.json(saldosPublicos(viaje, usuarioId));
 });

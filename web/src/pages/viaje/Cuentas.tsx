@@ -92,10 +92,18 @@ export function Cuentas() {
           {editable && (
             <div className="flex flex-wrap gap-3">
               <IrAAgregarGasto viajeId={viaje.id} personas={viaje.personas} />
-              <Button variant="secundario" size="sm" disabled={simplificar.isPending} onClick={() => simplificar.mutate()}>
-                Simplificar cuentas
-              </Button>
+              {!saldos.data?.simplificadas && (
+                <Button variant="secundario" size="sm" disabled={simplificar.isPending} onClick={() => simplificar.mutate()}>
+                  Simplificar cuentas
+                </Button>
+              )}
             </div>
+          )}
+          {saldos.data?.simplificadas && <p className="text-meta text-tinta-suave">Cuentas simplificadas</p>}
+          {simplificar.error && (
+            <p role="alert" className="font-semibold text-negativo">
+              {mensajeDeCuentas(simplificar.error)}
+            </p>
           )}
         </Tarjeta>
         <PagosPorConfirmar viajeId={viaje.id} personas={viaje.personas} />

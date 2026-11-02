@@ -345,3 +345,38 @@ test("la migración completa partes, propina, autor y estado, y se puede correr 
   assert.equal(typeof crudo?.pagos[0].id, "string");
   assert.deepEqual(await montosDe("Nacho", viajeId), antes);
 });
+
+test('después de "Simplificar cuentas", Nacho ve Fede −14.633 y 0 con el resto', async () => {
+  const viajeId = await viajeVacio();
+  await cargarEjemplo(viajeId);
+  const respuesta = await api<Saldos & { simplificadas: boolean; moneda: string }>("Nacho", "POST", `/viajes/${viajeId}/gastos/simplificar`);
+  assert.equal(respuesta.status, 200);
+  assert.equal(respuesta.cuerpo.simplificadas, true);
+  assert.deepEqual(await montosDe("Nacho", viajeId), { Fede: -14633, Santi: 0, Pedro: 0 });
+  const viaje = await Viaje.findById(viajeId);
+  assert.equal(viaje?.cuentasSimplificadas, true);
+});
+
+test("con cuentas simplificadas, pagar los $ 14.633 deja a Nacho a mano con todos", async () => {
+  const viajeId = await viajeVacio();
+  await cargarEjemplo(viajeId);
+  await api("Nacho", "POST", `/viajes/${viajeId}/gastos/simplificar`);
+  const { cuerpo: pago } = await api<Pago>("Nacho", "POST", `/viajes/${viajeId}/gastos/pagos`, { personaId: idDe("Fede") });
+  assert.equal(pago.monto, 14633);
+  await api("Fede", "POST", `/viajes/${viajeId}/gastos/pagos/${pago.id}/confirmar`);
+  assert.deepEqual(await montosDe("Nacho", viajeId), { Fede: 0, Santi: 0, Pedro: 0 });
+});
+
+test("un lector no puede simplificar las cuentas", async () => {
+  const viajeId = await viajeVacio([{ nombre: "Lola", rol: "lector" }]);
+  const respuesta = await api("Lola", "POST", `/viajes/${viajeId}/gastos/simplificar`);
+  assert.equal(respuesta.status, 403);
+});
+
+test("los saldos usan la moneda del viaje, no la de quien mira, y crear un viaje copia la del creador", async () => {
+  await Usuario.updateOne({ _id: idDe("Lola") }, { moneda: "USD" });
+  const { cuerpo: viaje } = await api<{ id: string }>("Lola", "POST", "/viajes", { nombre: "Nueva York", destino: "Nueva York", fechaIda: null, fechaVuelta: null, ubicacion: null });
+  await Viaje.updateOne({ _id: viaje.id }, { $push: { miembros: { usuarioId: objeto("Nacho"), nombre: "Nacho", rol: "miembro" } } });
+  const { cuerpo } = await api<{ moneda: string }>("Nacho", "GET", `/viajes/${viaje.id}/gastos/saldos`);
+  assert.equal(cuerpo.moneda, "USD");
+});
