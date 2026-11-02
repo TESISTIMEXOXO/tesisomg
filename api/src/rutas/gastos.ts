@@ -1,5 +1,6 @@
-import { Router, type Request, type Response } from "express";
+import { Router, type NextFunction, type Request, type Response } from "express";
 import mongoose from "mongoose";
+import multer from "multer";
 import { z } from "zod";
 import {
   calcularNetos,
@@ -10,6 +11,7 @@ import {
   transferenciasSimplificadas,
   type Parte,
 } from "../cuentas/calculo.js";
+import { lector, SinLectorConfigurado } from "../cuentas/comprobante.js";
 import { gastosDe, pagosDe, partesDe } from "../cuentas/delViaje.js";
 import { Usuario } from "../modelos/Usuario.js";
 import { esOrganizador, puedeEditarViaje, registrarMovimiento, viajeDelMiembro } from "../viajePublico.js";
@@ -184,6 +186,69 @@ rutasGastos.get("/", async (req, res) => {
     .reverse()
     .sort((a, b) => b.fecha.localeCompare(a.fecha));
   res.json(nuevosPrimero);
+});
+
+// El límite de la API de lectura para una imagen es 5 MB en base64: unos 3,75 MB de archivo.
+const MAXIMO_IMAGEN = 3.75 * 1024 * 1024;
+const TIPOS_COMPROBANTE = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
+
+const subirComprobante = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (_req, archivo, callback) => callback(null, TIPOS_COMPROBANTE.has(archivo.mimetype)),
+}).single("archivo");
+
+function recibirComprobante(req: Request, res: Response, next: NextFunction) {
+  subirComprobante(req, res, (error: unknown) => {
+    if (error) res.status(413).json({ error: "archivo-muy-grande" });
+    else next();
+  });
+}
+
+/** Lee el comprobante y devuelve una sugerencia: no guarda ni el archivo ni el gasto. */
+rutasGastos.post("/comprobante", recibirComprobante, async (req, res) => {
+  const usuarioId = res.locals.usuarioId as string;
+  const viaje = await viajeDelMiembro((req.params as { id: string }).id, usuarioId);
+  if (!viaje) {
+    res.status(404).json({ error: "no-existe" });
+    return;
+  }
+  if (!puedeEditarViaje(viaje, usuarioId)) {
+    res.status(403).json({ error: "sin-permiso" });
+    return;
+  }
+  const archivo = req.file;
+  if (!archivo) {
+    res.status(400).json({ error: "falta-archivo" });
+    return;
+  }
+  if (archivo.mimetype !== "application/pdf" && archivo.size > MAXIMO_IMAGEN) {
+    res.status(413).json({ error: "archivo-muy-grande" });
+    return;
+  }
+  try {
+    const lectura = await lector.leer({ contenido: archivo.buffer, tipo: archivo.mimetype });
+    const monto = lectura.monto === null ? null : Math.round(lectura.monto);
+    if (!lectura.legible || monto === null || monto < 1 || monto > MONTO_MAXIMO) {
+      res.status(422).json({ error: "comprobante-ilegible" });
+      return;
+    }
+    const moneda = lectura.moneda?.toUpperCase() ?? null;
+    res.json({
+      descripcion: lectura.descripcion?.trim().slice(0, 160) || null,
+      monto,
+      fecha: lectura.fecha && /^\d{4}-\d{2}-\d{2}$/.test(lectura.fecha) ? lectura.fecha : null,
+      moneda,
+      monedaDistinta: moneda !== null && moneda !== viaje.moneda,
+    });
+  } catch (error) {
+    if (error instanceof SinLectorConfigurado) {
+      res.status(503).json({ error: "lectura-no-disponible" });
+      return;
+    }
+    console.error("No se pudo leer el comprobante", error);
+    res.status(502).json({ error: "lectura-fallo" });
+  }
 });
 
 rutasGastos.post("/", async (req, res) => {

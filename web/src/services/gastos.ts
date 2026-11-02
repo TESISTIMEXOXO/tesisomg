@@ -1,6 +1,7 @@
 import { z } from 'zod'
+import { achicarImagen } from '../lib/achicarImagen'
 import { pedir } from '../lib/api'
-import { GastoSchema, type NuevoGasto } from '../types/gasto'
+import { ComprobanteLeidoSchema, GastoSchema, type NuevoGasto } from '../types/gasto'
 import { PagoSchema } from '../types/pago'
 import { SaldosSchema } from '../types/saldo'
 
@@ -46,13 +47,13 @@ export function simplificar(viajeId: string) {
   return pedir(`/viajes/${encodeURIComponent(viajeId)}/gastos/simplificar`, { method: 'POST', schema: SaldosSchema })
 }
 
-/** Manda el comprobante para que el backend arme el gasto (HU-22). */
-export function leerComprobante(viajeId: string, archivo: File) {
+/** Manda el comprobante y devuelve lo que se leyó: no guarda nada hasta que la persona lo confirma (HU-22). */
+export async function leerComprobante(viajeId: string, archivo: File) {
   const form = new FormData()
-  form.set('archivo', archivo)
-  return pedir(`/viajes/${encodeURIComponent(viajeId)}/documentos`, {
+  form.set('archivo', await achicarImagen(archivo))
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/gastos/comprobante`, {
     method: 'POST',
     body: form,
-    schema: z.object({ id: z.string() }),
+    schema: ComprobanteLeidoSchema,
   })
 }

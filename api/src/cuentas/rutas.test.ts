@@ -7,8 +7,10 @@ import mongoose from "mongoose";
 import { app } from "../app.js";
 import { COOKIE_SESION } from "../auth/sesion.js";
 import { config } from "../config.js";
+import { Documento } from "../modelos/Documento.js";
 import { Usuario } from "../modelos/Usuario.js";
 import { Viaje } from "../modelos/Viaje.js";
+import { lector, type Lectura } from "./comprobante.js";
 import { migrarCuentas } from "./migracion.js";
 
 const BASE_DE_PRUEBA = "pinz_test";
@@ -23,16 +25,20 @@ const ids: Record<string, string> = {};
 const idDe = (nombre: string) => ids[nombre] as string;
 const objeto = (nombre: string) => new mongoose.Types.ObjectId(idDe(nombre));
 
-async function api<T = unknown>(quien: string, metodo: string, ruta: string, cuerpo?: unknown) {
+async function cookieDe(quien: string) {
   const token = await new SignJWT({})
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(idDe(quien))
     .setExpirationTime("1h")
     .sign(new TextEncoder().encode(config.sesionSecreto));
+  return `${COOKIE_SESION}=${token}`;
+}
+
+async function api<T = unknown>(quien: string, metodo: string, ruta: string, cuerpo?: unknown) {
   const respuesta = await fetch(`${url}${ruta}`, {
     method: metodo,
     headers: {
-      cookie: `${COOKIE_SESION}=${token}`,
+      cookie: await cookieDe(quien),
       ...(cuerpo === undefined ? {} : { "Content-Type": "application/json" }),
     },
     ...(cuerpo === undefined ? {} : { body: JSON.stringify(cuerpo) }),
@@ -416,4 +422,86 @@ test("cada cambio en las cuentas deja una línea en los movimientos", async () =
     "Santi rechazó el pago de Pedro",
     "Santi borró “Remís”",
   ]);
+});
+
+const LECTURA: Lectura = { legible: true, descripcion: "Supermercado Día", monto: 15320.5, fecha: "2026-10-27", moneda: "ARS" };
+
+async function subirComprobante(quien: string, viajeId: string, tipo = "image/jpeg", tamano = 10) {
+  const form = new FormData();
+  form.set("archivo", new Blob([new Uint8Array(tamano)], { type: tipo }), "ticket");
+  const respuesta = await fetch(`${url}/viajes/${viajeId}/gastos/comprobante`, {
+    method: "POST",
+    headers: { cookie: await cookieDe(quien) },
+    body: form,
+  });
+  return { status: respuesta.status, cuerpo: (await respuesta.json()) as Record<string, unknown> };
+}
+
+function conLector(leer: typeof lector.leer) {
+  const original = lector.leer;
+  lector.leer = leer;
+  return () => {
+    lector.leer = original;
+  };
+}
+
+test("leer un comprobante devuelve la sugerencia redondeada y no guarda nada", async (t) => {
+  t.after(conLector(async () => LECTURA));
+  const viajeId = await viajeVacio();
+  const { status, cuerpo } = await subirComprobante("Nacho", viajeId);
+  assert.equal(status, 200);
+  assert.deepEqual(cuerpo, { descripcion: "Supermercado Día", monto: 15321, fecha: "2026-10-27", moneda: "ARS", monedaDistinta: false });
+  const viaje = await Viaje.findById(viajeId);
+  assert.equal(viaje?.gastos.length, 0);
+  assert.equal(await Documento.countDocuments({ viajeId }), 0);
+});
+
+test("un comprobante en otra moneda queda marcado", async (t) => {
+  t.after(conLector(async () => ({ ...LECTURA, moneda: "brl" })));
+  const { cuerpo } = await subirComprobante("Nacho", await viajeVacio());
+  assert.equal(cuerpo.moneda, "BRL");
+  assert.equal(cuerpo.monedaDistinta, true);
+});
+
+test("un comprobante ilegible o sin total da 422 comprobante-ilegible", async (t) => {
+  const viajeId = await viajeVacio();
+  for (const lectura of [{ ...LECTURA, legible: false }, { ...LECTURA, monto: null }, { ...LECTURA, monto: 0 }]) {
+    const restaurar = conLector(async () => lectura);
+    const { status, cuerpo } = await subirComprobante("Nacho", viajeId);
+    restaurar();
+    assert.equal(status, 422);
+    assert.deepEqual(cuerpo, { error: "comprobante-ilegible" });
+  }
+  t.diagnostic("los tres casos responden igual");
+});
+
+test("una fecha mal escrita se descarta y queda la lectura", async (t) => {
+  t.after(conLector(async () => ({ ...LECTURA, fecha: "27/10/2026" })));
+  const { cuerpo } = await subirComprobante("Nacho", await viajeVacio());
+  assert.equal(cuerpo.fecha, null);
+});
+
+test("sin clave configurada responde 503 lectura-no-disponible", async () => {
+  const { status, cuerpo } = await subirComprobante("Nacho", await viajeVacio());
+  assert.equal(status, 503);
+  assert.deepEqual(cuerpo, { error: "lectura-no-disponible" });
+});
+
+test("si falla la lectura responde 502 lectura-fallo", async (t) => {
+  t.after(conLector(async () => {
+    throw new Error("sin servicio");
+  }));
+  const { status, cuerpo } = await subirComprobante("Nacho", await viajeVacio());
+  assert.equal(status, 502);
+  assert.deepEqual(cuerpo, { error: "lectura-fallo" });
+});
+
+test("un lector no puede escanear; un tipo no permitido da 400; una foto pesada, 413", async (t) => {
+  t.after(conLector(async () => LECTURA));
+  const viajeId = await viajeVacio([{ nombre: "Lola", rol: "lector" }]);
+  assert.equal((await subirComprobante("Lola", viajeId)).status, 403);
+  assert.equal((await subirComprobante("Ajena", viajeId)).status, 404);
+  assert.deepEqual((await subirComprobante("Nacho", viajeId, "image/gif")).cuerpo, { error: "falta-archivo" });
+  assert.equal((await subirComprobante("Nacho", viajeId, "image/jpeg", 4 * 1024 * 1024)).status, 413);
+  assert.equal((await subirComprobante("Nacho", viajeId, "image/jpeg", 9 * 1024 * 1024)).status, 413);
 });

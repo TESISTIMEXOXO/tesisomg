@@ -16,6 +16,8 @@ export const config = {
   webUrl: process.env.WEB_URL || process.env.CORS_ORIGIN || "http://localhost:5173",
   /** Firma las cookies de sesión. En desarrollo hay uno fijo para no trabar a nadie. */
   sesionSecreto: produccion ? requerida("SESION_SECRETO") : process.env.SESION_SECRETO || "desarrollo-no-usar-en-produccion",
+  /** Lee los comprobantes con Claude. Sin esto, el botón de escanear avisa que no está disponible. */
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY,
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,

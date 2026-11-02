@@ -8,6 +8,11 @@ const MENSAJES: Record<string, string> = {
   'participante-no-es-miembro': 'Elegiste a alguien que ya no está en el viaje.',
   'selecciona-participantes': 'Elegí al menos una persona.',
   'datos-invalidos': 'Revisá los datos: el monto tiene que alcanzar para repartir entre todos.',
+  'archivo-muy-grande': 'El archivo es muy pesado: probá con una foto más liviana.',
+  'falta-archivo': 'Usá una foto JPG, PNG o WEBP, o un PDF.',
+  'comprobante-ilegible': 'No pudimos leer el total. Probá con otra foto o cargalo a mano.',
+  'lectura-no-disponible': 'La lectura de comprobantes todavía no está activada. Cargalo a mano.',
+  'lectura-fallo': 'No pudimos leer el comprobante. Probá de nuevo o cargalo a mano.',
   'sin-permiso': 'No tenés permiso para hacer eso.',
   'no-existe': 'Eso ya no está. Actualizá la pantalla.',
 }

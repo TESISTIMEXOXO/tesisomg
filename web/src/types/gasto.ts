@@ -44,5 +44,14 @@ export const NuevoGastoSchema = z.discriminatedUnion('division', [
   }),
 ])
 
+/** Lo que se leyó de un comprobante: una sugerencia para el formulario, todavía sin guardar. */
+export const ComprobanteLeidoSchema = z.object({
+  descripcion: z.string().nullable(),
+  monto: z.number().int().positive(),
+  fecha: z.string().nullable(),
+  moneda: z.string().nullable(),
+  monedaDistinta: z.boolean(),
+})
+
 export type Gasto = z.infer<typeof GastoSchema>
 export type NuevoGasto = z.infer<typeof NuevoGastoSchema>

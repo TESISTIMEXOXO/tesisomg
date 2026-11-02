@@ -1,28 +1,28 @@
 import { ScanLine } from 'lucide-react'
 import { useId } from 'react'
 import { estilosBoton } from '../ui/estilosBoton'
-import { EsperaSlot } from './EsperaSlot'
 
 export type ComprobanteSlotProps = {
-  /** Se manda el ticket, la captura o el PDF; el backend lo lee y arma el gasto (HU-22, release 3). */
+  /** Se manda el ticket, la captura o el PDF; lo leído completa el formulario (HU-22). */
   onEscanear: (archivo: File) => void
+  leyendo: boolean
+  error: string | null
 }
 
-export function ComprobanteSlot({ onEscanear }: ComprobanteSlotProps) {
+export function ComprobanteSlot({ onEscanear, leyendo, error }: ComprobanteSlotProps) {
   const idInput = useId()
   return (
     <div className="flex flex-col gap-3 rounded-md trazo bg-papel-hundido p-4">
-      <EsperaSlot titulo="Lectura de comprobantes">
-        Pinz va a leer el monto, la fecha y los ítems. La lectura la hace el backend.
-      </EsperaSlot>
+      <p>Sacale una foto al ticket: completamos el monto, la fecha y el lugar, y vos elegís quién pagó.</p>
       <label htmlFor={idInput} className={`${estilosBoton('secundario', 'sm')} has-focus-visible:outline-3 has-focus-visible:outline-offset-3`}>
         <ScanLine size={20} strokeWidth={2} aria-hidden />
-        Escanear un comprobante
+        {leyendo ? 'Leyendo…' : 'Escanear un comprobante'}
         <input
           id={idInput}
           type="file"
           accept="image/*,application/pdf"
           capture="environment"
+          disabled={leyendo}
           className="sr-only"
           onChange={(evento) => {
             const archivo = evento.target.files?.[0]
@@ -31,6 +31,11 @@ export function ComprobanteSlot({ onEscanear }: ComprobanteSlotProps) {
           }}
         />
       </label>
+      {error && (
+        <p role="alert" className="font-semibold text-negativo">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

@@ -48,6 +48,7 @@ export function FormularioGasto({ viajeId, etapa, personas, gasto, onListo }: Pr
   const [propina, setPropina] = useState(consumoGuardado?.propinaPorcentaje ?? 0)
   const [errores, setErrores] = useState<Partial<Record<'descripcion' | 'monto' | 'fecha', string>>>({})
   const [confirmaBorrar, setConfirmaBorrar] = useState(false)
+  const [avisoLectura, setAvisoLectura] = useState<string | null>(null)
   const formulario = useRef<HTMLFormElement>(null)
   const { hash, key } = useLocation()
 
@@ -65,6 +66,25 @@ export function FormularioGasto({ viajeId, etapa, personas, gasto, onListo }: Pr
   const guardando = agregar.isPending || editar.isPending
   const errorGuardar = agregar.error ?? editar.error ?? borrar.error
   const quedaSinRepartir = division === 'consumo' && falta !== 0
+
+  /** Lo leído sólo completa el formulario: nada se guarda hasta que la persona lo revisa. */
+  function escanear(archivo: File) {
+    setAvisoLectura(null)
+    leer.mutate(archivo, {
+      onSuccess: (lectura) => {
+        if (lectura.descripcion) setDescripcion(lectura.descripcion)
+        if (lectura.fecha) setFecha(lectura.fecha)
+        if (lectura.monedaDistinta) {
+          setImporte('')
+          setAvisoLectura(`El comprobante dice ${lectura.monto} ${lectura.moneda}. Pasalo a la moneda del viaje y escribilo en Monto.`)
+        } else {
+          setImporte(String(lectura.monto))
+          setAvisoLectura('Revisá que esté bien y elegí quién pagó y entre quiénes se divide.')
+        }
+        formulario.current?.scrollIntoView({ block: 'start' })
+      },
+    })
+  }
 
   function enviar(evento: FormEvent) {
     evento.preventDefault()
@@ -107,6 +127,7 @@ export function FormularioGasto({ viajeId, etapa, personas, gasto, onListo }: Pr
   return (
     <Tarjeta titulo={gasto ? 'Editar gasto' : 'Agregar gasto'} className="scroll-mt-6">
       <form ref={formulario} id="nuevo-gasto" onSubmit={enviar} noValidate className="flex flex-col gap-4">
+        {avisoLectura && <p role="status" className="font-semibold">{avisoLectura}</p>}
         <TextField label="¿Qué fue?" placeholder="Nafta, súper, entradas…" value={descripcion} error={errores.descripcion} onChange={(evento) => setDescripcion(evento.target.value)} />
         <TextField
           label="Monto"
@@ -219,7 +240,7 @@ export function FormularioGasto({ viajeId, etapa, personas, gasto, onListo }: Pr
           )}
         </div>
       </form>
-      {!gasto && <ComprobanteSlot onEscanear={(archivo) => leer.mutate(archivo)} />}
+      {!gasto && <ComprobanteSlot onEscanear={escanear} leyendo={leer.isPending} error={leer.error ? mensajeDeCuentas(leer.error) : null} />}
     </Tarjeta>
   )
 }

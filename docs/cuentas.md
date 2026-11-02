@@ -41,7 +41,6 @@ Each trip gets real expenses, balances and payments; reading receipts, alias/CBU
 
 **Waits for later** (each already has a slot or a note in the frontend)
 
-- Reading a receipt photo (HU-22, `ComprobanteSlot`).
 - Paying with alias or CBU (HU-18).
 - More than one currency per trip.
 - Partial payments.
@@ -130,7 +129,7 @@ Nets: Fede +76.800, Nacho −14.633, Santi −38.833, Pedro −23.334 (sum 0).
 | Santi | +5.500 | 0 |
 | Pedro | −3.333 | 0 |
 
-Direct balances need 6 transfers across the group, and simplified ones need 3: Santi, Pedro and Nacho each pay Fede. Once Fede confirms Nacho's $ 14.633 payment, Nacho is a mano with everyone.
+Direct balances need 6 transfers across the group, and simplified ones need 3: Santi, Pedro and Nacho each pay Fede. Once Fede confirms Nacho's $ 14.633 payment, Nacho is a mano with everyone. That holds with simplified balances; with direct ones he would still have $ 2.167 to put with Fede.
 
 ## API
 
@@ -284,6 +283,7 @@ Five pull requests, in order. The first two fix the bugs above, so they go first
 | 3 | `cuentas/gastos` | `partes`, `propina` and `creadoPorId`, who paid and the date from the form, participants for both kinds, consumption with a tip, edit and delete, and the script for data already saved; on the web, the new contract and form | The worked example's three expenses load from the screen and give its numbers |
 | 4 | `cuentas/simplificar` | Saving `cuentasSimplificadas`, simplified saldos and the trip's `moneda`; on the web, the simplified state | Pressing "Simplificar cuentas" leaves Nacho with a single payment, $ 14.633 to Fede |
 | 5 | `cuentas/cierre` | `estadoCuentas`, no leaving with money pending, and activity lines for edits, deletes and payments | The route tests pass |
+| 6 | `cuentas/comprobantes` | Reading a receipt with Claude: a route that suggests amount, date and place, and the form filled from it | A photo fills the form, and nothing is saved until the person confirms |
 
 **Building it with Claude Code.** Export this doc as Markdown, save it in the repo as `docs/cuentas.md` and commit it in step 1. For each step, open Claude Code in the repo and ask:
 
@@ -294,6 +294,14 @@ result before committing.
 ```
 
 Review the changes in GitHub Desktop before pushing, then open the pull request.
+
+## Reading receipts
+
+`POST /viajes/:id/gastos/comprobante` takes `archivo` (JPG, PNG, WEBP or PDF) and answers `{ descripcion, monto, fecha, moneda, monedaDistinta }`. It saves neither the file nor an expense: the answer only fills the form, and the person checks it, chooses who paid and how it splits, and saves as usual.
+
+It needs `ANTHROPIC_API_KEY` in the `.env`. Without it the route answers 503 `lectura-no-disponible`. Other errors: 400 `falta-archivo`, 413 `archivo-muy-grande`, 422 `comprobante-ilegible`, 502 `lectura-fallo`. Lectores can't scan.
+
+When `moneda` differs from the trip's, the form leaves Monto empty and shows what the receipt says, so nobody saves reais as pesos. Line items don't fill "Por consumo" yet.
 
 ## Open decisions
 
