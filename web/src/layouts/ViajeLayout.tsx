@@ -34,7 +34,7 @@ export function ViajeLayout() {
   if (isPending) contenido = enEmergencias ? <p role="status">Cargando el viaje…</p> : <Cargando />
   else if (error) {
     contenido = enEmergencias ? (
-      <p role="alert" className="font-bold">No pudimos cargar el viaje. Si es urgente, llamá al 911.</p>
+      <p role="alert" className="font-bold">No pudimos cargar el viaje. Si es urgente, llamá al 112 (en Argentina, al 911).</p>
     ) : (
       <NoCargo error={error} onReintentar={() => refetch()} />
     )

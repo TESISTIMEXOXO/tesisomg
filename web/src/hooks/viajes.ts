@@ -45,6 +45,18 @@ export function useEmergencias(id: string) {
   return useQuery({ queryKey: ['viajes', id, 'emergencias'], queryFn: () => viajes.emergencias(id) })
 }
 
+/** El país de unas coordenadas. Redondea a ~1 km para no volver a preguntar con cada paso. */
+export function usePaisEn(coordenadas: { lat: number; lng: number } | null) {
+  const lat = coordenadas ? Math.round(coordenadas.lat * 100) / 100 : null
+  const lng = coordenadas ? Math.round(coordenadas.lng * 100) / 100 : null
+  return useQuery({
+    queryKey: ['lugares', 'pais', lat, lng],
+    queryFn: () => viajes.paisEn(lat!, lng!),
+    enabled: lat !== null && lng !== null,
+    staleTime: Infinity,
+  })
+}
+
 export function useInvitacion(codigo: string) {
   return useQuery({ queryKey: ['invitaciones', codigo], queryFn: () => viajes.verInvitacion(codigo), retry: false })
 }
