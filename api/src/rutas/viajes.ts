@@ -5,8 +5,9 @@ import { mandarInvitacion } from "../auth/mail.js";
 import { requiereSesion } from "../auth/sesion.js";
 import { netosDe } from "../cuentas/delViaje.js";
 import { Usuario } from "../modelos/Usuario.js";
+import { UbicacionCompartida } from "../modelos/UbicacionCompartida.js";
 import { Viaje } from "../modelos/Viaje.js";
-import { filtroMiembro, puedeEditarViaje, registrarMovimiento, viajeDelMiembro, viajePublico } from "../viajePublico.js";
+import { etapasDelViaje, filtroMiembro, puedeEditarViaje, registrarMovimiento, viajeDelMiembro, viajePublico } from "../viajePublico.js";
 
 export const rutasViajes = Router();
 rutasViajes.use(requiereSesion);
@@ -18,11 +19,57 @@ const NuevoViajeSchema = z
     fechaIda: z.iso.date().nullable(),
     fechaVuelta: z.iso.date().nullable(),
     ubicacion: z.object({ nombre: z.string().min(1), lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }).nullable(),
+    etapas: z.array(z.object({
+      destino: z.string().trim().min(1).max(100),
+      fechaIda: z.iso.date().nullable(),
+      fechaVuelta: z.iso.date().nullable(),
+      ubicacion: z.object({ nombre: z.string().min(1), lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }),
+    })).min(1).max(20),
   })
   .refine((viaje) => !viaje.fechaIda || !viaje.fechaVuelta || viaje.fechaVuelta >= viaje.fechaIda, {
     message: "La vuelta tiene que ser después de la ida.",
     path: ["fechaVuelta"],
   });
+
+const EtapaViajeSchema = z.object({
+  destino: z.string().trim().min(1).max(100),
+  fechaIda: z.iso.date().nullable(),
+  fechaVuelta: z.iso.date().nullable(),
+  ubicacion: z.object({ nombre: z.string().trim().min(1).max(160), lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }),
+}).refine((etapa) => (etapa.fechaIda === null) === (etapa.fechaVuelta === null), {
+  message: "Cada etapa necesita fecha de ida y vuelta, o ninguna.",
+});
+
+const ActualizarEtapasSchema = z.array(EtapaViajeSchema).min(1).max(20).superRefine((etapas, contexto) => {
+  const completas = etapas.filter((etapa) => etapa.fechaIda !== null);
+  if (completas.length !== 0 && completas.length !== etapas.length) {
+    contexto.addIssue({ code: "custom", message: "Completá las fechas de todas las etapas o dejalas pendientes." });
+    return;
+  }
+  etapas.forEach((etapa, indice) => {
+    if (etapa.fechaIda && etapa.fechaVuelta && etapa.fechaVuelta < etapa.fechaIda) {
+      contexto.addIssue({
+        code: "custom",
+        path: [indice, "fechaVuelta"],
+        message: "La vuelta de cada etapa tiene que ser después de la ida.",
+      });
+    }
+  });
+  for (let indice = 1; indice < etapas.length; indice += 1) {
+    const anterior = etapas[indice - 1];
+    const actual = etapas[indice];
+    if (!anterior || !actual || !anterior.fechaVuelta || !actual.fechaIda) continue;
+    const diaSiguiente = new Date(`${anterior.fechaVuelta}T12:00:00Z`);
+    diaSiguiente.setUTCDate(diaSiguiente.getUTCDate() + 1);
+    if (diaSiguiente.toISOString().slice(0, 10) !== actual.fechaIda) {
+      contexto.addIssue({
+        code: "custom",
+        path: [indice, "fechaIda"],
+        message: "Las etapas deben ser consecutivas, sin superposiciones ni días libres.",
+      });
+    }
+  }
+});
 
 rutasViajes.get("/invitacion/:codigo", async (req, res) => {
   const codigo = req.params.codigo?.toUpperCase();
@@ -44,6 +91,13 @@ rutasViajes.get("/invitacion/:codigo", async (req, res) => {
       fechaIda: resumen.fechaIda,
       fechaVuelta: resumen.fechaVuelta,
       personas: resumen.personas,
+      etapas: etapasDelViaje(viaje).map((etapa) => ({
+        id: etapa.id,
+        destino: etapa.destino,
+        fechaIda: etapa.fechaIda ?? null,
+        fechaVuelta: etapa.fechaVuelta ?? null,
+        ubicacion: etapa.ubicacion,
+      })),
     },
     yaEsMiembro: viaje.miembros.some((miembro) => miembro.usuarioId.toString() === usuarioId),
   });
@@ -89,6 +143,11 @@ rutasViajes.post("/", async (req, res) => {
     res.status(400).json({ error: "datos-invalidos", detalle: z.flattenError(datos.error) });
     return;
   }
+  const etapas = ActualizarEtapasSchema.safeParse(datos.data.etapas);
+  if (!etapas.success) {
+    res.status(400).json({ error: "etapas-invalidas", detalle: z.flattenError(etapas.error) });
+    return;
+  }
 
   const usuarioId = res.locals.usuarioId as string;
   const usuario = await Usuario.findById(usuarioId);
@@ -100,6 +159,7 @@ rutasViajes.post("/", async (req, res) => {
   const codigoInvitacion = crypto.randomUUID().replaceAll("-", "").slice(0, 6).toUpperCase();
   const viaje = await Viaje.create({
     ...datos.data,
+    etapas: etapas.data.map((etapa) => ({ id: crypto.randomUUID(), ...etapa })),
     creadoPor: usuario._id,
     moneda: usuario.moneda,
     codigoInvitacion,
@@ -186,14 +246,45 @@ rutasViajes.post("/:id/invitar", async (req, res) => {
     return;
   }
   const correo = pedido.data.email.toLowerCase();
-  const persona = await Usuario.findOne({ email: correo }).exec();
-  if (persona && !viaje.miembros.some((miembro) => miembro.usuarioId.toString() === persona.id)) {
-    viaje.miembros.push({ usuarioId: persona._id, nombre: persona.nombre || "Integrante", pinz: persona.pinz ?? null, rol: "miembro" });
-    registrarMovimiento(viaje, `${persona.nombre || "Alguien"} se sumó al viaje`);
-    await viaje.save();
+  const yaEsMiembro = await Usuario.findOne({ email: correo }).select("_id").exec();
+  if (yaEsMiembro && viaje.miembros.some((miembro) => miembro.usuarioId.toString() === yaEsMiembro.id)) {
+    res.status(409).json({ error: "ya-es-miembro" });
+    return;
   }
   await mandarInvitacion(correo, { nombre: viaje.nombre, destino: viaje.destino, codigo: viaje.codigoInvitacion }, quienInvita.nombre);
   res.status(204).end();
+});
+
+rutasViajes.put("/:id/etapas", async (req, res) => {
+  const datos = ActualizarEtapasSchema.safeParse(req.body);
+  if (!datos.success) {
+    res.status(400).json({ error: "etapas-invalidas", detalle: z.flattenError(datos.error) });
+    return;
+  }
+  const usuarioId = res.locals.usuarioId as string;
+  const viaje = await viajeDelMiembro(req.params.id, usuarioId);
+  if (!viaje) {
+    res.status(404).json({ error: "no-existe" });
+    return;
+  }
+  if (!puedeEditarViaje(viaje, usuarioId)) {
+    res.status(403).json({ error: "sin-permiso" });
+    return;
+  }
+  viaje.etapas = datos.data.map((etapa) => ({ id: crypto.randomUUID(), ...etapa }));
+  const primera = datos.data[0];
+  const ultima = datos.data.at(-1);
+  if (!primera || !ultima) {
+    res.status(400).json({ error: "etapas-invalidas" });
+    return;
+  }
+  viaje.destino = datos.data.map((etapa) => etapa.destino).join(" → ");
+  viaje.ubicacion = primera.ubicacion;
+  viaje.fechaIda = primera.fechaIda;
+  viaje.fechaVuelta = ultima.fechaVuelta;
+  registrarMovimiento(viaje, `${viaje.etapas.length} ${viaje.etapas.length === 1 ? "destino agregado" : "etapas del viaje actualizadas"}`);
+  await viaje.save();
+  res.json(viajePublico(viaje, usuarioId));
 });
 
 rutasViajes.patch("/:id/miembros/:personaId", async (req, res) => {
@@ -242,7 +333,13 @@ rutasViajes.delete("/:id/miembros/yo", async (req, res) => {
     res.status(409).json({ error: "saldo-pendiente" });
     return;
   }
-  if (viaje.miembros.length === 1) await viaje.deleteOne();
+  await UbicacionCompartida.deleteOne({ viajeId: viaje._id, usuarioId }).exec();
+  if (viaje.miembros.length === 1) {
+    await Promise.all([
+      viaje.deleteOne(),
+      UbicacionCompartida.deleteMany({ viajeId: viaje._id }).exec(),
+    ]);
+  }
   else {
     viaje.miembros = viaje.miembros.filter((persona) => persona.usuarioId.toString() !== usuarioId);
     await viaje.save();
@@ -273,6 +370,12 @@ rutasViajes.post("/:id/repetir", async (req, res) => {
     fechaIda: null,
     fechaVuelta: null,
     ubicacion: original.ubicacion,
+    etapas: etapasDelViaje(original).map((etapa) => ({
+      ...etapa,
+      id: crypto.randomUUID(),
+      fechaIda: null,
+      fechaVuelta: null,
+    })),
     creadoPor: usuario._id,
     moneda: usuario.moneda,
     codigoInvitacion: crypto.randomUUID().replaceAll("-", "").slice(0, 6).toUpperCase(),

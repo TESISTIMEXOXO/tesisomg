@@ -6,6 +6,7 @@ import {
   ResumenViajeSchema,
   ViajeSchema,
   type NuevoViaje,
+  type EtapaViaje,
   SugerenciaLugarSchema,
 } from '../types/viaje'
 
@@ -28,6 +29,14 @@ export function buscarLugares(consulta: string) {
 /** Guarda el viaje asociado a la cuenta que tiene abierta la sesión. */
 export function crear(datos: NuevoViaje) {
   return pedir('/viajes', { method: 'POST', body: datos, schema: ViajeSchema })
+}
+
+export function actualizarEtapas(viajeId: string, etapas: Omit<EtapaViaje, 'id'>[]) {
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/etapas`, {
+    method: 'PUT',
+    body: etapas,
+    schema: ViajeSchema,
+  })
 }
 
 export async function verInvitacion(codigo: string) {

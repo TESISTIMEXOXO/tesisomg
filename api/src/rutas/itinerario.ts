@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { puedeEditarViaje, viajeDelMiembro } from "../viajePublico.js";
+import { etapasDelViaje, puedeEditarViaje, viajeDelMiembro } from "../viajePublico.js";
 
 export const rutasItinerario = Router({ mergeParams: true });
 
@@ -9,6 +9,10 @@ const ActividadSchema = z.object({
   hora: z.iso.time({ precision: -1 }),
   titulo: z.string().trim().min(1).max(120),
   lugar: z.string().trim().max(160).nullable(),
+  lat: z.number().min(-90).max(90).nullable(),
+  lng: z.number().min(-180).max(180).nullable(),
+}).refine((actividad) => (actividad.lat === null) === (actividad.lng === null), {
+  message: "La latitud y longitud deben informarse juntas.",
 });
 
 function actividadPublica(
@@ -25,6 +29,8 @@ function actividadPublica(
     hora: item.hora,
     titulo: item.titulo,
     lugar: item.lugar ?? null,
+    lat: item.lat ?? null,
+    lng: item.lng ?? null,
     estado,
   };
 }
@@ -83,7 +89,7 @@ rutasItinerario.post("/", async (req, res) => {
     res.status(403).json({ error: "sin-permiso" });
     return;
   }
-  const actividad = { id: crypto.randomUUID(), ...datos.data, hecha: false, lat: null, lng: null };
+  const actividad = { id: crypto.randomUUID(), ...datos.data, hecha: false };
   viaje.itinerario.push(actividad);
   await viaje.save();
   const creada = viaje.itinerario.find((item) => item.id === actividad.id)!;
@@ -99,8 +105,12 @@ rutasItinerario.get("/hoy", async (req, res) => {
   const ahora = new Date();
   const fecha = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" }).format(ahora);
   const horaActual = new Intl.DateTimeFormat("en-GB", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(ahora);
-  const inicio = viaje.fechaIda ? new Date(`${viaje.fechaIda}T12:00:00-03:00`) : ahora;
-  const final = viaje.fechaVuelta ? new Date(`${viaje.fechaVuelta}T12:00:00-03:00`) : ahora;
+  const etapas = etapasDelViaje(viaje);
+  const etapaDeHoy = etapas.find((etapa) => etapa.fechaIda && etapa.fechaVuelta && etapa.fechaIda <= fecha && etapa.fechaVuelta >= fecha);
+  const fechaIda = etapas.find((etapa) => etapa.fechaIda)?.fechaIda ?? viaje.fechaIda;
+  const fechaVuelta = [...etapas].reverse().find((etapa) => etapa.fechaVuelta)?.fechaVuelta ?? viaje.fechaVuelta;
+  const inicio = fechaIda ? new Date(`${fechaIda}T12:00:00-03:00`) : ahora;
+  const final = fechaVuelta ? new Date(`${fechaVuelta}T12:00:00-03:00`) : ahora;
   const fechaActual = new Date(`${fecha}T12:00:00-03:00`);
   const diaViaje = Math.max(1, Math.floor((fechaActual.getTime() - inicio.getTime()) / 86_400_000) + 1);
   const totalDias = Math.max(1, Math.floor((final.getTime() - inicio.getTime()) / 86_400_000) + 1);
@@ -109,9 +119,15 @@ rutasItinerario.get("/hoy", async (req, res) => {
     .sort((a, b) => a.hora.localeCompare(b.hora))
     .map((item) => actividadPublica(item, viaje._id.toString(), fecha, horaActual));
   const puntos = [
-    ...(viaje.ubicacion ? [{ id: "destino", nombre: viaje.ubicacion.nombre, lat: viaje.ubicacion.lat, lng: viaje.ubicacion.lng, tipo: "alojamiento" }] : []),
+    ...(etapaDeHoy ? [{
+      id: etapaDeHoy.id,
+      nombre: etapaDeHoy.destino,
+      lat: etapaDeHoy.ubicacion.lat,
+      lng: etapaDeHoy.ubicacion.lng,
+      tipo: "alojamiento" as const,
+    }] : []),
     ...viaje.itinerario
-      .filter((item) => item.lat !== null && item.lng !== null)
+      .filter((item) => item.fecha === fecha && item.lat !== null && item.lng !== null)
       .map((item) => ({ id: item.id, nombre: item.lugar ?? item.titulo, lat: item.lat!, lng: item.lng!, tipo: "actividad" })),
   ];
   res.json({
@@ -119,7 +135,7 @@ rutasItinerario.get("/hoy", async (req, res) => {
     fecha,
     dia: diaViaje,
     totalDias,
-    titulo: items[0]?.titulo ?? viaje.destino,
+    titulo: items[0]?.titulo ?? etapaDeHoy?.destino ?? viaje.destino,
     items,
     puntos,
     ubicaciones: [],

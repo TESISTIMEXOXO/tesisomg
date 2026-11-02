@@ -381,7 +381,14 @@ test("un lector no puede simplificar las cuentas", async () => {
 
 test("los saldos usan la moneda del viaje, no la de quien mira, y crear un viaje copia la del creador", async () => {
   await Usuario.updateOne({ _id: idDe("Lola") }, { moneda: "USD" });
-  const { cuerpo: viaje } = await api<{ id: string }>("Lola", "POST", "/viajes", { nombre: "Nueva York", destino: "Nueva York", fechaIda: null, fechaVuelta: null, ubicacion: null });
+  const { cuerpo: viaje } = await api<{ id: string }>("Lola", "POST", "/viajes", {
+    nombre: "Nueva York",
+    destino: "Nueva York",
+    fechaIda: null,
+    fechaVuelta: null,
+    ubicacion: null,
+    etapas: [{ destino: "Nueva York", fechaIda: null, fechaVuelta: null, ubicacion: { nombre: "Nueva York", lat: 40.7, lng: -74 } }],
+  });
   await Viaje.updateOne({ _id: viaje.id }, { $push: { miembros: { usuarioId: objeto("Nacho"), nombre: "Nacho", rol: "miembro" } } });
   const { cuerpo } = await api<{ moneda: string }>("Nacho", "GET", `/viajes/${viaje.id}/gastos/saldos`);
   assert.equal(cuerpo.moneda, "USD");
@@ -454,6 +461,17 @@ test("leer un comprobante devuelve la sugerencia redondeada y no guarda nada", a
   const viaje = await Viaje.findById(viajeId);
   assert.equal(viaje?.gastos.length, 0);
   assert.equal(await Documento.countDocuments({ viajeId }), 0);
+});
+
+test("una fecha imposible o en otro formato no llega al formulario", async (t) => {
+  for (const fecha of ["2026-02-31", "12/10/2026"]) {
+    const deshacer = conLector(async () => ({ ...LECTURA, fecha }));
+    const { status, cuerpo } = await subirComprobante("Nacho", await viajeVacio());
+    deshacer();
+    assert.equal(status, 200);
+    assert.equal(cuerpo.fecha, null);
+  }
+  t.diagnostic("el resto de la lectura se mantiene");
 });
 
 test("un comprobante en otra moneda queda marcado", async (t) => {

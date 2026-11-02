@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 import { netosDe } from "./cuentas/delViaje.js";
 import { Viaje, type DocViaje } from "./modelos/Viaje.js";
 
+type EtapaViaje = NonNullable<DocViaje["etapas"]>[number];
+
 export function filtroMiembro(usuarioId: string) {
   return { "miembros.usuarioId": new mongoose.Types.ObjectId(usuarioId) };
 }
@@ -33,16 +35,36 @@ function estadoDeCuentas(viaje: DocViaje) {
   return [...netosDe(viaje).values()].every((neto) => neto === 0) ? "todos a mano" : null;
 }
 
-export function viajePublico(viaje: DocViaje, usuarioId: string) {
-  return {
-    id: viaje._id.toString(),
-    nombre: viaje.nombre,
+export function etapasDelViaje(viaje: DocViaje): EtapaViaje[] {
+  if (viaje.etapas.length > 0) return [...viaje.etapas];
+  if (!viaje.ubicacion) return [];
+  return [{
+    id: `etapa-${viaje._id.toString()}`,
     destino: viaje.destino,
     fechaIda: viaje.fechaIda ?? null,
     fechaVuelta: viaje.fechaVuelta ?? null,
-    ubicacion: viaje.ubicacion
-      ? { nombre: viaje.ubicacion.nombre, lat: viaje.ubicacion.lat, lng: viaje.ubicacion.lng }
-      : null,
+    ubicacion: viaje.ubicacion,
+  }];
+}
+
+export function viajePublico(viaje: DocViaje, usuarioId: string) {
+  const etapas = etapasDelViaje(viaje);
+  const primeraEtapa = etapas[0];
+  const ultimaEtapa = etapas.at(-1);
+  return {
+    id: viaje._id.toString(),
+    nombre: viaje.nombre,
+    destino: etapas.length > 1 ? etapas.map((etapa) => etapa.destino).join(" → ") : viaje.destino,
+    fechaIda: primeraEtapa?.fechaIda ?? viaje.fechaIda ?? null,
+    fechaVuelta: ultimaEtapa?.fechaVuelta ?? viaje.fechaVuelta ?? null,
+    ubicacion: primeraEtapa?.ubicacion ?? viaje.ubicacion,
+    etapas: etapas.map((etapa) => ({
+      id: etapa.id,
+      destino: etapa.destino,
+      fechaIda: etapa.fechaIda ?? null,
+      fechaVuelta: etapa.fechaVuelta ?? null,
+      ubicacion: etapa.ubicacion,
+    })),
     personas: viaje.miembros.map((miembro) => ({
       id: miembro.usuarioId.toString(),
       nombre: miembro.nombre,

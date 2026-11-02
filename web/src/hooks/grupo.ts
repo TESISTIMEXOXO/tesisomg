@@ -25,7 +25,7 @@ export function useCambiarRol(viajeId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ personaId, rol }: { personaId: string; rol: Rol }) => grupo.cambiarRol(viajeId, personaId, rol),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['viajes', viajeId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['viajes'] }),
   })
 }
 

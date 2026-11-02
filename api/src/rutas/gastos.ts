@@ -205,6 +205,13 @@ function recibirComprobante(req: Request, res: Response, next: NextFunction) {
   });
 }
 
+/** Sólo una fecha que exista: "2026-02-31" el formulario la mostraría vacía. */
+function fechaValida(fecha: string | null) {
+  if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return null;
+  const leida = new Date(`${fecha}T00:00:00Z`);
+  return !Number.isNaN(leida.getTime()) && leida.toISOString().startsWith(fecha) ? fecha : null;
+}
+
 /** Lee el comprobante y devuelve una sugerencia: no guarda ni el archivo ni el gasto. */
 rutasGastos.post("/comprobante", recibirComprobante, async (req, res) => {
   const usuarioId = res.locals.usuarioId as string;
@@ -237,7 +244,7 @@ rutasGastos.post("/comprobante", recibirComprobante, async (req, res) => {
     res.json({
       descripcion: lectura.descripcion?.trim().slice(0, 160) || null,
       monto,
-      fecha: lectura.fecha && /^\d{4}-\d{2}-\d{2}$/.test(lectura.fecha) ? lectura.fecha : null,
+      fecha: fechaValida(lectura.fecha),
       moneda,
       monedaDistinta: moneda !== null && moneda !== viaje.moneda,
     });

@@ -7,6 +7,7 @@ type TipoDivision = "iguales" | "consumo";
 type ListaTarea = "compartida" | "personal";
 
 type UbicacionDoc = { nombre: string; lat: number; lng: number };
+type TramoViajeDoc = { id: string; destino: string; fechaIda: string | null; fechaVuelta: string | null; ubicacion: UbicacionDoc };
 type MiembroDoc = { usuarioId: mongoose.Types.ObjectId; nombre: string; pinz: (typeof PINZ_IDS)[number] | null; rol: RolViaje };
 type OpcionDoc = { id: string; nombre: string; detalle: string | null; votantes: mongoose.Types.ObjectId[] };
 type VotacionDoc = { id: string; pregunta: string; categoria: CategoriaVotacion; estado: "abierta" | "cerrada"; cierre: string | null; opciones: OpcionDoc[]; ganadoraId: string | null };
@@ -29,6 +30,7 @@ export type ViajeData = {
   fechaIda: string | null;
   fechaVuelta: string | null;
   ubicacion: UbicacionDoc | null;
+  etapas: TramoViajeDoc[];
   creadoPor: mongoose.Types.ObjectId;
   miembros: MiembroDoc[];
   moneda: (typeof MONEDAS)[number];
@@ -59,6 +61,17 @@ const miembroSchema = new mongoose.Schema<MiembroDoc>(
     nombre: { type: String, required: true },
     pinz: { type: String, enum: [...PINZ_IDS, null], default: null },
     rol: { type: String, enum: ["organizador", "miembro", "lector"], required: true },
+  },
+  { _id: false },
+);
+
+const etapaViajeSchema = new mongoose.Schema<TramoViajeDoc>(
+  {
+    id: { type: String, required: true },
+    destino: { type: String, required: true, trim: true },
+    fechaIda: { type: String, default: null },
+    fechaVuelta: { type: String, default: null },
+    ubicacion: { type: ubicacionSchema, required: true },
   },
   { _id: false },
 );
@@ -179,6 +192,7 @@ const viajeSchema = new mongoose.Schema<ViajeData>(
     fechaIda: { type: String, default: null },
     fechaVuelta: { type: String, default: null },
     ubicacion: { type: ubicacionSchema, default: null },
+    etapas: { type: [etapaViajeSchema], default: [] },
     creadoPor: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario", required: true },
     miembros: { type: [miembroSchema], default: [] },
     moneda: { type: String, enum: MONEDAS, default: "ARS" },
