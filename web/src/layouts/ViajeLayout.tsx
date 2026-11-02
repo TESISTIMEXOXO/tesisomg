@@ -1,8 +1,7 @@
-import { Briefcase, House, MapPin, Plus, Route, Wallet } from 'lucide-react'
+import { Briefcase, House, Plus, Route, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { Outlet, useMatch, useParams } from 'react-router-dom'
 import { Cargando, NoCargo } from '../components/marca/Estados'
-import { BarraLateral } from '../components/ui/BarraLateral'
 import { BottomNav, type ItemNav } from '../components/ui/BottomNav'
 import { ButtonLink } from '../components/ui/Button'
 import { useViaje } from '../hooks/viajes'
@@ -10,7 +9,6 @@ import { etapaDelViaje } from '../lib/etapa'
 import type { Etapa } from '../types/viaje'
 import type { ContextoViaje } from './contextoViaje'
 import { BarraSuperior } from './BarraSuperior'
-import { CuentaUsuario } from './CuentaUsuario'
 import { EncabezadoViaje } from './EncabezadoViaje'
 
 function secciones(id: string): ItemNav[] {
@@ -22,7 +20,7 @@ function secciones(id: string): ItemNav[] {
   ]
 }
 
-/** Adentro de un viaje: encabezado con la etapa, las cuatro secciones fijas y, en Viaje, el gasto a mano. */
+/** Adentro de un viaje: encabezado con la etapa, las cuatro secciones y la alarma fijas y, en Viaje, el gasto a mano. */
 export function ViajeLayout() {
   const { id = '' } = useParams()
   const { data: viaje, isPending, error, refetch } = useViaje(id)
@@ -54,7 +52,7 @@ export function ViajeLayout() {
           <ButtonLink
             to={`/viajes/${viaje.id}/cuentas#nuevo-gasto`}
             icon={Plus}
-            className="fixed right-4 bottom-27 z-20 lg:right-10 lg:bottom-10"
+            className="fixed right-4 bottom-27 z-20 lg:right-10"
           >
             Agregar gasto
           </ButtonLink>
@@ -64,15 +62,10 @@ export function ViajeLayout() {
   }
 
   return (
-    <div className="lg:flex">
-      <BarraLateral items={items} pie={{ label: 'Mis viajes', icon: MapPin, to: '/viajes' }} cuenta={<CuentaUsuario />} />
-      <div className="min-w-0 flex-1">
-        {!enEmergencias && <BarraSuperior />}
-        <main className="mx-auto max-w-contenido px-4 pt-4 pb-29 md:px-6 lg:px-10 lg:pt-8 lg:pb-12">{contenido}</main>
-        <div className="fixed inset-x-4 bottom-4 z-20 flex justify-center lg:hidden">
-          <BottomNav items={items} />
-        </div>
-      </div>
-    </div>
+    <>
+      {!enEmergencias && <BarraSuperior />}
+      <main className="mx-auto max-w-contenido px-4 pt-4 pb-29 md:px-6 lg:px-10 lg:pt-8">{contenido}</main>
+      <BottomNav items={items} sosTo={`/viajes/${id}/emergencias`} />
+    </>
   )
 }

@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
-import { Logo } from '../../components/marca/Logo'
+import { useSyncExternalStore } from 'react'
+import { BarraMarca } from '../../components/marca/BarraMarca'
 import { ButtonLink } from '../../components/ui/Button'
 
 const SECCIONES = [
@@ -9,13 +9,21 @@ const SECCIONES = [
   { href: '#preguntas', label: 'Preguntas' },
 ]
 
+function suscribirAlScroll(avisar: () => void) {
+  window.addEventListener('scroll', avisar, { passive: true })
+  return () => window.removeEventListener('scroll', avisar)
+}
+
+const hayScroll = () => window.scrollY > 0
+
 export function BarraLanding() {
+  const conFondo = useSyncExternalStore(suscribirAlScroll, hayScroll)
+
+  /* Arriba de todo va transparente: el camino del hero pasa por detrás de los botones y un fondo lo taparía. */
   return (
-    <header className="relative z-10 flex items-center justify-between gap-4 p-4 lg:px-12 lg:py-5.5">
-      <Link to="/" aria-label="Pinz, inicio" className="rounded-sm">
-        <Logo size={30} label="" className="lg:hidden" />
-        <Logo size={40} label="" className="max-lg:hidden" />
-      </Link>
+    <BarraMarca
+      className={`sticky top-0 z-30 border-b-2 motion-safe:transition-colors ${conFondo ? 'border-contorno bg-papel' : 'border-transparent'}`}
+    >
       <nav aria-label="Secciones" className="hidden gap-7 font-extrabold lg:flex">
         {SECCIONES.map((seccion) => (
           <a key={seccion.href} href={seccion.href} className="rounded-sm hover:text-tinta-suave">
@@ -23,14 +31,14 @@ export function BarraLanding() {
           </a>
         ))}
       </nav>
-      <div className="flex gap-3">
-        <ButtonLink to="/ingresar" variant="secundario" size="sm">
-          Ingresar
+      <div data-camino="acceso" className="flex gap-3">
+        <ButtonLink to="/ingresar?paso=ingreso" variant="secundario" size="sm">
+          Iniciar sesión
         </ButtonLink>
         <ButtonLink to="/ingresar" size="sm" className="max-lg:hidden">
-          Armar un viaje
+          Registrarse
         </ButtonLink>
       </div>
-    </header>
+    </BarraMarca>
   )
 }

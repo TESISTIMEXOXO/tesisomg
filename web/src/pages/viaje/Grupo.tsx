@@ -9,6 +9,7 @@ import { Tarjeta } from '../../components/ui/Tarjeta'
 import { TextField } from '../../components/ui/TextField'
 import { useInvitacionGrupo, useInvitarPorMail, useMovimientos, useRepetirViaje, useSalirDelGrupo } from '../../hooks/grupo'
 import { useViajeActual } from '../../layouts/contextoViaje'
+import { cuandoEnDias } from '../../lib/fechas'
 import { ELENCO } from '../../pinz/elenco'
 import type { Rol } from '../../types/persona'
 
@@ -88,7 +89,7 @@ export function Grupo() {
             {movimientos.data?.map((movimiento) => (
               <li key={movimiento.id} className="flex justify-between gap-3">
                 <span>{movimiento.texto}</span>
-                <span className="text-meta whitespace-nowrap text-tinta-suave">{movimiento.cuando}</span>
+                <span className="text-meta whitespace-nowrap text-tinta-suave">{cuandoEnDias(movimiento.cuando)}</span>
               </li>
             ))}
           </ul>

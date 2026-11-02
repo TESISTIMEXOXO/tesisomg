@@ -3,11 +3,11 @@ import { Logo } from '../components/marca/Logo'
 import { AvatarStack } from '../components/ui/AvatarStack'
 import { usePerfil } from '../hooks/perfil'
 
-/** Arriba en mobile: la marca lleva a Mis viajes y tu pinz a tu perfil. Desde desktop lo hace la barra lateral. */
+/** Arriba de la app: la marca lleva a Mis viajes y tu pinz a tu perfil. */
 export function BarraSuperior() {
   const { data: perfil } = usePerfil()
   return (
-    <header className="flex items-center justify-between gap-3 px-4 pt-4 md:px-6 lg:hidden">
+    <header className="mx-auto flex max-w-contenido items-center justify-between gap-3 px-4 pt-4 md:px-6 lg:px-10">
       <Link to="/viajes" className="rounded-sm">
         <Logo size={30} />
       </Link>

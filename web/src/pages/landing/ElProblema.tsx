@@ -65,7 +65,7 @@ export function ElProblema() {
       <Titular className="text-center">Del caos del chat a un solo lugar.</Titular>
       <div className="mt-10 flex flex-col lg:mt-17.5 lg:flex-row lg:items-center">
         <ChatGrupal />
-        <svg viewBox="0 0 120 70" aria-hidden className="mx-auto my-4.5 h-17.5 w-15 flex-none rotate-90 lg:my-0 lg:w-30 lg:rotate-0">
+        <svg viewBox="0 0 120 70" aria-hidden className="mx-auto my-4.5 h-17.5 w-15 flex-none rotate-90 lg:mx-8 lg:my-0 lg:w-30 lg:rotate-0">
           <path d="M10 35 H96 M74 10 L104 35 L74 60" fill="none" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" className="stroke-contorno" />
         </svg>
         <TodoEnPinz />

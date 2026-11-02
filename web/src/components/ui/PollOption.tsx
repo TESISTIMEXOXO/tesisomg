@@ -27,7 +27,7 @@ export function PollOption({ label, detail, votes, total, voted = false, onVote,
     >
       <span
         aria-hidden
-        className="absolute inset-y-0 left-0 border-r-2 border-dashed bg-sol-tinte transition-[width] duration-250 ease-rebote motion-reduce:transition-none"
+        className="absolute inset-y-0 left-0 border-r-2 border-dashed bg-sol-tinte oscuro:bg-sol/30 transition-[width] duration-250 ease-rebote motion-reduce:transition-none"
         style={{ width: `${porcentaje}%` }}
       />
       <span

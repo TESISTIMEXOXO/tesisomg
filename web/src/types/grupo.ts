@@ -11,7 +11,7 @@ export const MovimientoSchema = z.object({
   id: z.string(),
   viajeId: z.string(),
   texto: z.string(),
-  /** Texto ya armado: "hace 2 h". */
+  /** Texto ya armado, siempre en horas: "hace 2 horas". Las pantallas lo pasan a días con cuandoEnDias. */
   cuando: z.string(),
 })
 

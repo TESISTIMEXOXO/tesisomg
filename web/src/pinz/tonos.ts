@@ -47,19 +47,19 @@ export const FONDO_TINTE: Record<TonoPinz, string> = {
 }
 
 /*
- * Para bloques grandes, como el encabezado del viaje. En oscuro un pastel de ese tamaño encandila
- * y su tinte se vuelve marrón: el fondo pasa a neutro y el tono queda en el contorno y la sombra.
+ * Para bloques grandes, como el encabezado del viaje. El color es el mismo en los dos temas:
+ * sobre el negro contrasta, y tema-claro deja su texto oscuro.
  */
 export const FONDO_DESTACADO: Record<TonoPinz, string> = {
-  coral: 'bg-coral oscuro:bg-papel-elevado oscuro:border-coral oscuro:shadow-coral',
-  sol: 'bg-sol oscuro:bg-papel-elevado oscuro:border-sol oscuro:shadow-sol',
-  mar: 'bg-mar oscuro:bg-papel-elevado oscuro:border-mar oscuro:shadow-mar',
-  lavanda: 'bg-lavanda oscuro:bg-papel-elevado oscuro:border-lavanda oscuro:shadow-lavanda',
-  cielo: 'bg-cielo oscuro:bg-papel-elevado oscuro:border-cielo oscuro:shadow-cielo',
-  durazno: 'bg-durazno oscuro:bg-papel-elevado oscuro:border-durazno oscuro:shadow-durazno',
-  rosa: 'bg-rosa oscuro:bg-papel-elevado oscuro:border-rosa oscuro:shadow-rosa',
-  arena: 'bg-arena oscuro:bg-papel-elevado oscuro:border-arena oscuro:shadow-arena',
-  noche: 'bg-noche oscuro:bg-papel-elevado oscuro:border-noche oscuro:shadow-noche',
-  mostaza: 'bg-mostaza oscuro:bg-papel-elevado oscuro:border-mostaza oscuro:shadow-mostaza',
-  bosque: 'bg-bosque oscuro:bg-papel-elevado oscuro:border-bosque oscuro:shadow-bosque',
+  coral: 'tema-claro bg-coral',
+  sol: 'tema-claro bg-sol',
+  mar: 'tema-claro bg-mar',
+  lavanda: 'tema-claro bg-lavanda',
+  cielo: 'tema-claro bg-cielo',
+  durazno: 'tema-claro bg-durazno',
+  rosa: 'tema-claro bg-rosa',
+  arena: 'tema-claro bg-arena',
+  noche: 'tema-claro bg-noche',
+  mostaza: 'tema-claro bg-mostaza',
+  bosque: 'tema-claro bg-bosque',
 }

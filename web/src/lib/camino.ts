@@ -1,6 +1,6 @@
 import type { PinzId } from '../pinz/elenco'
 
-type Punto = readonly [number, number]
+export type Punto = readonly [number, number]
 
 type GrupoAnclado = {
   /** El elemento con data-camino="<ancla>" que lleva el grupo; null = coordenadas absolutas. */
@@ -24,7 +24,14 @@ export type DatosCamino = {
   /** En px por segundo. */
   velocidad: number
   plaza: { ancla: string; extraAncho: number; extraAlto: number }
+  /**
+   * El arco que rodea los botones de la barra: cuánto arranca a su izquierda, hasta qué altura baja y el aire mínimo con ellos.
+   * Con `esquivaTitulo` baja menos si el título le quedaría debajo.
+   */
+  rodeo: { entrada: number; caida: number; aire: number; esquivaTitulo: boolean; caminantes: readonly (readonly PinzId[])[] }
   caminantes: readonly (readonly PinzId[])[]
+  /** Cada cuánto sale un grupo, en anchos de pantalla: menos que lo que se ve de una pasada, así siempre hay alguno a la vista. */
+  separacionGrupos: number
   grupos: readonly (GrupoAnclado | Vuelta)[]
 }
 
@@ -122,14 +129,70 @@ function curva(puntos: Punto[]) {
 }
 
 /**
+ * El camino corto de arriba a la derecha: un solo arco que baja desde el borde superior, pasa por debajo de los botones y sale horizontal por el costado.
+ * No arranca antes de la x `tope`, y devuelve null si con ese lugar no llega a rodear los botones.
+ * Se arma desde el borde real de los botones, que no escalan con la pantalla como el resto de la guía.
+ */
+export function armarRodeo(datos: DatosCamino, botones: { izquierda: number; abajo: number }, ancho: number, tope: number, titulo: { derecha: number; arriba: number } | null) {
+  const { izquierda, abajo } = botones
+  const { grosor } = datos
+  const radioX = ancho - izquierda + Math.min(datos.rodeo.entrada, izquierda - tope - grosor / 2)
+  const alturaEn = (x: number) => Math.sqrt(1 - ((ancho - x) / radioX) ** 2)
+
+  if (ancho - izquierda >= radioX) return null
+  const paraRodear = (abajo + grosor / 2 + datos.rodeo.aire) / alturaEn(izquierda)
+
+  /* Lo más que puede bajar sin pasar por encima del título, que tiene que quedar debajo mientras la curva no lo pasó. */
+  let radioY = datos.rodeo.caida
+  if (titulo && ancho - titulo.derecha < radioX) {
+    radioY = Math.min(radioY, (titulo.arriba - grosor / 2 - 6) / alturaEn(titulo.derecha))
+  } else if (!titulo) {
+    radioY = Math.min(radioY, paraRodear)
+  }
+
+  /* Sin lugar para abrirse, la curva le pasaría por encima a la esquina de los botones. */
+  if (radioY < paraRodear) return null
+
+  const inicioX = redondo(ancho - radioX)
+  const afuera = grosor * 1.5
+  /* El cuarto de elipse no tiene largo exacto: alcanza con la aproximación de Ramanujan, porque solo marca la velocidad de los pinz. */
+  const largoArco = (Math.PI * (3 * (radioX + radioY) - Math.sqrt((3 * radioX + radioY) * (radioX + 3 * radioY)))) / 4
+  return {
+    d: `M${inicioX} ${-afuera} L${inicioX} 0 A${redondo(radioX)} ${redondo(radioY)} 0 0 0 ${redondo(ancho)} ${redondo(radioY)} L${redondo(ancho + afuera)} ${redondo(radioY)}`,
+    largo: largoArco + afuera * 2,
+  }
+}
+
+/** Los puntos de un `path` corto, a intervalos parejos. */
+export function muestrear(d: string, paso: number): Punto[] {
+  const camino = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+  camino.setAttribute('d', d)
+  const largo = camino.getTotalLength()
+  const puntos: Punto[] = []
+  for (let s = 0; s <= largo; s += paso) {
+    const { x, y } = camino.getPointAtLength(s)
+    puntos.push([x, y])
+  }
+  return puntos
+}
+
+/** Repite la lista de caminantes hasta cubrir el largo del camino con grupos a la separación pedida. */
+export function repartirGrupos(datos: DatosCamino, largo: number, ancho: number) {
+  const cantidad = Math.max(datos.caminantes.length, Math.round(largo / (ancho * datos.separacionGrupos)))
+  return Array.from({ length: cantidad }, (_, i) => datos.caminantes[i % datos.caminantes.length])
+}
+
+/**
  * Arma el `d` del camino a partir de dónde quedaron las anclas en la página.
  * Las x se escalan del ancho del diseño al de la pantalla; las y siguen a las anclas.
  * `largo` es el recorrido en px, para que los pinz caminen siempre a la misma velocidad.
+ * `finX` es dónde termina el camino, escondido detrás del botón final.
+ * `puntos` lo recorre a intervalos parejos: alcanza para saber por dónde va un pinz sin medir el `path`, que en uno tan largo es caro.
  */
 export function armarCamino(datos: DatosCamino, anclas: Anclas, ancho: number) {
   const puntos = suavizar(remuestrear(guia(datos, anclas, ancho / datos.ancho), datos.paso), datos.sigma)
   if (puntos.length < 2) return null
   let largo = 0
   for (let i = 1; i < puntos.length; i++) largo += distancia(puntos[i - 1], puntos[i])
-  return { d: curva(nodos(puntos, datos.cada)), largo }
+  return { d: curva(nodos(puntos, datos.cada)), largo, finX: puntos[puntos.length - 1][0], puntos }
 }

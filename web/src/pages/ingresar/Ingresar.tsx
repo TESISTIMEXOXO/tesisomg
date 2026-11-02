@@ -1,9 +1,10 @@
 import { ArrowLeft } from 'lucide-react'
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { AuthSlot } from '../../components/slots/AuthSlot'
 import { Button } from '../../components/ui/Button'
 import { TextField } from '../../components/ui/TextField'
+import { Ventana } from '../../components/ui/Ventana'
 import {
   useEntrarConGoogle,
   useIngresarConContrasena,
@@ -30,9 +31,17 @@ const estiloLink = 'rounded-sm font-extrabold underline decoration-2 underline-o
 
 export function Ingresar() {
   const { data: sesion } = useSesion()
-  const [paso, setPaso] = useState<Paso>('inicio')
+  const [parametros] = useSearchParams()
+  const [paso, setPaso] = useState<Paso>(parametros.get('paso') === 'ingreso' ? 'ingreso' : 'inicio')
   // Compartido entre pasos: si la contraseña no coincide y va a cambiarla, el mail ya está escrito.
   const [email, setEmail] = useState('')
+  const ventana = useRef<HTMLDialogElement>(null)
+  const idTitulo = useId()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!ventana.current?.open) ventana.current?.showModal()
+  }, [])
 
   // Cubre el final de todos los caminos: al abrir sesión queda en caché y se sigue a la app.
   if (sesion) return <Navigate to={sesion.perfilCompleto ? '/viajes' : '/bienvenida'} replace />
@@ -40,17 +49,39 @@ export function Ingresar() {
   const props = { onIrA: setPaso, email, onEmail: setEmail }
 
   return (
-    <div className="flex flex-col gap-8 pt-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="font-display text-display font-black">{TITULOS[paso]}</h1>
-        {paso === 'inicio' && (
-          <p className="text-cuerpo-lg text-tinta-suave">Entrá con tu cuenta de Google o creá una con tu mail.</p>
-        )}
+    <Ventana ventanaRef={ventana} idTitulo={idTitulo} onClose={() => navigate('/')}>
+      <CaminosDeLaVentana />
+      {/* Sin el contorno del foco: el campo activo ya se marca con su sombra más grande. */}
+      <div className="relative flex flex-col gap-6 [&_input]:outline-none">
+        <div className="flex flex-col gap-2 pr-24">
+          <h1 id={idTitulo} className="font-display text-titulo-1 font-black">
+            {TITULOS[paso]}
+          </h1>
+          {paso === 'inicio' && <p className="text-tinta-suave">Entrá con tu cuenta de Google o creá una con tu mail.</p>}
+        </div>
+        {paso === 'inicio' && <Inicio onIrA={setPaso} />}
+        {paso === 'registro' && <Registro {...props} />}
+        {paso === 'ingreso' && <Ingreso {...props} />}
+        {paso === 'recuperar' && <Recuperar {...props} />}
       </div>
-      {paso === 'inicio' && <Inicio onIrA={setPaso} />}
-      {paso === 'registro' && <Registro {...props} />}
-      {paso === 'ingreso' && <Ingreso {...props} />}
-      {paso === 'recuperar' && <Recuperar {...props} />}
+    </Ventana>
+  )
+}
+
+/** Dos tramos del camino de la landing, en las esquinas de la ventana. Quedan detrás del contenido. */
+function CaminosDeLaVentana() {
+  const tramos = [
+    { d: 'M30 -16C30 50 100 104 206 104', lugar: 'top-0 right-0 origin-top-right', ancho: 190, alto: 120 },
+    { d: 'M-16 16C60 16 130 60 130 126', lugar: 'bottom-0 left-0 origin-bottom-left', ancho: 150, alto: 110 },
+  ]
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-lg">
+      {tramos.map(({ d, lugar, ancho, alto }) => (
+        <svg key={lugar} width={ancho} height={alto} className={`absolute max-md:scale-60 ${lugar}`}>
+          <path d={d} fill="none" strokeWidth={22} strokeLinecap="round" className="stroke-contorno" />
+          <path d={d} fill="none" strokeWidth={16} strokeLinecap="round" className="stroke-cielo" />
+        </svg>
+      ))}
     </div>
   )
 }
@@ -96,7 +127,8 @@ function mensajeCodigo(error: unknown) {
   return null
 }
 
-function Inicio({ onIrA }: PasoProps) {
+/** El ingreso con Google, igual desde cualquier paso: cada uno decide cómo mostrar los estados. */
+function useIngresoConGoogle() {
   const google = useEntrarConGoogle()
   const [noDisponible, setNoDisponible] = useState(false)
 
@@ -105,11 +137,7 @@ function Inicio({ onIrA }: PasoProps) {
     if (GOOGLE_CLIENT_ID) cargarGoogle().catch(() => {})
   }, [])
 
-  function elegir(proveedor: Proveedor) {
-    if (proveedor === 'mail') {
-      onIrA('registro')
-      return
-    }
+  function entrar() {
     if (!GOOGLE_CLIENT_ID) {
       setNoDisponible(true)
       return
@@ -117,18 +145,26 @@ function Inicio({ onIrA }: PasoProps) {
     google.mutate()
   }
 
+  const sinConfigurar = noDisponible || codigoDeError(google.error) === 'proveedor-no-disponible'
   // Cerrar la ventanita sin elegir cuenta no es un error.
-  const fallo = google.isError && !(google.error instanceof GoogleCancelado)
-  const mensajeError =
-    noDisponible || codigoDeError(google.error) === 'proveedor-no-disponible'
-      ? 'El ingreso con Google todavía no está configurado. Creá una cuenta con tu mail.'
-      : undefined
+  const fallo = noDisponible || (google.isError && !(google.error instanceof GoogleCancelado))
+
+  return { entrar, cargando: google.isPending, fallo, sinConfigurar }
+}
+
+function Inicio({ onIrA }: PasoProps) {
+  const google = useIngresoConGoogle()
+
+  function elegir(proveedor: Proveedor) {
+    if (proveedor === 'mail') onIrA('registro')
+    else google.entrar()
+  }
 
   return (
     <>
       <AuthSlot
-        estado={google.isPending ? 'cargando' : fallo || noDisponible ? 'error' : 'listo'}
-        mensajeError={mensajeError}
+        estado={google.cargando ? 'cargando' : google.fallo ? 'error' : 'listo'}
+        mensajeError={google.sinConfigurar ? 'El ingreso con Google todavía no está configurado. Creá una cuenta con tu mail.' : undefined}
         onElegirProveedor={elegir}
       />
       <p className="text-center">
@@ -244,6 +280,7 @@ function CodigoRegistro({ email, contrasena, onCambiarMail }: CodigoRegistroProp
 /** Entrar a una cuenta que ya existe. Sin tope de intentos: cada error dice qué pasó y cómo seguir. */
 function Ingreso({ onIrA, email, onEmail }: PasoConEmailProps) {
   const ingresar = useIngresarConContrasena()
+  const google = useIngresoConGoogle()
   const [contrasena, setContrasena] = useState('')
   const [errores, setErrores] = useState<Record<string, string>>({})
 
@@ -275,7 +312,7 @@ function Ingreso({ onIrA, email, onEmail }: PasoConEmailProps) {
   } else if (motivo === 'sin-contrasena') {
     error = (
       <>
-        Esa cuenta entra con Google y todavía no tiene contraseña. Volvé y usá “Seguir con Google”, o{' '}
+        Esa cuenta entra con Google y todavía no tiene contraseña. Usá “Iniciar con Google”, o{' '}
         <LinkPaso onClick={() => onIrA('recuperar')}>creá una contraseña</LinkPaso>.
       </>
     )
@@ -303,9 +340,14 @@ function Ingreso({ onIrA, email, onEmail }: PasoConEmailProps) {
       <Button type="submit" full disabled={ingresar.isPending}>
         {ingresar.isPending ? 'Entrando…' : 'Iniciar sesión'}
       </Button>
-      <Button variant="fantasma" icon={ArrowLeft} full onClick={() => onIrA('inicio')}>
-        Volver
+      <Button variant="secundario" full disabled={google.cargando} onClick={google.entrar}>
+        {google.cargando ? 'Elegí tu cuenta en la ventana de Google…' : 'Iniciar con Google'}
       </Button>
+      {google.fallo && (
+        <MensajeError>
+          {google.sinConfigurar ? 'El ingreso con Google todavía no está configurado. Entrá con tu mail y contraseña.' : 'No pudimos entrar con Google. Probá de nuevo.'}
+        </MensajeError>
+      )}
       <p className="text-center">
         ¿No tenés cuenta? <LinkPaso onClick={() => onIrA('registro')}>Creá una</LinkPaso>
       </p>
@@ -337,7 +379,7 @@ function Recuperar({ onIrA, email, onEmail }: PasoConEmailProps) {
 
   return (
     <form onSubmit={enviar} noValidate className="flex flex-col gap-4">
-      <p>Te mandamos un código a tu mail para que elijas una contraseña nueva.</p>
+      <p className="pr-20">Te mandamos un código a tu mail para que elijas una contraseña nueva.</p>
       <CampoEmail value={email} error={errorEmail} onChange={onEmail} />
       {sinCuenta && (
         <MensajeError>
@@ -448,7 +490,7 @@ function CampoCodigo({ value, error, onChange }: { value: string; error?: string
 
 function AvisoCodigo({ email }: { email: string }) {
   return (
-    <p>
+    <p className="pr-20">
       Te mandamos un código de 6 números a <strong className="font-extrabold">{email}</strong>. Vence en 10 minutos. Si no lo ves, revisá
       la carpeta de spam.
     </p>

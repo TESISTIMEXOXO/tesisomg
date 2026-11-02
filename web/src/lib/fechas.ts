@@ -41,6 +41,17 @@ export function diaCorto(fecha: string) {
   return `${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]}`
 }
 
+/**
+ * El backend cuenta los movimientos solo en horas ("hace 30 horas"). Desde las 24 pasa a días: "hace 1 día".
+ * Lo que no sea una cuenta de horas ("esta hora") queda como llegó.
+ */
+export function cuandoEnDias(cuando: string) {
+  const horas = Number(/^hace (\d+) horas?$/.exec(cuando)?.[1])
+  if (!(horas >= 24)) return cuando
+  const dias = Math.floor(horas / 24)
+  return `hace ${dias} ${dias === 1 ? 'día' : 'días'}`
+}
+
 export function diasHasta(fecha: string, hoy = new Date()) {
   const inicioDeHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
   return Math.round((leerFecha(fecha).getTime() - inicioDeHoy.getTime()) / UN_DIA)

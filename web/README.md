@@ -53,8 +53,9 @@ web/
       animaciones.css   keyframes y utilidades animate-* (siempre con motion-safe:)
     components/
       ui/               el design system: Button, Chip, StageSwitch, TextField, PollOption, BalanceRow,
-                        ItineraryItem, TripCard, AvatarStack, BottomNav, BarraLateral y Tarjeta
-      marca/            Logo, Pin, PinzNote, ElegirPinz y los estados Cargando / NoCargo
+                        ItineraryItem, TripCard, AvatarStack, BottomNav, Ventana y Tarjeta
+      marca/            Logo, BarraMarca (la barra con la marca de la landing y las pantallas públicas), Pin,
+                        PinzNote, ElegirPinz y los estados Cargando / NoCargo
       landing/          Camino: la ruta celeste que recorre la landing
       slots/            MapaSlot, SaldosSlot, AuthSlot, ArchivosSlot, ComprobanteSlot, QrSlot y EsperaSlot
     pinz/
@@ -62,12 +63,11 @@ web/
       dibujos.ts        el dibujo de cada pinz, como datos (capas detrás, recortado y delante)
       tonos.ts          las clases de color de cada tono (fill-*, bg-*, bg-*-tinte)
     layouts/
-      PublicLayout      ingreso, bienvenida e invitaciones
+      PublicLayout      bienvenida e invitaciones
       AppLayout         fuera de un viaje: Mis viajes y Vos
-      ViajeLayout       dentro de un viaje: encabezado de etapa, BottomNav / barra lateral, botón de gasto
-      BarraSuperior     mobile: la marca (a Mis viajes) y "Tu perfil", en la app y dentro de un viaje
-      CuentaUsuario     al pie de la barra lateral: tu perfil y Cerrar sesión
-      EncabezadoViaje   nombre, fechas, avatares (abren Grupo), Emergencias en Viaje y, solo en dev, el StageSwitch
+      ViajeLayout       dentro de un viaje: encabezado de etapa, BottomNav con SOS (Emergencias), botón de gasto
+      BarraSuperior     la marca (a Mis viajes) y "Tu perfil", en la app y dentro de un viaje
+      EncabezadoViaje   nombre, fechas, avatares (abren Grupo) y, solo en dev, el StageSwitch
       contextoViaje.ts  useViajeActual(): el viaje y la etapa que se está mirando
     pages/              una carpeta por pantalla (ver la tabla de abajo)
     types/              esquemas zod por entidad: el contrato con el backend
@@ -82,14 +82,13 @@ web/
 | Ruta | Archivo | Qué usa |
 | --- | --- | --- |
 | `/` | `pages/landing/Landing.tsx` (una sección por archivo en la misma carpeta; ver "La landing") | `Camino`, `Pin`, `Logo`, `Button`, `PollOption`, `BalanceRow`, `ItineraryItem`, `AvatarStack` |
-| `/ingresar` | `pages/ingresar/Ingresar.tsx` (bypass temporal: en desarrollo, cualquier proveedor lleva a `/viajes`) | `AuthSlot`, `useIngresar` |
+| `/ingresar` | `pages/ingresar/Ingresar.tsx`, una `Ventana` sobre la landing: es ruta hija de `Landing` y al cerrarla vuelve a `/` (bypass temporal: en desarrollo, cualquier proveedor lleva a `/viajes`). Con `?paso=ingreso` abre directo en "Iniciá sesión", que también ofrece "Iniciar con Google" | `AuthSlot`, `useIngresar` |
 | `/bienvenida` | `pages/bienvenida/Bienvenida.tsx` | `TextField`, `Chip`, `ElegirPinz`, `useGuardarPerfil` |
 | `/unirse` | `pages/unirse/Unirse.tsx` | `TextField`, `Button` |
 | `/unirse/:codigo` | `pages/unirse/VistaInvitacion.tsx` | `Tarjeta`, `AvatarStack`, `useInvitacion`, `useUnirse` |
 | `/viajes` | `pages/viajes/MisViajes.tsx` | `TripCard`, `PinzNote` (vacío), `useViajes`, `usePerfil` |
 | `/viajes/nuevo` | `pages/viajes/NuevoViaje.tsx` | `TextField`, `TripCard` (vista previa en desktop), `useCrearViaje` |
-| `/vos` | `pages/vos/Vos.tsx` | `Pin`, `Tarjeta`, `ArchivosSlot`, `usePerfil`, `useDocumentosPersonales` |
-| `/viajes/:id` | `pages/viaje/resumen/Resumen.tsx` → `ResumenPrevaje`, `Hoy` o `ResumenPostViaje` según la etapa | `TarjetaVotacion`, `PinzNote` (tip), `MapaSlot`, `ItineraryItem`, `SaldosSlot` |
+| `/vos` | `pages/vos/Vos.tsx` | `Pin`, `Tarjeta`, `ArchivosSlot`, `usePerfil`, `useDocumentosPersonales` || `/viajes/:id` | `pages/viaje/resumen/Resumen.tsx` → `ResumenPrevaje`, `Hoy` o `ResumenPostViaje` según la etapa | `TarjetaVotacion`, `PinzNote` (tip), `MapaSlot`, `ItineraryItem`, `SaldosSlot` |
 | `/viajes/:id/plan` | `pages/viaje/Plan.tsx` | `TarjetaVotacion`, `ItineraryItem`, `MapaSlot`, `useVotaciones`, `useItinerario` |
 | `/viajes/:id/cuentas` | `pages/viaje/Cuentas.tsx` | `SaldosSlot`, `ComprobanteSlot`, `Chip`, `useGastos`, `useSaldos`, `useAgregarGasto` |
 | `/viajes/:id/baul` | `pages/viaje/Baul.tsx` | `ArchivosSlot`, `Chip`, `useTareas`, `useRequisitos`, `useDocumentos` |
@@ -116,8 +115,8 @@ Cada pantalla resuelve sus estados de carga, vacío y error con `Cargando`, `NoC
 | `ItineraryItem` | `components/ui/ItineraryItem.tsx` | `time`, `title`, `place`, `done`, `current`, `last` | Un momento del día; es un `<li>`, va dentro de un `<ol>` |
 | `TripCard` | `components/ui/TripCard.tsx` | `title`, `place`, `dates`, `stage`, `people`, `image`, `pending`, `to` | La card de un viaje en Mis viajes |
 | `AvatarStack` | `components/ui/AvatarStack.tsx` | `people` (nombres o `{ name, pinz }`), `max` | Siluetas de pin con inicial, en el tono del pinz |
-| `BottomNav` | `components/ui/BottomNav.tsx` | `items` (`{ id, label, icon, to, end }`) | Navegación flotante de mobile (hasta 4) |
-| `BarraLateral` | `components/ui/BarraLateral.tsx` | `items`, `pie`, `cuenta` | La navegación desde 1024px |
+| `BottomNav` | `components/ui/BottomNav.tsx` | `items` (`{ id, label, icon, to, end }`, hasta 4), `sosTo` | La navegación de la app: barra flotante abajo, en todos los tamaños. Dentro de un viaje suma "SOS" en rojo, siempre al final: es el único acceso a Emergencias |
+| `Ventana` | `components/ui/Ventana.tsx` | `ventanaRef`, `idTitulo`, `onClose` | La ventana emergente con el fondo oscurecido (`dialog` nativo): el ingreso y el formulario de contacto |
 | `Tarjeta` / `Etiqueta` | `components/ui/Tarjeta.tsx` | `titulo`, `extra`, `fondo` | El bloque de contenido de la app y su badge |
 | `Logo` | `components/marca/Logo.tsx` | `variant` (`marca` · `simbolo` · `icono`), `size` (en `marca`, el alto de la palabra), `ink`, `label` | La marca: el pinz genérico coral pegado a "pinz" en Archivo 900. El pin es siempre coral. Las versiones en curvas (`pinz-logo.svg`) son para documentos y Open Graph; en la interfaz se usa el componente |
 | `Pin` | `components/marca/Pin.tsx` | `pinz` (elenco o `generico`), `color`, `size`, `label` | El pinz ilustrado |
@@ -137,9 +136,9 @@ Los tokens viven en `src/styles/index.css`, dentro de `@theme`, y salen de `toke
 | Tipografías | `font-display` (Archivo), `font-texto` (Figtree, la base) |
 | Escala de texto | `text-display-xl`, `text-display`, `text-titulo-1`, `text-titulo-2`, `text-monto`, `text-cuerpo-lg`, `text-cuerpo`, `text-etiqueta`, `text-meta`, `text-sobretitulo` |
 | Titulares de la landing | `text-portada` / `lg:text-portada-lg` (el hero), `text-titular` (cada sección), `text-cierre`, `text-frase` y `text-frase-etiqueta` ("Para quiénes"), `text-bajada` (21px). Crecen con la pantalla (`clamp`) hasta el tamaño del diseño en 1440px. `tracking-marca` (−0,045em) es la interletra del logo y de los titulares; `contorno-texto` pone el contorno tinta a letras de color ("Organícenlo") |
-| Espaciado (grilla de 4px) | `p-4` = `espacio-4`, `gap-8` = `espacio-8`; medidas: `min-h-toque` (44), `min-h-control` (50), `h-nav` (68), `w-lateral` (240) |
+| Espaciado (grilla de 4px) | `p-4` = `espacio-4`, `gap-8` = `espacio-8`; medidas: `min-h-toque` (44), `min-h-control` (50), `h-nav` (68) |
 | Contornos | `trazo-fino` (2px), `trazo` (2,5px), `trazo-grueso` (3,5px) y por lado: `trazo-b`, `trazo-t`, `trazo-r`, `trazo-grueso-b`… El color es siempre tinta |
-| Breakpoints | `md` (768), `lg` (1024, barra lateral), `xl` (1280); contenido con `max-w-contenido` (1200) |
+| Breakpoints | `md` (768), `lg` (1024), `xl` (1280); contenido con `max-w-contenido` (1200) |
 | Movimiento | `motion-safe:animate-bob`, `animate-jump`, `animate-cinta`, `animate-asoma`; en la landing también `animate-camino` (los pinz que caminan), `animate-repisa` (la repisa del cierre y Vuelto en Gastos) y `barras-se-llenan` (las barras de votación); `ease-rebote` |
 
 **Regla:** nunca se escriben valores a mano (`bg-[#ff8a66]`, `p-[13px]`, hex sueltos). Si falta algo, se suma como token en `@theme` o como `@utility`. Las paletas de Tailwind están vaciadas, así que `bg-red-500` ni siquiera existe. La única excepción son los colores de accesorios de los pinz que no son de la paleta, que viven solo en `pinz/dibujos.ts`.
@@ -163,7 +162,7 @@ Es la única página donde los pinz son protagonistas. El fondo es `papel` de pu
 
 | Sección | Archivo |
 | --- | --- |
-| Barra superior | `BarraLanding.tsx` (en mobile, solo Ingresar) |
+| Barra superior | `BarraLanding.tsx` (fija al hacer scroll; en mobile, solo Ingresar) |
 | Hero: titular, botones, navegador y celular con Hoy | `Hero.tsx` (en mobile, solo el celular) |
 | Cintas de destinos cruzadas | `CintaDestinos.tsx` |
 | Del caos del chat a un solo lugar | `ElProblema.tsx` |
@@ -181,11 +180,13 @@ Es la única página donde los pinz son protagonistas. El fondo es `papel` de pu
 
 La ruta celeste que recorre la página por detrás del contenido y termina en una plataforma bajo el botón "Organizá tu viaje".
 
-- **Componente:** `components/landing/Camino.tsx`. Mide la landing, arma el `path` y lo dibuja en tres trazos (sombra, borde y relleno `cielo`) intercalados con la plataforma. Se recalcula con un `ResizeObserver` sobre la landing; desde 1024px usa los datos de desktop y por debajo los de mobile.
+- **Componente:** `components/landing/Camino.tsx`. Mide la landing, arma el `path` y lo dibuja en dos trazos (borde y relleno `cielo`) intercalados con la plataforma. No lleva sombra corrida: así el borde tiene el mismo grosor en toda la curva. Se recalcula con un `ResizeObserver` sobre la landing; desde 1024px usa los datos de desktop y por debajo los de mobile.
 - **Cálculo:** `lib/camino.ts` (`armarCamino`), una función pura: guía → remuestreo → suavizado gaussiano → nodos → Catmull-Rom. Las x se escalan del ancho del diseño al de la pantalla.
 - **Datos:** `lib/caminoDatos.ts`, los puntos guía del diseño, los grosores y quiénes caminan.
 - **Anclas:** cada tramo sigue a un elemento con `data-camino`: las pausas `banda1`…`banda5` (los espacios vacíos entre secciones, `Pausa` en `Seccion.tsx`), las cards `b-iti` y `b-hoy` del bento y el botón `cta`. Si una sección cambia de alto, el camino se acomoda solo. En mobile no hay `banda4` (entre el elenco y "Para quiénes") y la pausa del cierre es `banda5`, igual que en desktop.
-- **Pinz que caminan:** van con `offset-path` sobre el mismo `path`, en grupos de uno, dos o tres. Con `prefers-reduced-motion` el camino queda dibujado y cada grupo, quieto en su tramo.
+- **Rodeo de la barra:** un segundo camino, corto y con sus propios pinz (`rodeo.caminantes`), es un solo arco que baja desde el borde superior, pasa por debajo de los botones de acceso (`data-camino="acceso"` en `BarraLanding.tsx`) y sale horizontal por la derecha. Lo arma `armarRodeo` desde el borde real de los botones, con los valores de `rodeo` en `lib/caminoDatos.ts`. En desktop baja menos si el título le queda debajo; la entrada se achica si el menú está cerca y, si aun así no rodea los botones, no se dibuja.
+- **Al cargar:** el camino se mide antes del primer cuadro y se dibuja solo (`animate-trazar`). Los pinz que abren la marcha entran enseguida y el resto de a un grupo, con el dibujo terminado: montarlos juntos traba la página. Las fuentes latinas se precargan en `index.html` para que el texto no cambie de tipografía a la vista.
+- **Pinz que caminan:** van con `offset-path` sobre el mismo `path`, en grupos de uno, dos o tres, dando pasitos (`animate-paso`). La lista de `caminantes` se repite a lo largo del camino según `separacionGrupos` (`repartirGrupos` en `lib/camino.ts`), para que siempre haya alguno a la vista. Al llegar al botón final estallan en una nube de humo (`animate-llegada` y `animate-humo`). Los que quedan fuera de pantalla se pausan y retoman donde corresponde (`useCaminantesEnPantalla`), porque `offset-path` se recalcula en cada cuadro aunque no se vea. Con `prefers-reduced-motion` el camino queda dibujado y cada grupo, quieto en su tramo.
 
 ## 9. Cómo conectar el backend
 
@@ -261,7 +262,7 @@ Una escritura igual: `crear(datos)` pasa de `sinBackend('viajes.crear', datos)` 
 | --- | --- | --- | --- | --- |
 | Mapa | `components/slots/MapaSlot.tsx` | `puntos: { id, nombre, lat, lng, tipo }[]`, `personas: { id, nombre, pinz, lat, lng }[]`, `contenedorRef`, `alto` | `onSeleccionarPunto(id)` | `pages/viaje/resumen/Hoy.tsx`, `pages/viaje/Plan.tsx` |
 | Saldos | `components/slots/SaldosSlot.tsx` | `saldos: { persona, monto }[]` ya calculados (o `null`), `moneda` | `onRegistrarPago(personaId)` | `pages/viaje/Cuentas.tsx`, `pages/viaje/resumen/ResumenPostViaje.tsx` |
-| Auth | `components/slots/AuthSlot.tsx` | `estado` (`listo` · `cargando` · `error`) | `onElegirProveedor('google' \| 'apple' \| 'mail')` | `pages/ingresar/Ingresar.tsx` |
+| Auth | `components/slots/AuthSlot.tsx` | `estado` (`listo` · `cargando` · `error`) | `onElegirProveedor('google' \| 'mail')` | `pages/ingresar/Ingresar.tsx` |
 | Archivos | `components/slots/ArchivosSlot.tsx` | `archivos: { id, nombre, tipo, tamano }[]`, `ayuda` | `onSubir(archivo)`, `onAbrir(id)` | `pages/viaje/Baul.tsx`, `pages/vos/Vos.tsx` |
 | Comprobante | `components/slots/ComprobanteSlot.tsx` | — | `onEscanear(archivo)` | `pages/viaje/Cuentas.tsx` |
 | QR | `components/slots/QrSlot.tsx` | `valor` (link de invitación) | — | `pages/viaje/Grupo.tsx` |
@@ -286,10 +287,10 @@ Mientras no estén conectados, muestran `EsperaSlot`: un recuadro punteado que d
 
 ## 11. Pendientes
 
-- **"¿Es gratis?"** en la landing (`pages/landing/Preguntas.tsx`): falta definir el modelo de precios. Está marcado como pendiente en la interfaz y con un comentario en el código.
 - **"Escribinos"** en la landing (`pages/landing/Preguntas.tsx`): falta definir el canal de contacto (mail o formulario). Hasta entonces el botón está deshabilitado.
 - **Privacidad y Términos:** el diseño los pone en el pie de la landing, pero todavía no hay páginas. Se suman a `Pie.tsx` cuando existan.
 - **Mapa, QR, lectura de comprobantes, login y archivos:** son slots. Esperan la librería o el backend.
+- **Últimos movimientos:** `api/` manda `cuando` armado y solo en horas, y `cuandoEnDias` (`lib/fechas.ts`) lo pasa a días leyendo ese texto. Lo prolijo es que el backend mande la fecha o el texto final; ahí se borra esa función.
 - **Roles:** `cambiarRol` y `useCambiarRol` están listos, pero falta la interfaz para el organizador (HU-08).
 - **Funciones sin flujo propio todavía:**
   - Recuperar acceso (HU-03).
@@ -302,8 +303,9 @@ Mientras no estén conectados, muestran `EsperaSlot`: un recuadro punteado que d
 ## Modo oscuro (en prueba)
 
 - Se elige en **Vos → Apariencia** (claro, oscuro o como el dispositivo). Se guarda en `localStorage` (`pinz-tema`); no pasa por el backend. Lógica en `src/lib/tema.ts`, hooks en `src/hooks/tema.ts`, y un script en `index.html` lo aplica antes de pintar.
-- Los tokens que cambian con el tema están en `@theme inline` y leen variables crudas (`--papel`, `--tinta`, `--contorno`…) definidas en `:root` y en `[data-tema="oscuro"]`. Los pastel no cambian.
-- `tinta` es el texto y `contorno` el trazo y la sombra: para bordes y sombras se usa `contorno`, nunca `tinta`.
+- Los tokens que cambian con el tema están en `@theme inline` y leen variables crudas (`--papel`, `--tinta`, `--contorno`, `--sombra`…) definidas en `:root` y en `[data-tema="oscuro"]`. Los pastel no cambian.
+- En oscuro la app es negra (`papel` #000), con superficies en gris muy oscuro y trazo y sombra en gris. Los colores de la marca son los mismos que en claro: todo lo que tiene una clase `*-tinte` es automáticamente una isla clara, con su texto oscuro (la regla está en `index.css`). `FONDO_DESTACADO` usa el color puro con `tema-claro`.
+- `tinta` es el texto, `contorno` el trazo y `--sombra` la sombra dura (`shadow-chica`, `shadow-dura`, `shadow-grande`). Para bordes se usa `contorno`, nunca `tinta`.
 - `tema-claro` marca una isla que vuelve a la paleta clara: los dibujos (`Pin`, `AvatarStack`, logo) y todo lo que tiene relleno pastel, para que su texto siga oscuro.
 - La variante `oscuro:` es para lo que un token no resuelve, como `FONDO_DESTACADO` en `pinz/tonos.ts` para bloques grandes.
 - La landing siempre se ve en claro (`useSoloClaro`).

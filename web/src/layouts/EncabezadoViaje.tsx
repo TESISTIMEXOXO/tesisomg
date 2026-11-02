@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import { AvatarStack } from '../components/ui/AvatarStack'
-import { ButtonLink } from '../components/ui/Button'
 import { StageSwitch } from '../components/ui/StageSwitch'
 import { ETAPAS } from '../lib/etapa'
 import { diasHasta, rangoDeFechas } from '../lib/fechas'
@@ -46,11 +45,6 @@ export function EncabezadoViaje({ viaje, etapa, onCambiarEtapa }: EncabezadoViaj
             <span className="font-display text-display font-black numeros">{faltan}</span>
             <span className="text-etiqueta">{faltan === 1 ? 'día para salir' : 'días para salir'}</span>
           </p>
-        )}
-        {etapa === 'viaje' && (
-          <ButtonLink to={`/viajes/${viaje.id}/emergencias`} variant="emergencia" size="sm">
-            Emergencias
-          </ButtonLink>
         )}
       </div>
       {import.meta.env.DEV && (

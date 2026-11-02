@@ -11,11 +11,17 @@ export const router = createBrowserRouter([
     path: '/',
     hydrateFallbackElement: <div aria-busy="true" className="min-h-dvh" />,
     children: [
-      { index: true, lazy: () => import('./pages/landing/Landing').then((m) => ({ Component: m.Landing })) },
+      {
+        /* El ingreso es una ventana sobre la landing: tiene su URL, pero la landing sigue montada atrás. */
+        lazy: () => import('./pages/landing/Landing').then((m) => ({ Component: m.Landing })),
+        children: [
+          { index: true },
+          { path: 'ingresar', lazy: () => import('./pages/ingresar/Ingresar').then((m) => ({ Component: m.Ingresar })) },
+        ],
+      },
       {
         element: <PublicLayout />,
         children: [
-          { path: 'ingresar', lazy: () => import('./pages/ingresar/Ingresar').then((m) => ({ Component: m.Ingresar })) },
           { path: 'unirse', lazy: () => import('./pages/unirse/Unirse').then((m) => ({ Component: m.Unirse })) },
           { path: 'unirse/:codigo', lazy: () => import('./pages/unirse/VistaInvitacion').then((m) => ({ Component: m.VistaInvitacion })) },
         ],
@@ -34,8 +40,7 @@ export const router = createBrowserRouter([
             children: [
               { path: 'viajes', lazy: () => import('./pages/viajes/MisViajes').then((m) => ({ Component: m.MisViajes })) },
               { path: 'viajes/nuevo', lazy: () => import('./pages/viajes/NuevoViaje').then((m) => ({ Component: m.NuevoViaje })) },
-              { path: 'vos', lazy: () => import('./pages/vos/Vos').then((m) => ({ Component: m.Vos })) },
-            ],
+              { path: 'vos', lazy: () => import('./pages/vos/Vos').then((m) => ({ Component: m.Vos })) },            ],
           },
           {
             path: 'viajes/:id',
