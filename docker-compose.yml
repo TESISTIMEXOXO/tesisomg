@@ -5,9 +5,9 @@ services:
     image: mongo:7
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
-      MONGO_INITDB_DATABASE: ${MONGO_DB}
+      MONGO_INITDB_ROOT_USERNAME: "${MONGO_USER:-px}"
+      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_PASSWORD:-cambiame}"
+      MONGO_INITDB_DATABASE: "${MONGO_DB:-px}"
     ports:
       - "27017:27017"
     volumes:
@@ -22,17 +22,18 @@ services:
   api:
     build: ./api
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
       NODE_ENV: development
       PORT: 4000
-      MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@db:27017/${MONGO_DB}?authSource=admin
+      MONGODB_URI: "${MONGODB_URI:-}"
+      MONGO_USER: "${MONGO_USER:-px}"
+      MONGO_PASSWORD: "${MONGO_PASSWORD:-cambiame}"
+      MONGO_DB: "${MONGO_DB:-px}"
       WEB_URL: http://localhost:5173
       SESION_SECRETO: ${SESION_SECRETO:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       SMTP_URL: ${SMTP_URL:-}
       MAIL_FROM: ${MAIL_FROM:-}
       CONTACTO_EQUIPO: ${CONTACTO_EQUIPO:-}

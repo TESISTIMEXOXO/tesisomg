@@ -1,0 +1,408 @@
+import { CalendarPlus, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { useState, type FormEvent } from 'react'
+import { NoCargo } from '../../components/marca/Estados'
+import { TituloPantalla } from '../../components/marca/TituloPantalla'
+import { MapaSlot } from '../../components/slots/MapaSlot'
+import { Button } from '../../components/ui/Button'
+import { CampoFecha } from '../../components/ui/CampoFecha'
+import { Chip } from '../../components/ui/Chip'
+import { ItineraryItem } from '../../components/ui/ItineraryItem'
+import { SelectorLugar } from '../../components/ui/SelectorLugar'
+import { TextField } from '../../components/ui/TextField'
+import { useAgregarActividad, useExportarCalendario, useItinerario } from '../../hooks/itinerario'
+import { useActualizarEtapas } from '../../hooks/viajes'
+import { useViajeActual } from '../../layouts/contextoViaje'
+import { diaCorto, diasDeLaSemana, hoyISO, leerFecha, mesYAnio, semanasDelMes, sumarDias, sumarMeses } from '../../lib/fechas'
+import { conMayuscula } from '../../lib/texto'
+import type { PuntoMapa } from '../../types/itinerario'
+import type { EtapaViaje, LugarViaje } from '../../types/viaje'
+import { puedeEditar } from './nombres'
+
+type EtapaBorrador = Omit<EtapaViaje, 'id' | 'ubicacion'> & { ubicacion: LugarViaje | null }
+
+function diaSiguiente(fecha: string) {
+  const dia = new Date(`${fecha}T12:00:00Z`)
+  dia.setUTCDate(dia.getUTCDate() + 1)
+  return dia.toISOString().slice(0, 10)
+}
+
+function etapasIniciales(etapas: EtapaViaje[], destino: string, fechaIda: string | null, fechaVuelta: string | null, ubicacion: LugarViaje | null): EtapaBorrador[] {
+  if (etapas.length) return etapas.map((etapa) => ({
+    destino: etapa.destino,
+    fechaIda: etapa.fechaIda,
+    fechaVuelta: etapa.fechaVuelta,
+    ubicacion: etapa.ubicacion,
+  }))
+  return [{
+    destino,
+    fechaIda,
+    fechaVuelta,
+    ubicacion,
+  }]
+}
+
+function EditarEtapas({
+  viaje,
+  soloLectura,
+}: {
+  viaje: ReturnType<typeof useViajeActual>['viaje']
+  soloLectura: boolean
+}) {
+  const actualizar = useActualizarEtapas(viaje.id)
+  const [abierto, setAbierto] = useState(false)
+  const [error, setError] = useState('')
+  const [etapas, setEtapas] = useState(() => etapasIniciales(viaje.etapas, viaje.destino, viaje.fechaIda, viaje.fechaVuelta, viaje.ubicacion))
+
+  function cambiar(indice: number, cambios: Partial<EtapaBorrador>) {
+    setEtapas((actuales) => actuales.map((etapa, i) => i === indice ? { ...etapa, ...cambios } : etapa))
+  }
+
+  function guardar(evento: FormEvent) {
+    evento.preventDefault()
+    setError('')
+    if (etapas.some((etapa) => !etapa.ubicacion)) {
+      setError('Elegí un lugar de las sugerencias para cada destino.')
+      return
+    }
+    const completas = etapas.filter((etapa) => etapa.fechaIda && etapa.fechaVuelta)
+    if (etapas.some((etapa) => Boolean(etapa.fechaIda) !== Boolean(etapa.fechaVuelta)) || (completas.length > 0 && completas.length !== etapas.length)) {
+      setError('Completá las fechas de todas las etapas o dejalas pendientes.')
+      return
+    }
+    for (let indice = 1; indice < etapas.length; indice += 1) {
+      const anterior = etapas[indice - 1]
+      const etapa = etapas[indice]
+      if (anterior?.fechaVuelta && etapa?.fechaIda && diaSiguiente(anterior.fechaVuelta) !== etapa.fechaIda) {
+        setError('Las etapas deben ser consecutivas, sin días libres ni superposiciones.')
+        return
+      }
+    }
+    actualizar.mutate(etapas.map((etapa) => ({
+      destino: etapa.ubicacion!.nombre,
+      fechaIda: etapa.fechaIda,
+      fechaVuelta: etapa.fechaVuelta,
+      ubicacion: etapa.ubicacion!,
+    })), {
+      onSuccess: (viajeActualizado) => {
+        setEtapas(etapasIniciales(viajeActualizado.etapas, viajeActualizado.destino, viajeActualizado.fechaIda, viajeActualizado.fechaVuelta, viajeActualizado.ubicacion))
+        setAbierto(false)
+      },
+    })
+  }
+
+  if (soloLectura) return null
+  if (!abierto) {
+    return (
+      <Button
+        variant="secundario"
+        icon={Plus}
+        className="self-start"
+        onClick={() => {
+          setEtapas(etapasIniciales(viaje.etapas, viaje.destino, viaje.fechaIda, viaje.fechaVuelta, viaje.ubicacion))
+          setAbierto(true)
+        }}
+      >
+        Editar destinos y fechas
+      </Button>
+    )
+  }
+
+  return (
+    <form onSubmit={guardar} noValidate className="flex flex-col gap-4 rounded-lg trazo bg-papel-hundido p-5">
+      {etapas.map((etapa, indice) => (
+        <section key={indice} className="flex flex-col gap-4 border-b border-linea pb-5 last:border-0 last:pb-0">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-bold">Destino {indice + 1}</h3>
+            {etapas.length > 1 && (
+              <Button type="button" variant="fantasma" size="sm" onClick={() => setEtapas((actuales) => actuales.filter((_, i) => i !== indice))}>
+                Quitar
+              </Button>
+            )}
+          </div>
+          <SelectorLugar
+            label="Destino"
+            value={etapa.destino}
+            hayUbicacion={Boolean(etapa.ubicacion)}
+            onChange={(destino) => cambiar(indice, { destino, ubicacion: null })}
+            onSelect={(ubicacion) => cambiar(indice, { destino: ubicacion.nombre, ubicacion })}
+          />
+          <div className="grid gap-4 md:grid-cols-2">
+            <CampoFecha
+              label="Ida"
+              min={indice > 0 && etapas[indice - 1]?.fechaVuelta ? diaSiguiente(etapas[indice - 1].fechaVuelta!) : undefined}
+              value={etapa.fechaIda ?? ''}
+              onChange={(fechaIda) => cambiar(indice, { fechaIda: fechaIda || null })}
+            />
+            <CampoFecha
+              label="Vuelta"
+              min={etapa.fechaIda || undefined}
+              value={etapa.fechaVuelta ?? ''}
+              onChange={(fechaVuelta) => cambiar(indice, { fechaVuelta: fechaVuelta || null })}
+            />
+          </div>
+        </section>
+      ))}
+      {etapas.length < 20 && (
+        <Button
+          type="button"
+          variant="fantasma"
+          icon={Plus}
+          className="self-start"
+          onClick={() => setEtapas((actuales) => [...actuales, { destino: '', fechaIda: null, fechaVuelta: null, ubicacion: null }])}
+        >
+          Agregar destino
+        </Button>
+      )}
+      {error && <p role="alert" className="font-semibold text-negativo">{error}</p>}
+      {actualizar.isError && <p role="alert" className="font-semibold text-negativo">No pudimos guardar destinos y fechas.</p>}
+      <div className="flex gap-3">
+        <Button type="submit" variant="secundario" disabled={actualizar.isPending}>{actualizar.isPending ? 'Guardando…' : 'Guardar etapas'}</Button>
+        <Button type="button" variant="fantasma" onClick={() => setAbierto(false)}>Cancelar</Button>
+      </div>
+    </form>
+  )
+}
+
+function AgregarActividad({ viajeId }: { viajeId: string }) {
+  const agregar = useAgregarActividad(viajeId)
+  const [abierto, setAbierto] = useState(false)
+  const [datos, setDatos] = useState({ fecha: '', hora: '', titulo: '', lugar: '', lat: null as number | null, lng: null as number | null })
+  const [error, setError] = useState<string>()
+  const [errorLugar, setErrorLugar] = useState<string>()
+
+  function cambiar(campo: 'fecha' | 'hora' | 'titulo' | 'lugar', valor: string) {
+    setDatos((anteriores) => ({ ...anteriores, [campo]: valor }))
+  }
+
+  function enviar(evento: FormEvent) {
+    evento.preventDefault()
+    if (!datos.fecha || !datos.hora || !datos.titulo.trim()) {
+      setError('Poné el día, la hora y qué van a hacer.')
+      return
+    }
+    if (datos.lugar.trim() && (datos.lat === null || datos.lng === null)) {
+      setErrorLugar('Elegí el lugar de las sugerencias para agregarlo al mapa.')
+      return
+    }
+    setError(undefined)
+    setErrorLugar(undefined)
+    agregar.mutate(
+      { ...datos, lugar: datos.lugar.trim() || null },
+      {
+        onSuccess: () => {
+          setDatos({ fecha: '', hora: '', titulo: '', lugar: '', lat: null, lng: null })
+          setAbierto(false)
+        },
+      },
+    )
+  }
+
+  if (!abierto) {
+    return (
+      <Button variant="secundario" icon={Plus} className="self-start" onClick={() => setAbierto(true)}>
+        Agregar actividad
+      </Button>
+    )
+  }
+
+  return (
+    <form onSubmit={enviar} noValidate className="flex flex-col gap-4 rounded-lg trazo bg-papel-hundido p-5">
+      <div className="grid gap-4 md:grid-cols-2">
+        <CampoFecha label="Día" value={datos.fecha} onChange={(fecha) => cambiar('fecha', fecha)} />
+        <TextField label="Hora" type="time" value={datos.hora} onChange={(evento) => cambiar('hora', evento.target.value)} />
+      </div>
+      <TextField label="Qué van a hacer" value={datos.titulo} error={error} onChange={(evento) => cambiar('titulo', evento.target.value)} />
+      <SelectorLugar
+        label="Dónde (opcional)"
+        value={datos.lugar}
+        error={errorLugar}
+        hayUbicacion={datos.lat !== null && datos.lng !== null}
+        onChange={(lugar) => {
+          setErrorLugar(undefined)
+          setDatos((anteriores) => ({ ...anteriores, lugar, lat: null, lng: null }))
+        }}
+        onSelect={(lugar) => {
+          setErrorLugar(undefined)
+          setDatos((anteriores) => ({ ...anteriores, lugar: lugar.nombre, lat: lugar.lat, lng: lugar.lng }))
+        }}
+      />
+      {agregar.isError && (
+        <p role="alert" className="font-semibold text-negativo">
+          No pudimos guardar la actividad. Revisá la conexión y probá de nuevo.
+        </p>
+      )}
+      <div className="flex gap-3">
+        <Button type="submit" variant="secundario" disabled={agregar.isPending}>
+          Agregar
+        </Button>
+        <Button variant="fantasma" onClick={() => setAbierto(false)}>
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+type Vista = 'dia' | 'semana' | 'mes'
+
+const VISTAS: { id: Vista; nombre: string }[] = [
+  { id: 'dia', nombre: 'Día' },
+  { id: 'semana', nombre: 'Semana' },
+  { id: 'mes', nombre: 'Mes' },
+]
+
+function CeldaDia({ fecha, cantidad, elegido, mesActual = true, onElegir }: { fecha: string; cantidad: number; elegido: boolean; mesActual?: boolean; onElegir: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={`${diaCorto(fecha)}: ${cantidad === 1 ? '1 actividad' : `${cantidad} actividades`}`}
+      aria-pressed={elegido}
+      onClick={onElegir}
+      className={`flex min-h-toque flex-col items-center justify-center rounded-sm trazo-fino numeros ${elegido ? 'tema-claro bg-coral' : 'bg-papel-elevado'} ${mesActual ? '' : 'opacity-50'}`}
+    >
+      <span className="font-bold">{leerFecha(fecha).getDate()}</span>
+      {cantidad > 0 && <span aria-hidden className="size-1.5 rounded-full bg-tinta" />}
+    </button>
+  )
+}
+
+/** Agenda: el plan día por día, con vistas de semana y mes y el mapa del día elegido. */
+export function Agenda() {
+  const { viaje, etapa } = useViajeActual()
+  const itinerario = useItinerario(viaje.id)
+  const exportar = useExportarCalendario(viaje.id)
+  const [vista, setVista] = useState<Vista>('dia')
+  const [fechaElegida, setFechaElegida] = useState<string | null>(null)
+  const soloLectura = etapa === 'post' || !puedeEditar(viaje.personas)
+  const etapas = viaje.etapas.length
+    ? viaje.etapas
+    : viaje.ubicacion
+      ? [{ id: 'destino', destino: viaje.destino, fechaIda: viaje.fechaIda, fechaVuelta: viaje.fechaVuelta, ubicacion: viaje.ubicacion }]
+      : []
+  const actividades = itinerario.data ?? []
+  const fechas = actividades.map((actividad) => actividad.fecha).sort()
+  const hoy = hoyISO()
+  const primera = fechas.includes(hoy) ? hoy : (fechas[0] ?? viaje.fechaIda ?? hoy)
+  const fecha = fechaElegida ?? primera
+  const delDia = actividades.filter((actividad) => actividad.fecha === fecha)
+  const cantidad = (dia: string) => actividades.filter((actividad) => actividad.fecha === dia).length
+  const centroMapa = etapas[0]?.ubicacion ?? viaje.ubicacion
+  const puntosMapa: PuntoMapa[] = [
+    ...etapas.map((etapaViaje) => ({
+      id: etapaViaje.id,
+      nombre: etapaViaje.destino,
+      lat: etapaViaje.ubicacion.lat,
+      lng: etapaViaje.ubicacion.lng,
+      tipo: 'alojamiento' as const,
+    })),
+    ...delDia.flatMap((actividad) => actividad.lat !== null && actividad.lng !== null
+      ? [{
+          id: actividad.id,
+          nombre: actividad.lugar ?? actividad.titulo,
+          lat: actividad.lat,
+          lng: actividad.lng,
+          tipo: 'actividad' as const,
+        }]
+      : []),
+  ]
+
+  function mover(direccion: 1 | -1) {
+    if (vista === 'dia') setFechaElegida(sumarDias(fecha, direccion))
+    else if (vista === 'semana') setFechaElegida(sumarDias(fecha, direccion * 7))
+    else setFechaElegida(sumarMeses(fecha, direccion))
+  }
+
+  function abrirDia(dia: string) {
+    setFechaElegida(dia)
+    setVista('dia')
+  }
+
+  return (
+    <>
+      <TituloPantalla titulo="El plan, día por día" pinz="brujula" />
+      <div className="flex flex-col gap-12">
+        <section aria-labelledby="itinerario" className="grid gap-6 lg:grid-cols-2">
+          <div className="flex flex-col gap-5">
+            <h3 id="itinerario" className="sr-only">Actividades</h3>
+            <div className="flex gap-2" role="group" aria-label="Cómo ver la agenda">
+              {VISTAS.map(({ id, nombre }) => (
+                <Chip key={id} tone={etapa} selected={vista === id} onClick={() => setVista(id)}>
+                  {nombre}
+                </Chip>
+              ))}
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <Button variant="fantasma" size="sm" icon={ChevronLeft} aria-label="Anterior" onClick={() => mover(-1)} />
+              <p aria-live="polite" className="font-bold">
+                {vista === 'dia' && conMayuscula(diaCorto(fecha))}
+                {vista === 'semana' && `Semana del ${diaCorto(diasDeLaSemana(fecha)[0] ?? fecha)}`}
+                {vista === 'mes' && mesYAnio(fecha)}
+              </p>
+              <Button variant="fantasma" size="sm" icon={ChevronRight} aria-label="Siguiente" onClick={() => mover(1)} />
+            </div>
+            {itinerario.isPending && <p className="text-tinta-suave">Cargando el itinerario…</p>}
+            {itinerario.error && <NoCargo error={itinerario.error} onReintentar={() => itinerario.refetch()} />}
+            {vista === 'dia' && itinerario.data && (
+              delDia.length === 0 ? (
+                <p className="text-tinta-suave">No hay actividades para este día.</p>
+              ) : (
+                <ol aria-label="El día">
+                  {delDia.map((item, i) => (
+                    <ItineraryItem
+                      key={item.id}
+                      time={item.hora}
+                      title={item.titulo}
+                      place={item.lugar}
+                      done={item.estado === 'hecho'}
+                      current={etapa === 'viaje' && item.estado === 'ahora'}
+                      last={i === delDia.length - 1}
+                    />
+                  ))}
+                </ol>
+              )
+            )}
+            {vista === 'semana' && (
+              <div className="grid grid-cols-7 gap-1">
+                {diasDeLaSemana(fecha).map((dia) => (
+                  <CeldaDia key={dia} fecha={dia} cantidad={cantidad(dia)} elegido={dia === fecha} onElegir={() => abrirDia(dia)} />
+                ))}
+              </div>
+            )}
+            {vista === 'mes' && (
+              <div className="grid grid-cols-7 gap-1">
+                {semanasDelMes(fecha).map((dia) => (
+                  <CeldaDia key={dia} fecha={dia} cantidad={cantidad(dia)} elegido={dia === fecha} mesActual={dia.slice(0, 7) === fecha.slice(0, 7)} onElegir={() => abrirDia(dia)} />
+                ))}
+              </div>
+            )}
+            {!soloLectura && <AgregarActividad viajeId={viaje.id} />}
+            <Button
+              variant="secundario"
+              size="sm"
+              icon={CalendarPlus}
+              className="self-start"
+              disabled={exportar.isPending || !actividades.length}
+              onClick={() => exportar.mutate()}
+            >
+              Sincronizar con el calendario
+            </Button>
+          </div>
+          <MapaSlot puntos={puntosMapa} personas={[]} centro={centroMapa} alto="grande" />
+        </section>
+
+        <section aria-labelledby="destinos" className="flex flex-col gap-5">
+          <h3 id="destinos" className="font-display text-titulo-1 font-black">Destinos y fechas</h3>
+          <ol className="flex flex-wrap gap-3">
+            {etapas.map((etapaViaje, indice) => (
+              <li key={etapaViaje.id} className="rounded-full trazo-fino bg-papel-hundido px-4 py-2 font-semibold">
+                {indice + 1}. {etapaViaje.destino}
+                {etapaViaje.fechaIda && etapaViaje.fechaVuelta && ` · ${diaCorto(etapaViaje.fechaIda)}–${diaCorto(etapaViaje.fechaVuelta)}`}
+              </li>
+            ))}
+          </ol>
+          {!soloLectura && <EditarEtapas viaje={viaje} soloLectura={soloLectura} />}
+        </section>
+      </div>
+    </>
+  )
+}

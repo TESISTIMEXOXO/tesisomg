@@ -1,9 +1,11 @@
 import { Briefcase, Route } from 'lucide-react'
 import { Cargando, NoCargo } from '../../../components/marca/Estados'
+import { TituloPantalla } from '../../../components/marca/TituloPantalla'
 import { MapaSlot } from '../../../components/slots/MapaSlot'
 import { ButtonLink } from '../../../components/ui/Button'
 import { ItineraryItem } from '../../../components/ui/ItineraryItem'
 import { useHoy } from '../../../hooks/itinerario'
+import { useUbicaciones } from '../../../hooks/ubicaciones'
 import { useViajeActual } from '../../../layouts/contextoViaje'
 import { diaCorto } from '../../../lib/fechas'
 
@@ -11,11 +13,15 @@ import { diaCorto } from '../../../lib/fechas'
 export function Hoy() {
   const { viaje } = useViajeActual()
   const { data: hoy, isPending, error, refetch } = useHoy(viaje.id)
+  const ubicaciones = useUbicaciones(viaje.id)
 
   if (isPending) return <Cargando pinz="siesta" />
   if (error) return <NoCargo error={error} onReintentar={() => refetch()} />
 
-  const enElLugar = hoy.ubicaciones.length
+  const personasUbicadas = ubicaciones.data ?? []
+  const enElLugar = personasUbicadas.length
+  const etapaDeHoy = viaje.etapas.find((etapa) => etapa.fechaIda && etapa.fechaVuelta && etapa.fechaIda <= hoy.fecha && etapa.fechaVuelta >= hoy.fecha)
+  const centroMapa = etapaDeHoy?.ubicacion ?? viaje.ubicacion
 
   return (
     <div className="grid gap-8 lg:grid-cols-2 lg:gap-7">
@@ -23,13 +29,14 @@ export function Hoy() {
         <span className="self-start rounded-full trazo-fino bg-papel-elevado px-3 py-1 text-sobretitulo uppercase">
           Día {hoy.dia} de {hoy.totalDias} · {diaCorto(hoy.fecha)}
         </span>
-        <h2 className="font-display text-display font-black">Hoy, {hoy.titulo}.</h2>
+        <TituloPantalla titulo={`Hoy, ${hoy.titulo}.`} pinz="siesta" />
         {hoy.aviso && (
           <p role="status" className="rounded-lg trazo bg-sol-tinte px-4 py-3 font-semibold">
             {hoy.aviso}
           </p>
         )}
-        <MapaSlot puntos={hoy.puntos} personas={hoy.ubicaciones} centro={viaje.ubicacion} />
+        {ubicaciones.error && <p role="alert" className="text-meta text-negativo">No pudimos actualizar las ubicaciones compartidas.</p>}
+        <MapaSlot puntos={hoy.puntos} personas={personasUbicadas} centro={centroMapa} />
         {enElLugar > 0 && (
           <p className="text-meta text-tinta-suave">
             {enElLugar} de {viaje.personas.length} compartiendo su ubicación
@@ -51,7 +58,7 @@ export function Hoy() {
           ))}
         </ol>
         <div className="grid grid-cols-2 gap-2.5">
-          <ButtonLink to={`/viajes/${viaje.id}/plan`} variant="secundario" size="sm" icon={Route}>
+          <ButtonLink to={`/viajes/${viaje.id}/agenda`} variant="secundario" size="sm" icon={Route}>
             Ruta
           </ButtonLink>
           <ButtonLink to={`/viajes/${viaje.id}/baul`} variant="secundario" size="sm" icon={Briefcase}>

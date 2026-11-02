@@ -41,7 +41,7 @@ export const ELENCO: Record<PinzId, Personaje> = {
     nombre: 'Chispa',
     apodo: 'el de las ideas',
     tono: 'sol',
-    acompana: 'Decidir · ideas guardadas',
+    acompana: 'Listas · ideas por decidir',
     descripcion:
       'Propone planes todo el tiempo: la cascada escondida, la feria del domingo, el atardecer que no sale en ninguna guía.',
     frase: '¿Y si mañana vemos el atardecer en el Campanario?',
@@ -50,7 +50,7 @@ export const ELENCO: Record<PinzId, Personaje> = {
     nombre: 'Brújula',
     apodo: 'el analista',
     tono: 'cielo',
-    acompana: 'Plan · itinerario y mapa',
+    acompana: 'Agenda · itinerario y mapa',
     descripcion:
       'Si hay un horario, lo sabe. Compara rutas, calcula tiempos y avisa cuando dos planes se pisan.',
     frase: 'Si salimos 9:40, llegamos a la aerosilla sin fila.',
@@ -68,7 +68,7 @@ export const ELENCO: Record<PinzId, Personaje> = {
     nombre: 'Siesta',
     apodo: 'el relajado',
     tono: 'mar',
-    acompana: 'Hoy · durante el viaje',
+    acompana: 'Inicio · durante el viaje',
     descripcion:
       'Viene a descansar y lo dice con orgullo. Le baja la ansiedad al grupo y recuerda que las vacaciones también son no hacer nada.',
     frase: 'Tranqui, el plan ya está. Disfrutá el día.',
@@ -77,7 +77,7 @@ export const ELENCO: Record<PinzId, Personaje> = {
     nombre: 'Valija',
     apodo: 'la precavida',
     tono: 'rosa',
-    acompana: 'Baúl · papeles y emergencias',
+    acompana: 'Listas · lo que falta y qué llevar',
     descripcion:
       'Lleva lo que nadie llevó y lo comparte sin decir «te lo dije». Piensa en el clima, los papeles y el botiquín.',
     frase: '¿Tenés el DNI a mano? Te lo dejo en el Baúl, por las dudas.',
@@ -86,7 +86,7 @@ export const ELENCO: Record<PinzId, Personaje> = {
     nombre: 'Postal',
     apodo: 'la memoriosa',
     tono: 'lavanda',
-    acompana: 'Post-viaje · álbum y recuerdos',
+    acompana: 'Baúl · álbum y recuerdos',
     descripcion:
       'Guarda todo: fotos, entradas, el nombre del bar del primer día. Cuando termina el viaje, es la primera en decir «¿repetimos?».',
     frase: 'Junté las fotos de todos en un álbum.',
@@ -122,7 +122,7 @@ export const ELENCO: Record<PinzId, Personaje> = {
     nombre: 'Cumbre',
     apodo: 'el aventurero',
     tono: 'bosque',
-    acompana: 'Plan · actividades y equipo',
+    acompana: 'Agenda · actividades y equipo',
     descripcion:
       'Quiere subir todo lo que se pueda subir. Convence al grupo de «una caminata cortita» que termina siendo de seis horas.',
     frase: 'Es una caminata cortita, lo prometo.',

@@ -1,7 +1,8 @@
-import { Briefcase, House, Plus, Route, Wallet } from 'lucide-react'
+import { Briefcase, CalendarDays, House, ListChecks, Plus, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { Outlet, useMatch, useParams } from 'react-router-dom'
 import { Cargando, NoCargo } from '../components/marca/Estados'
+import { CompartirUbicacion } from '../components/slots/CompartirUbicacion'
 import { BottomNav, type ItemNav } from '../components/ui/BottomNav'
 import { ButtonLink } from '../components/ui/Button'
 import { useViaje } from '../hooks/viajes'
@@ -13,14 +14,15 @@ import { EncabezadoViaje } from './EncabezadoViaje'
 
 function secciones(id: string): ItemNav[] {
   return [
-    { id: 'resumen', label: 'Resumen', icon: House, to: `/viajes/${id}`, end: true },
-    { id: 'plan', label: 'Plan', icon: Route, to: `/viajes/${id}/plan` },
+    { id: 'inicio', label: 'Inicio', icon: House, to: `/viajes/${id}`, end: true },
+    { id: 'agenda', label: 'Agenda', icon: CalendarDays, to: `/viajes/${id}/agenda` },
+    { id: 'listas', label: 'Listas', icon: ListChecks, to: `/viajes/${id}/listas` },
     { id: 'cuentas', label: 'Cuentas', icon: Wallet, to: `/viajes/${id}/cuentas` },
     { id: 'baul', label: 'Baúl', icon: Briefcase, to: `/viajes/${id}/baul` },
   ]
 }
 
-/** Adentro de un viaje: encabezado con la etapa, las cuatro secciones y la alarma fijas y, en Viaje, el gasto a mano. */
+/** Adentro de un viaje: encabezado con la etapa, las cinco secciones y la alarma fijas y, en Viaje, el gasto a mano. */
 export function ViajeLayout() {
   const { id = '' } = useParams()
   const { data: viaje, isPending, error, refetch } = useViaje(id)
@@ -45,6 +47,7 @@ export function ViajeLayout() {
     contenido = (
       <>
         <EncabezadoViaje viaje={viaje} etapa={etapa} onCambiarEtapa={(nueva) => setEtapaElegida({ viajeId: viaje.id, etapa: nueva })} />
+        {etapa === 'viaje' && <CompartirUbicacion key={viaje.id} viajeId={viaje.id} />}
         <div className="pt-8 lg:pt-12">
           <Outlet context={contexto} />
         </div>

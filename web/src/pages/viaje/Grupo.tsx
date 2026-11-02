@@ -7,11 +7,12 @@ import { AvatarStack } from '../../components/ui/AvatarStack'
 import { Button } from '../../components/ui/Button'
 import { Tarjeta } from '../../components/ui/Tarjeta'
 import { TextField } from '../../components/ui/TextField'
-import { useInvitacionGrupo, useInvitarPorMail, useMovimientos, useRepetirViaje, useSalirDelGrupo } from '../../hooks/grupo'
+import { mensajeAlSalir } from '../../lib/erroresCuentas'
+import { useCambiarRol, useInvitacionGrupo, useInvitarPorMail, useMovimientos, useRepetirViaje, useSalirDelGrupo } from '../../hooks/grupo'
 import { useViajeActual } from '../../layouts/contextoViaje'
 import { cuandoEnDias } from '../../lib/fechas'
 import { ELENCO } from '../../pinz/elenco'
-import type { Rol } from '../../types/persona'
+import { RolSchema, type Rol } from '../../types/persona'
 
 const ROLES: Record<Rol, string> = { organizador: 'Organiza', miembro: 'Miembro', lector: 'Solo mira' }
 
@@ -54,6 +55,8 @@ export function Grupo() {
   const movimientos = useMovimientos(viaje.id)
   const salir = useSalirDelGrupo(viaje.id)
   const repetir = useRepetirViaje(viaje.id)
+  const cambiarRol = useCambiarRol(viaje.id)
+  const puedeAdministrarRoles = viaje.personas.some((persona) => persona.esVos && persona.rol === 'organizador')
   const [confirmarSalida, setConfirmarSalida] = useState(false)
   const [copiado, setCopiado] = useState(false)
 
@@ -76,10 +79,30 @@ export function Grupo() {
                     {persona.pinz ? `${ELENCO[persona.pinz].nombre}, ${ELENCO[persona.pinz].apodo}` : 'Todavía no eligió su pinz'}
                   </span>
                 </span>
-                <span className="rounded-full trazo-fino bg-papel-hundido px-2.5 py-0.5 text-meta font-extrabold">{ROLES[persona.rol]}</span>
+                {puedeAdministrarRoles && !persona.esVos ? (
+                  <label>
+                    <span className="sr-only">Rol de {persona.nombre}</span>
+                    <select
+                      value={persona.rol}
+                      disabled={cambiarRol.isPending}
+                      onChange={(evento) => {
+                        const rol = RolSchema.safeParse(evento.target.value)
+                        if (rol.success) cambiarRol.mutate({ personaId: persona.id, rol: rol.data })
+                      }}
+                      className="min-h-toque rounded-full trazo-fino bg-papel-hundido px-3 text-meta font-extrabold"
+                    >
+                      <option value="organizador">Organiza</option>
+                      <option value="miembro">Miembro</option>
+                      <option value="lector">Solo mira</option>
+                    </select>
+                  </label>
+                ) : (
+                  <span className="rounded-full trazo-fino bg-papel-hundido px-2.5 py-0.5 text-meta font-extrabold">{ROLES[persona.rol]}</span>
+                )}
               </li>
             ))}
           </ul>
+          {cambiarRol.isError && <p role="alert" className="mt-3 text-meta font-semibold text-negativo">No pudimos cambiar el rol. Revisá que siga habiendo al menos una persona organizadora.</p>}
         </Tarjeta>
 
         <Tarjeta titulo="Últimos movimientos">
@@ -150,7 +173,7 @@ export function Grupo() {
               Salir del grupo
             </Button>
           )}
-          {salir.isError && <p role="alert" className="text-negativo">No pudimos salir del grupo. Si sos organizador, primero transferí la organización.</p>}
+          {salir.isError && <p role="alert" className="text-negativo">{mensajeAlSalir(salir.error)}</p>}
         </section>
         {repetir.isError && <p role="alert" className="text-negativo">No pudimos crear el nuevo viaje. Probá de nuevo.</p>}
       </div>

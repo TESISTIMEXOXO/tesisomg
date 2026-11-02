@@ -7,15 +7,21 @@ function requerida(nombre: string) {
 }
 
 const produccion = process.env.NODE_ENV === "production";
+const mongoUri = process.env.MONGODB_URI?.trim()
+  || (produccion
+    ? requerida("MONGODB_URI")
+    : `mongodb://${encodeURIComponent(process.env.MONGO_USER || "px")}:${encodeURIComponent(process.env.MONGO_PASSWORD || "cambiame")}@db:27017/${encodeURIComponent(process.env.MONGO_DB || "px")}?authSource=admin`);
 
 export const config = {
   produccion,
   puerto: Number(process.env.PORT) || 4000,
-  mongoUri: requerida("MONGODB_URI"),
+  mongoUri,
   /** Dónde vive el front: CORS. */
   webUrl: process.env.WEB_URL || process.env.CORS_ORIGIN || "http://localhost:5173",
   /** Firma las cookies de sesión. En desarrollo hay uno fijo para no trabar a nadie. */
   sesionSecreto: produccion ? requerida("SESION_SECRETO") : process.env.SESION_SECRETO || "desarrollo-no-usar-en-produccion",
+  /** Lee los comprobantes con Claude. Sin esto, el botón de escanear avisa que no está disponible. */
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY,
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,

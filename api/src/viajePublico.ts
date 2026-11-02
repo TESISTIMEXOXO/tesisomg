@@ -1,5 +1,8 @@
 import mongoose from "mongoose";
+import { netosDe } from "./cuentas/delViaje.js";
 import { Viaje, type DocViaje } from "./modelos/Viaje.js";
+
+type EtapaViaje = NonNullable<DocViaje["etapas"]>[number];
 
 export function filtroMiembro(usuarioId: string) {
   return { "miembros.usuarioId": new mongoose.Types.ObjectId(usuarioId) };
@@ -26,16 +29,42 @@ export function registrarMovimiento(viaje: DocViaje, texto: string) {
   viaje.movimientos.push({ id: crypto.randomUUID(), texto, creadoEn: new Date() });
 }
 
-export function viajePublico(viaje: DocViaje, usuarioId: string) {
-  return {
-    id: viaje._id.toString(),
-    nombre: viaje.nombre,
+/** "todos a mano" cuando hubo gastos y ya nadie le debe nada a nadie. */
+function estadoDeCuentas(viaje: DocViaje) {
+  if (viaje.gastos.length === 0) return null;
+  return [...netosDe(viaje).values()].every((neto) => neto === 0) ? "todos a mano" : null;
+}
+
+export function etapasDelViaje(viaje: DocViaje): EtapaViaje[] {
+  if (viaje.etapas.length > 0) return [...viaje.etapas];
+  if (!viaje.ubicacion) return [];
+  return [{
+    id: `etapa-${viaje._id.toString()}`,
     destino: viaje.destino,
     fechaIda: viaje.fechaIda ?? null,
     fechaVuelta: viaje.fechaVuelta ?? null,
-    ubicacion: viaje.ubicacion
-      ? { nombre: viaje.ubicacion.nombre, lat: viaje.ubicacion.lat, lng: viaje.ubicacion.lng }
-      : null,
+    ubicacion: viaje.ubicacion,
+  }];
+}
+
+export function viajePublico(viaje: DocViaje, usuarioId: string) {
+  const etapas = etapasDelViaje(viaje);
+  const primeraEtapa = etapas[0];
+  const ultimaEtapa = etapas.at(-1);
+  return {
+    id: viaje._id.toString(),
+    nombre: viaje.nombre,
+    destino: etapas.length > 1 ? etapas.map((etapa) => etapa.destino).join(" → ") : viaje.destino,
+    fechaIda: primeraEtapa?.fechaIda ?? viaje.fechaIda ?? null,
+    fechaVuelta: ultimaEtapa?.fechaVuelta ?? viaje.fechaVuelta ?? null,
+    ubicacion: primeraEtapa?.ubicacion ?? viaje.ubicacion,
+    etapas: etapas.map((etapa) => ({
+      id: etapa.id,
+      destino: etapa.destino,
+      fechaIda: etapa.fechaIda ?? null,
+      fechaVuelta: etapa.fechaVuelta ?? null,
+      ubicacion: etapa.ubicacion,
+    })),
     personas: viaje.miembros.map((miembro) => ({
       id: miembro.usuarioId.toString(),
       nombre: miembro.nombre,
@@ -44,6 +73,6 @@ export function viajePublico(viaje: DocViaje, usuarioId: string) {
       esVos: miembro.usuarioId.toString() === usuarioId,
     })),
     pendiente: null,
-    estadoCuentas: null,
+    estadoCuentas: estadoDeCuentas(viaje),
   };
 }
