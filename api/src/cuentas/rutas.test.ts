@@ -9,10 +9,12 @@ import { COOKIE_SESION } from "../auth/sesion.js";
 import { config } from "../config.js";
 import { Usuario } from "../modelos/Usuario.js";
 import { Viaje } from "../modelos/Viaje.js";
+import { migrarCuentas } from "./migracion.js";
 
 const BASE_DE_PRUEBA = "pinz_test";
 
 type Saldos = { saldos: { persona: { nombre: string }; monto: number; pagoEnviado: { id: string; monto: number } | null }[] };
+type GastoApi = { id: string; descripcion: string; monto: number; propina: number; pagoId: string; creadoPorId: string; partes: { personaId: string; monto: number }[] };
 type Pago = { id: string; deudorId: string; acreedorId: string; monto: number; estado: string };
 
 let servidor: Server;
@@ -48,7 +50,6 @@ function gastoViejo(descripcion: string, monto: number, pago: string, participan
     fecha: "2026-10-27",
     division: participantes.length > 0 ? ("consumo" as const) : ("iguales" as const),
     participantes: participantes.map(objeto),
-    pagosConfirmados: [],
   };
 }
 
@@ -189,4 +190,158 @@ test("GET /pagos devuelve los pagos, el más nuevo primero", async () => {
   await api("Pedro", "POST", `/viajes/${viajeId}/gastos/pagos`, { personaId: idDe("Fede") });
   const { cuerpo } = await api<Pago[]>("Santi", "GET", `/viajes/${viajeId}/gastos/pagos`);
   assert.deepEqual(cuerpo.map((pago) => pago.deudorId), [idDe("Pedro"), idDe("Nacho")]);
+});
+
+
+async function viajeVacio(extra: { nombre: string; rol: "miembro" | "lector" }[] = []) {
+  const viaje = await Viaje.create({
+    nombre: "Cabaña",
+    destino: "Bariloche",
+    creadoPor: objeto("Nacho"),
+    codigoInvitacion: crypto.randomUUID(),
+    miembros: [
+      { usuarioId: objeto("Nacho"), nombre: "Nacho", rol: "organizador" },
+      ...["Fede", "Santi", "Pedro"].map((nombre) => ({ usuarioId: objeto(nombre), nombre, rol: "miembro" as const })),
+      ...extra.map(({ nombre, rol }) => ({ usuarioId: objeto(nombre), nombre, rol })),
+    ],
+  });
+  return viaje.id as string;
+}
+
+async function cargarEjemplo(viajeId: string) {
+  const ruta = `/viajes/${viajeId}/gastos`;
+  await api("Nacho", "POST", ruta, { descripcion: "Seña de la cabaña", monto: 120000, division: "iguales", pagoId: idDe("Fede") });
+  await api("Pedro", "POST", ruta, {
+    descripcion: "Súper",
+    monto: 10000,
+    division: "iguales",
+    participantes: [idDe("Pedro"), idDe("Nacho"), idDe("Santi")],
+  });
+  return api<GastoApi>("Nacho", "POST", ruta, {
+    descripcion: "Cena",
+    monto: 25000,
+    division: "consumo",
+    fecha: "2026-10-27",
+    consumos: [
+      { personaId: idDe("Nacho"), monto: 8000 },
+      { personaId: idDe("Fede"), monto: 12000 },
+      { personaId: idDe("Santi"), monto: 5000 },
+    ],
+    propina: 10,
+  });
+}
+
+test("los tres gastos del ejemplo, cargados por la API, dan los números de docs/cuentas.md", async () => {
+  const viajeId = await viajeVacio();
+  const cena = await cargarEjemplo(viajeId);
+  assert.equal(cena.status, 201);
+  assert.equal(cena.cuerpo.monto, 27500);
+  assert.equal(cena.cuerpo.propina, 2500);
+  assert.equal(cena.cuerpo.partes.find((parte) => parte.personaId === idDe("Fede"))?.monto, 13200);
+  assert.deepEqual(await montosDe("Nacho", viajeId), { Fede: -16800, Santi: 5500, Pedro: -3333 });
+});
+
+test("consumos que no suman el monto dan 400 consumos-no-suman", async () => {
+  const viajeId = await viajeVacio();
+  const respuesta = await api("Nacho", "POST", `/viajes/${viajeId}/gastos`, {
+    descripcion: "Cena",
+    monto: 25000,
+    division: "consumo",
+    consumos: [{ personaId: idDe("Nacho"), monto: 8000 }],
+  });
+  assert.equal(respuesta.status, 400);
+  assert.deepEqual(respuesta.cuerpo, { error: "consumos-no-suman" });
+});
+
+test("los datos mal formados dan 400 datos-invalidos", async () => {
+  const viajeId = await viajeVacio();
+  const ruta = `/viajes/${viajeId}/gastos`;
+  const malos = [
+    { descripcion: "", monto: 100, division: "iguales" },
+    { descripcion: "x", monto: 100000001, division: "iguales" },
+    { descripcion: "x", monto: 100, division: "iguales", participantes: [idDe("Nacho"), idDe("Nacho")] },
+    { descripcion: "x", monto: 2, division: "iguales" },
+  ];
+  for (const malo of malos) {
+    const respuesta = await api<{ error: string }>("Nacho", "POST", ruta, malo);
+    assert.equal(respuesta.status, 400);
+    assert.equal(respuesta.cuerpo.error, "datos-invalidos");
+  }
+});
+
+test("un participante que no es del viaje da 400 participante-no-es-miembro", async () => {
+  const viajeId = await viajeVacio();
+  const respuesta = await api("Nacho", "POST", `/viajes/${viajeId}/gastos`, {
+    descripcion: "x",
+    monto: 100,
+    division: "iguales",
+    participantes: [idDe("Ajena")],
+  });
+  assert.deepEqual(respuesta.cuerpo, { error: "participante-no-es-miembro" });
+});
+
+test("un lector no carga gastos (403), pero participa y puede pagar", async () => {
+  const viajeId = await viajeVacio([{ nombre: "Lola", rol: "lector" }]);
+  const ruta = `/viajes/${viajeId}/gastos`;
+  const carga = await api("Lola", "POST", ruta, { descripcion: "x", monto: 100, division: "iguales" });
+  assert.equal(carga.status, 403);
+  assert.deepEqual(carga.cuerpo, { error: "sin-permiso" });
+  await api("Nacho", "POST", ruta, { descripcion: "Nafta", monto: 500, division: "iguales" });
+  const pago = await api("Lola", "POST", `${ruta}/pagos`, { personaId: idDe("Nacho") });
+  assert.equal(pago.status, 201);
+});
+
+test("editar o borrar un gasto ajeno como miembro da 403; como organizador se puede", async () => {
+  const viajeId = await viajeVacio();
+  const ruta = `/viajes/${viajeId}/gastos`;
+  const { cuerpo: gasto } = await api<GastoApi>("Pedro", "POST", ruta, { descripcion: "Súper", monto: 4000, division: "iguales" });
+  const cambio = { descripcion: "Súper grande", monto: 8000, division: "iguales" };
+  assert.equal((await api("Santi", "PATCH", `${ruta}/${gasto.id}`, cambio)).status, 403);
+  assert.equal((await api("Santi", "DELETE", `${ruta}/${gasto.id}`)).status, 403);
+  const editado = await api<GastoApi>("Nacho", "PATCH", `${ruta}/${gasto.id}`, cambio);
+  assert.equal(editado.status, 200);
+  assert.equal(editado.cuerpo.monto, 8000);
+  assert.equal(editado.cuerpo.pagoId, idDe("Pedro"));
+  assert.equal(editado.cuerpo.creadoPorId, idDe("Pedro"));
+  assert.equal(editado.cuerpo.partes.find((parte) => parte.personaId === idDe("Fede"))?.monto, 2000);
+  assert.equal((await api("Nacho", "DELETE", `${ruta}/${gasto.id}`)).status, 204);
+});
+
+test("quien cargó un gasto lo puede editar aunque lo haya pagado otro", async () => {
+  const viajeId = await viajeVacio();
+  const ruta = `/viajes/${viajeId}/gastos`;
+  const { cuerpo: gasto } = await api<GastoApi>("Santi", "POST", ruta, { descripcion: "Taxi", monto: 400, division: "iguales", pagoId: idDe("Pedro") });
+  const editado = await api("Santi", "PATCH", `${ruta}/${gasto.id}`, { descripcion: "Taxi al centro", monto: 400, division: "iguales" });
+  assert.equal(editado.status, 200);
+  assert.equal((await api("Pedro", "DELETE", `${ruta}/${gasto.id}`)).status, 403);
+});
+
+test("borrar un gasto actualiza los saldos de todos", async () => {
+  const viajeId = await viajeVacio();
+  await cargarEjemplo(viajeId);
+  const { cuerpo: gastos } = await api<GastoApi[]>("Nacho", "GET", `/viajes/${viajeId}/gastos`);
+  const cena = gastos.find((gasto) => gasto.descripcion === "Cena");
+  await api("Nacho", "DELETE", `/viajes/${viajeId}/gastos/${cena?.id}`);
+  assert.deepEqual(await montosDe("Nacho", viajeId), { Fede: -30000, Santi: 0, Pedro: -3333 });
+  assert.equal((await montosDe("Santi", viajeId)).Fede, -30000);
+});
+
+test("la migración completa partes, propina, autor y estado, y se puede correr dos veces", async () => {
+  const viajeId = await viajeDeEjemplo();
+  await Viaje.collection.updateOne(
+    { _id: new mongoose.Types.ObjectId(viajeId) },
+    { $push: { pagos: { deudorId: objeto("Nacho"), acreedorId: objeto("Fede"), monto: 1000, fecha: "2026-10-20" } } as never },
+  );
+  const antes = await montosDe("Nacho", viajeId);
+  await migrarCuentas();
+  await migrarCuentas();
+  const crudo = await Viaje.collection.findOne({ _id: new mongoose.Types.ObjectId(viajeId) });
+  const gasto = crudo?.gastos[0];
+  assert.equal(gasto.partes.length, 4);
+  assert.equal(gasto.propina, 0);
+  assert.equal(String(gasto.creadoPorId), idDe("Fede"));
+  assert.equal("pagosConfirmados" in gasto, false);
+  assert.equal(crudo?.pagos[0].estado, "confirmado");
+  assert.equal(typeof crudo?.pagos[0].id, "string");
+  assert.deepEqual(await montosDe("Nacho", viajeId), antes);
 });

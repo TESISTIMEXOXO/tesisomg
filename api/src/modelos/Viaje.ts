@@ -11,7 +11,8 @@ type MiembroDoc = { usuarioId: mongoose.Types.ObjectId; nombre: string; pinz: (t
 type OpcionDoc = { id: string; nombre: string; detalle: string | null; votantes: mongoose.Types.ObjectId[] };
 type VotacionDoc = { id: string; pregunta: string; categoria: CategoriaVotacion; estado: "abierta" | "cerrada"; cierre: string | null; opciones: OpcionDoc[]; ganadoraId: string | null };
 type ActividadDoc = { id: string; fecha: string; hora: string; titulo: string; lugar: string | null; lat: number | null; lng: number | null; hecha: boolean };
-type GastoDoc = { id: string; descripcion: string; monto: number; pagoId: mongoose.Types.ObjectId; fecha: string; division: TipoDivision; participantes: mongoose.Types.ObjectId[]; pagosConfirmados: mongoose.Types.ObjectId[] };
+type ParteDoc = { personaId: mongoose.Types.ObjectId; monto: number };
+type GastoDoc = { id: string; descripcion: string; monto: number; pagoId: mongoose.Types.ObjectId; fecha: string; division: TipoDivision; participantes: mongoose.Types.ObjectId[]; partes: ParteDoc[]; consumos: ParteDoc[]; propina: number; propinaPorcentaje: number; creadoPorId: mongoose.Types.ObjectId | null };
 type PagoDoc = { id: string; deudorId: mongoose.Types.ObjectId; acreedorId: mongoose.Types.ObjectId; monto: number; fecha: string; estado: "pendiente" | "confirmado" | "rechazado"; resueltoEn: Date | null };
 type TareaDoc = { id: string; titulo: string; lista: ListaTarea; responsableId: mongoose.Types.ObjectId | null; creadaPor: mongoose.Types.ObjectId; hecha: boolean };
 type RequisitoDoc = { id: string; titulo: string; detalle: string; cumplidoPor: mongoose.Types.ObjectId[] };
@@ -97,6 +98,14 @@ const actividadSchema = new mongoose.Schema<ActividadDoc>(
   { _id: false },
 );
 
+const parteSchema = new mongoose.Schema<ParteDoc>(
+  {
+    personaId: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario", required: true },
+    monto: { type: Number, required: true },
+  },
+  { _id: false },
+);
+
 const gastoSchema = new mongoose.Schema<GastoDoc>(
   {
     id: { type: String, required: true, default: () => new mongoose.Types.ObjectId().toString() },
@@ -106,7 +115,12 @@ const gastoSchema = new mongoose.Schema<GastoDoc>(
     fecha: { type: String, required: true },
     division: { type: String, enum: ["iguales", "consumo"], required: true },
     participantes: [{ type: mongoose.Schema.Types.ObjectId, ref: "Usuario" }],
-    pagosConfirmados: [{ type: mongoose.Schema.Types.ObjectId, ref: "Usuario" }],
+    partes: { type: [parteSchema], default: [] },
+    // Lo que consumió cada uno antes de la propina: hace falta para volver a editar el gasto.
+    consumos: { type: [parteSchema], default: [] },
+    propina: { type: Number, default: 0 },
+    propinaPorcentaje: { type: Number, default: 0 },
+    creadoPorId: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario", default: null },
   },
   { _id: false },
 );

@@ -26,6 +26,20 @@ export function dividirIguales(monto: number, participantes: string[], pagoId: s
   return orden.map((personaId, indice) => ({ personaId, monto: parte + (indice < sobran ? 1 : 0) }));
 }
 
+/** La regla de los gastos guardados antes de que existieran las partes. */
+export function partesPorReglaVieja(
+  monto: number,
+  division: "iguales" | "consumo",
+  participantes: string[],
+  miembros: string[],
+  pagoId: string,
+) {
+  const entre = division === "consumo" && participantes.length > 0
+    ? miembros.filter((id) => participantes.includes(id))
+    : miembros;
+  return dividirIguales(monto, entre, pagoId);
+}
+
 /**
  * Parte por consumo: la propina se reparte en proporción a lo que consumió cada uno.
  * Los pesos que sobran van a las fracciones más grandes y los empates se definen por id.

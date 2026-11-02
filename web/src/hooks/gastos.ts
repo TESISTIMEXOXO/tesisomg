@@ -29,6 +29,19 @@ export function useAgregarGasto(viajeId: string) {
   return useMutation({ mutationFn: (datos: NuevoGasto) => gastos.agregar(viajeId, datos), onSuccess: invalidar })
 }
 
+export function useEditarGasto(viajeId: string) {
+  const invalidar = useInvalidarCuentas(viajeId)
+  return useMutation({
+    mutationFn: ({ gastoId, datos }: { gastoId: string; datos: NuevoGasto }) => gastos.editar(viajeId, gastoId, datos),
+    onSuccess: invalidar,
+  })
+}
+
+export function useBorrarGasto(viajeId: string) {
+  const invalidar = useInvalidarCuentas(viajeId)
+  return useMutation({ mutationFn: (gastoId: string) => gastos.borrar(viajeId, gastoId), onSuccess: invalidar })
+}
+
 export function useRegistrarPago(viajeId: string) {
   const invalidar = useInvalidarCuentas(viajeId)
   return useMutation({ mutationFn: (personaId: string) => gastos.registrarPago(viajeId, personaId), onSuccess: invalidar })

@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "test": "tsx --test \"src/**/*.test.ts\"",
-    "dev": "tsx watch src/index.ts"
+    "dev": "tsx watch src/index.ts",
+    "migrar:cuentas": "tsx src/cuentas/migrar.ts"
   },
   "keywords": [],
   "author": "",

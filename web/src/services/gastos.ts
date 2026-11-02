@@ -17,6 +17,14 @@ export function agregar(viajeId: string, datos: NuevoGasto) {
   return pedir(`/viajes/${encodeURIComponent(viajeId)}/gastos`, { method: 'POST', body: datos, schema: GastoSchema })
 }
 
+export function editar(viajeId: string, gastoId: string, datos: NuevoGasto) {
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/gastos/${encodeURIComponent(gastoId)}`, { method: 'PATCH', body: datos, schema: GastoSchema })
+}
+
+export function borrar(viajeId: string, gastoId: string) {
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/gastos/${encodeURIComponent(gastoId)}`, { method: 'DELETE' })
+}
+
 export async function pagos(viajeId: string) {
   return pedir(`/viajes/${encodeURIComponent(viajeId)}/gastos/pagos`, { schema: z.array(PagoSchema) })
 }
