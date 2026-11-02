@@ -4,6 +4,7 @@ import { z } from "zod";
 import { mandarInvitacion } from "../auth/mail.js";
 import { requiereSesion } from "../auth/sesion.js";
 import { netosDe } from "../cuentas/delViaje.js";
+import { conListasAlDia, listasDe } from "../listasDelViaje.js";
 import { Usuario } from "../modelos/Usuario.js";
 import { UbicacionCompartida } from "../modelos/UbicacionCompartida.js";
 import { Viaje } from "../modelos/Viaje.js";
@@ -401,8 +402,8 @@ rutasViajes.get("/:id/resumen", async (req, res) => {
     res.status(404).json({ error: "no-existe" });
     return;
   }
-  const tareas = viaje.tareas.filter((tarea) => tarea.lista === "compartida");
-  res.json({ viajeId: viaje._id.toString(), pendientes: [], checklist: { hechas: tareas.filter((tarea) => tarea.hecha).length, total: tareas.length } });
+  const items = listasDe(await conListasAlDia(viaje), usuarioId).flatMap((lista) => lista.items);
+  res.json({ viajeId: viaje._id.toString(), pendientes: [], checklist: { hechas: items.filter((item) => item.hecha).length, total: items.length } });
 });
 
 rutasViajes.get("/:id", async (req, res) => {

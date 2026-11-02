@@ -16,6 +16,9 @@ type ParteDoc = { personaId: mongoose.Types.ObjectId; monto: number };
 type GastoDoc = { id: string; descripcion: string; monto: number; pagoId: mongoose.Types.ObjectId; fecha: string; division: TipoDivision; participantes: mongoose.Types.ObjectId[]; partes: ParteDoc[]; consumos: ParteDoc[]; propina: number; propinaPorcentaje: number; creadoPorId: mongoose.Types.ObjectId | null };
 type PagoDoc = { id: string; deudorId: mongoose.Types.ObjectId; acreedorId: mongoose.Types.ObjectId; monto: number; fecha: string; estado: "pendiente" | "confirmado" | "rechazado"; resueltoEn: Date | null };
 type TareaDoc = { id: string; titulo: string; lista: ListaTarea; responsableId: mongoose.Types.ObjectId | null; creadaPor: mongoose.Types.ObjectId; hecha: boolean };
+export const COLORES_LISTA = ["coral", "sol", "durazno", "rosa", "lavanda", "cielo", "mar", "bosque"] as const;
+type ItemListaDoc = { id: string; titulo: string; hecha: boolean; responsableId: mongoose.Types.ObjectId | null };
+type ListaDoc = { id: string; nombre: string; color: (typeof COLORES_LISTA)[number]; grupal: boolean; creadaPor: mongoose.Types.ObjectId; participantes: mongoose.Types.ObjectId[]; items: ItemListaDoc[] };
 type RequisitoDoc = { id: string; titulo: string; detalle: string; cumplidoPor: mongoose.Types.ObjectId[] };
 type MovimientoDoc = { id: string; texto: string; creadoEn: Date };
 type ContactoEmergenciaDoc = { id: string; nombre: string; detalle: string; telefono: string | null };
@@ -40,7 +43,9 @@ export type ViajeData = {
   itinerario: ActividadDoc[];
   gastos: GastoDoc[];
   pagos: PagoDoc[];
+  /** Las de antes de las checklists: se pasan a listas la primera vez que se piden. */
   tareas: TareaDoc[];
+  listas: ListaDoc[];
   requisitos: RequisitoDoc[];
   movimientos: MovimientoDoc[];
   emergencias: EmergenciasDoc;
@@ -166,6 +171,29 @@ const tareaSchema = new mongoose.Schema<TareaDoc>(
   { _id: false },
 );
 
+const itemListaSchema = new mongoose.Schema<ItemListaDoc>(
+  {
+    id: { type: String, required: true },
+    titulo: { type: String, required: true },
+    hecha: { type: Boolean, default: false },
+    responsableId: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario", default: null },
+  },
+  { _id: false },
+);
+
+const listaSchema = new mongoose.Schema<ListaDoc>(
+  {
+    id: { type: String, required: true },
+    nombre: { type: String, required: true, trim: true },
+    color: { type: String, enum: COLORES_LISTA, required: true },
+    grupal: { type: Boolean, required: true },
+    creadaPor: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario", required: true },
+    participantes: [{ type: mongoose.Schema.Types.ObjectId, ref: "Usuario" }],
+    items: { type: [itemListaSchema], default: [] },
+  },
+  { _id: false },
+);
+
 const requisitoSchema = new mongoose.Schema<RequisitoDoc>(
   {
     id: { type: String, required: true },
@@ -203,6 +231,7 @@ const viajeSchema = new mongoose.Schema<ViajeData>(
     gastos: { type: [gastoSchema], default: [] },
     pagos: { type: [pagoSchema], default: [] },
     tareas: { type: [tareaSchema], default: [] },
+    listas: { type: [listaSchema], default: [] },
     requisitos: { type: [requisitoSchema], default: [] },
     movimientos: { type: [movimientoSchema], default: [] },
     emergencias: {

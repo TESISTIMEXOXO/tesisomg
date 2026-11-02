@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from './layouts/AppLayout'
 import { ConSesion } from './layouts/ConSesion'
 import { PublicLayout } from './layouts/PublicLayout'
+import { RaizLayout } from './layouts/RaizLayout'
 import { ViajeLayout } from './layouts/ViajeLayout'
 import { NoEncontrada } from './pages/NoEncontrada'
 
@@ -9,6 +10,7 @@ import { NoEncontrada } from './pages/NoEncontrada'
 export const router = createBrowserRouter([
   {
     path: '/',
+    element: <RaizLayout />,
     hydrateFallbackElement: <div aria-busy="true" className="min-h-dvh" />,
     children: [
       {

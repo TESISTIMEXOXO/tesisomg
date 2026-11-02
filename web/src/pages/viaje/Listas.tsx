@@ -1,84 +1,25 @@
 import { Check, Plus } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { Cargando, NoCargo } from '../../components/marca/Estados'
+import { NoCargo } from '../../components/marca/Estados'
 import { PinzNote } from '../../components/marca/PinzNote'
 import { TituloPantalla } from '../../components/marca/TituloPantalla'
 import { Button } from '../../components/ui/Button'
+import { Tarjeta } from '../../components/ui/Tarjeta'
 import { TextField } from '../../components/ui/TextField'
-import { useAgregarTarea, useMarcarRequisito, useMarcarTarea, useRequisitos, useTareas } from '../../hooks/baul'
+import { useMarcarRequisito, useRequisitos } from '../../hooks/baul'
 import { useCrearVotacion, useProponerOpcion, useVotaciones } from '../../hooks/votaciones'
 import { useViajeActual } from '../../layouts/contextoViaje'
-import { conMayuscula } from '../../lib/texto'
-import type { Persona } from '../../types/persona'
-import type { Tarea } from '../../types/tarea'
 import { CrearVotacionSchema, type Votacion } from '../../types/votacion'
-import { nombreEnElGrupo, puedeEditar } from './nombres'
+import { Checklists } from './Checklists'
+import { puedeEditar } from './nombres'
 import { TarjetaVotacion } from './TarjetaVotacion'
 
 function Desplegable({ titulo, abierta = true, children }: { titulo: string; abierta?: boolean; children: ReactNode }) {
   return (
-    <details open={abierta} className="rounded-lg trazo bg-papel-elevado p-4 shadow-chica">
-      <summary className="flex min-h-toque cursor-pointer items-center font-display text-titulo-2 font-black">{titulo}</summary>
+    <details open={abierta} className="rounded-lg trazo bg-papel-elevado p-4 shadow-grande md:p-6">
+      <summary className="flex min-h-toque cursor-pointer items-center font-display text-titulo-1 font-black">{titulo}</summary>
       <div className="mt-3 flex flex-col gap-4">{children}</div>
     </details>
-  )
-}
-
-function ListaDeTareas({ tareas, personas, viajeId, editable }: { tareas: Tarea[]; personas: Persona[]; viajeId: string; editable: boolean }) {
-  const marcar = useMarcarTarea(viajeId)
-  if (tareas.length === 0) return <p className="text-tinta-suave">No hay nada anotado todavía.</p>
-  return (
-    <ul className="flex flex-col">
-      {tareas.map((tarea) => {
-        const responsable = nombreEnElGrupo(personas, tarea.responsableId)
-        return (
-          <li key={tarea.id} className="border-b border-linea last:border-b-0">
-            <label className="flex min-h-toque cursor-pointer items-center gap-3 py-2">
-              <input
-                type="checkbox"
-                checked={tarea.hecha}
-                disabled={!editable || marcar.isPending}
-                onChange={(evento) => marcar.mutate({ tareaId: tarea.id, hecha: evento.target.checked })}
-                className="peer sr-only"
-              />
-              <span
-                aria-hidden
-                className="grid size-6 flex-none place-items-center rounded-sm trazo bg-papel-elevado peer-checked:bg-tinta peer-checked:text-papel peer-focus-visible:outline-3 peer-focus-visible:outline-offset-3"
-              >
-                {tarea.hecha && <Check size={16} strokeWidth={2} />}
-              </span>
-              <span className={`flex-1 ${tarea.hecha ? 'text-tinta-suave line-through' : ''}`}>{tarea.titulo}</span>
-              {responsable && <b className="text-meta">{conMayuscula(responsable)}</b>}
-            </label>
-          </li>
-        )
-      })}
-    </ul>
-  )
-}
-
-function AgregarTarea({ viajeId, lista }: { viajeId: string; lista: Tarea['lista'] }) {
-  const agregar = useAgregarTarea(viajeId)
-  const [titulo, setTitulo] = useState('')
-  const [error, setError] = useState<string>()
-
-  function enviar(evento: FormEvent) {
-    evento.preventDefault()
-    if (!titulo.trim()) {
-      setError('Contanos qué hay que hacer.')
-      return
-    }
-    setError(undefined)
-    agregar.mutate({ titulo, lista, responsableId: null }, { onSuccess: () => setTitulo('') })
-  }
-
-  return (
-    <form onSubmit={enviar} noValidate className="flex flex-col gap-3 md:flex-row md:items-end">
-      <TextField label="Nuevo ítem" value={titulo} error={error} onChange={(evento) => setTitulo(evento.target.value)} className="flex-1" />
-      <Button type="submit" variant="secundario" disabled={agregar.isPending}>
-        Agregar
-      </Button>
-    </form>
   )
 }
 
@@ -245,26 +186,19 @@ function Requisitos({ viajeId, editable }: { viajeId: string; editable: boolean 
 export function Listas() {
   const { viaje, etapa } = useViajeActual()
   const votaciones = useVotaciones(viaje.id)
-  const tareas = useTareas(viaje.id)
   const editable = puedeEditar(viaje.personas)
   const soloLectura = etapa === 'post' || !editable
 
-  if (tareas.isPending) return <Cargando pinz="valija" />
-  if (tareas.error) return <NoCargo error={tareas.error} onReintentar={() => tareas.refetch()} />
 
   const abiertas = votaciones.data?.filter((votacion) => votacion.estado === 'abierta') ?? []
   const cerradas = votaciones.data?.filter((votacion) => votacion.estado !== 'abierta') ?? []
-  const listas = [
-    { lista: 'compartida', titulo: 'Del grupo' },
-    { lista: 'personal', titulo: 'Mía' },
-  ] as const
 
   return (
     <>
       <TituloPantalla titulo="Lo que falta resolver" pinz="valija" />
       <div className="flex flex-col gap-12">
         <section aria-labelledby="por-decidir" className="flex flex-col gap-5">
-          <h3 id="por-decidir" className="font-display text-titulo-1 font-black">Por decidir</h3>
+          <h3 id="por-decidir" className="font-display text-titulo-1 font-black lg:text-display">Por decidir</h3>
           {votaciones.isPending && <p className="text-tinta-suave">Cargando las votaciones…</p>}
           {votaciones.error && <NoCargo error={votaciones.error} onReintentar={() => votaciones.refetch()} />}
           {votaciones.data && abiertas.length === 0 && (
@@ -292,18 +226,11 @@ export function Listas() {
           )}
         </section>
 
-        <section aria-labelledby="para-llevar" className="flex flex-col gap-5">
-          <h3 id="para-llevar" className="font-display text-titulo-1 font-black">Para llevar</h3>
-          {listas.map(({ lista, titulo }) => (
-            <Desplegable key={lista} titulo={titulo}>
-              <ListaDeTareas tareas={tareas.data.filter((tarea) => tarea.lista === lista)} personas={viaje.personas} viajeId={viaje.id} editable={editable} />
-              {editable && <AgregarTarea viajeId={viaje.id} lista={lista} />}
-            </Desplegable>
-          ))}
-          <Desplegable titulo="Requisitos">
-            <Requisitos viajeId={viaje.id} editable={editable} />
-          </Desplegable>
-        </section>
+        <Checklists viajeId={viaje.id} personas={viaje.personas} etapa={etapa} editable={editable} />
+
+        <Tarjeta titulo="Requisitos">
+          <Requisitos viajeId={viaje.id} editable={editable} />
+        </Tarjeta>
       </div>
     </>
   )

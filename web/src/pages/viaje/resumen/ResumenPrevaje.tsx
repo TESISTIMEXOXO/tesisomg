@@ -5,8 +5,8 @@ import { TituloPantalla } from '../../../components/marca/TituloPantalla'
 import { PinzNote } from '../../../components/marca/PinzNote'
 import { BalanceRow } from '../../../components/ui/BalanceRow'
 import { Tarjeta } from '../../../components/ui/Tarjeta'
-import { useTareas } from '../../../hooks/baul'
 import { useSaldos } from '../../../hooks/gastos'
+import { useListas } from '../../../hooks/listas'
 import { useResumenViaje } from '../../../hooks/viajes'
 import { useVotaciones } from '../../../hooks/votaciones'
 import { useViajeActual } from '../../../layouts/contextoViaje'
@@ -22,7 +22,7 @@ export function ResumenPrevaje() {
   const { viaje } = useViajeActual()
   const resumen = useResumenViaje(viaje.id)
   const votaciones = useVotaciones(viaje.id)
-  const tareas = useTareas(viaje.id)
+  const listas = useListas(viaje.id)
   const saldos = useSaldos(viaje.id)
   const [tipCerrado, setTipCerrado] = useState(false)
 
@@ -33,7 +33,7 @@ export function ResumenPrevaje() {
   const abiertas = votaciones.data.filter((v) => v.estado === 'abierta')
   const principal = abiertas.find((v) => v.votoPropio === null) ?? abiertas[0]
   const { hechas, total } = resumen.data.checklist
-  const proximas = (tareas.data ?? []).filter((t) => t.lista === 'compartida' && !t.hecha).slice(0, 3)
+  const proximas = (listas.data ?? []).flatMap((lista) => lista.items).filter((item) => !item.hecha).slice(0, 3)
   const pendienteDePlata = saldos.data?.saldos.find((s) => direccionDe(s.monto) === 'pendiente')
 
   return (
