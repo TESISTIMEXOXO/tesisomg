@@ -8,8 +8,9 @@ import { Button } from '../../components/ui/Button'
 import { Chip } from '../../components/ui/Chip'
 import { Tarjeta } from '../../components/ui/Tarjeta'
 import { TextField } from '../../components/ui/TextField'
-import { useAgregarGasto, useGastos, useLeerComprobante, useRegistrarPago, useSaldos, useSimplificarCuentas } from '../../hooks/gastos'
+import { useAgregarGasto, useConfirmarPago, useGastos, useLeerComprobante, usePagos, useRechazarPago, useRegistrarPago, useSaldos, useSimplificarCuentas } from '../../hooks/gastos'
 import { useViajeActual } from '../../layouts/contextoViaje'
+import { mensajeDeCuentas } from '../../lib/erroresCuentas'
 import { fechaCorta } from '../../lib/fechas'
 import { monto } from '../../lib/moneda'
 import { NuevoGastoSchema, type NuevoGasto } from '../../types/gasto'
@@ -120,6 +121,45 @@ function AgregarGasto({ viajeId, etapa, personas }: { viajeId: string; etapa: Et
   )
 }
 
+/** Los pagos que te avisaron y todavía tenés que confirmar. Si no hay ninguno, no se muestra. */
+function PagosPorConfirmar({ viajeId, personas }: { viajeId: string; personas: Persona[] }) {
+  const pagos = usePagos(viajeId)
+  const confirmar = useConfirmarPago(viajeId)
+  const rechazar = useRechazarPago(viajeId)
+  const yo = personas.find((persona) => persona.esVos)?.id
+  const pendientes = (pagos.data ?? []).filter((pago) => pago.estado === 'pendiente' && pago.acreedorId === yo)
+  const error = confirmar.error ?? rechazar.error
+
+  if (pendientes.length === 0) return null
+
+  return (
+    <Tarjeta titulo="Te avisaron que te pagaron">
+      <ul className="flex flex-col gap-3">
+        {pendientes.map((pago) => (
+          <li key={pago.id} className="flex flex-col gap-2">
+            <span>
+              {nombreEnElGrupo(personas, pago.deudorId)} te pasó {monto(pago.monto)}
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" disabled={confirmar.isPending || rechazar.isPending} onClick={() => confirmar.mutate(pago.id)}>
+                Confirmar
+              </Button>
+              <Button variant="secundario" size="sm" disabled={confirmar.isPending || rechazar.isPending} onClick={() => rechazar.mutate(pago.id)}>
+                No me llegó
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {error && (
+        <p role="alert" className="font-semibold text-negativo">
+          {mensajeDeCuentas(error)}
+        </p>
+      )}
+    </Tarjeta>
+  )
+}
+
 /** Cuentas: los gastos del grupo y cómo quedás con cada uno. */
 export function Cuentas() {
   const { viaje, etapa } = useViajeActual()
@@ -144,8 +184,13 @@ export function Cuentas() {
             <SaldosSlot
               saldos={saldos.data?.saldos ?? null}
               moneda={saldos.data?.moneda ?? 'ARS'}
-              onRegistrarPago={editable ? (personaId) => registrarPago.mutate(personaId) : undefined}
+              onRegistrarPago={(personaId) => registrarPago.mutate(personaId)}
             />
+          )}
+          {registrarPago.error && (
+            <p role="alert" className="font-semibold text-negativo">
+              {mensajeDeCuentas(registrarPago.error)}
+            </p>
           )}
           {editable && (
             <div className="flex flex-wrap gap-3">
@@ -156,6 +201,7 @@ export function Cuentas() {
             </div>
           )}
         </Tarjeta>
+        <PagosPorConfirmar viajeId={viaje.id} personas={viaje.personas} />
         {gastos.data.length === 0 ? (
           <PinzNote tipo="vacio" pinz="vuelto" title="Todavía nadie puso un peso">
             Cuando alguien pague algo, anotalo acá.

@@ -6,6 +6,8 @@ export const SaldoSchema = z.object({
   persona: PersonaSchema.pick({ id: true, nombre: true, pinz: true }),
   /** Positivo: le tienen que devolver. Negativo: le falta poner. Cero: están a mano. */
   monto: z.number().int(),
+  /** El pago que ya le avisaste a esta persona y todavía no confirmó. */
+  pagoEnviado: z.object({ id: z.string(), monto: z.number().int() }).nullable(),
 })
 
 export const SaldosSchema = z.object({

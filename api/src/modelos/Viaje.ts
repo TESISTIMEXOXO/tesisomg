@@ -12,7 +12,7 @@ type OpcionDoc = { id: string; nombre: string; detalle: string | null; votantes:
 type VotacionDoc = { id: string; pregunta: string; categoria: CategoriaVotacion; estado: "abierta" | "cerrada"; cierre: string | null; opciones: OpcionDoc[]; ganadoraId: string | null };
 type ActividadDoc = { id: string; fecha: string; hora: string; titulo: string; lugar: string | null; lat: number | null; lng: number | null; hecha: boolean };
 type GastoDoc = { id: string; descripcion: string; monto: number; pagoId: mongoose.Types.ObjectId; fecha: string; division: TipoDivision; participantes: mongoose.Types.ObjectId[]; pagosConfirmados: mongoose.Types.ObjectId[] };
-type PagoDoc = { deudorId: mongoose.Types.ObjectId; acreedorId: mongoose.Types.ObjectId; monto: number; fecha: string };
+type PagoDoc = { id: string; deudorId: mongoose.Types.ObjectId; acreedorId: mongoose.Types.ObjectId; monto: number; fecha: string; estado: "pendiente" | "confirmado" | "rechazado"; resueltoEn: Date | null };
 type TareaDoc = { id: string; titulo: string; lista: ListaTarea; responsableId: mongoose.Types.ObjectId | null; creadaPor: mongoose.Types.ObjectId; hecha: boolean };
 type RequisitoDoc = { id: string; titulo: string; detalle: string; cumplidoPor: mongoose.Types.ObjectId[] };
 type MovimientoDoc = { id: string; texto: string; creadoEn: Date };
@@ -113,10 +113,14 @@ const gastoSchema = new mongoose.Schema<GastoDoc>(
 
 const pagoSchema = new mongoose.Schema<PagoDoc>(
   {
+    id: { type: String, required: true, default: () => crypto.randomUUID() },
     deudorId: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario", required: true },
     acreedorId: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario", required: true },
     monto: { type: Number, required: true },
     fecha: { type: String, required: true },
+    // Los pagos guardados antes de que hubiera confirmación ya contaban: quedan confirmados.
+    estado: { type: String, enum: ["pendiente", "confirmado", "rechazado"], default: "confirmado" },
+    resueltoEn: { type: Date, default: null },
   },
   { _id: false },
 );

@@ -33,7 +33,9 @@ export function SaldosSlot({ saldos, moneda, onRegistrarPago }: SaldosSlotProps)
             pinz={saldo.persona.pinz}
             amount={saldo.monto}
             action={
-              direccionDe(saldo.monto) === 'pendiente' && onRegistrarPago ? (
+              saldo.pagoEnviado ? (
+                <span className="text-meta text-tinta-suave">Esperando que {saldo.persona.nombre} confirme</span>
+              ) : direccionDe(saldo.monto) === 'pendiente' && onRegistrarPago ? (
                 <Button variant="secundario" size="sm" onClick={() => onRegistrarPago(saldo.persona.id)}>
                   Pagar
                 </Button>

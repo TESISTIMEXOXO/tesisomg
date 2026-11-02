@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import mongoose from "mongoose";
 import { z } from "zod";
 import { calcularNetos, dividirIguales, saldosPara, transferenciasDirectas, transferenciasSimplificadas } from "../cuentas/calculo.js";
@@ -34,8 +34,27 @@ function pagosDe(viaje: ViajeConGastos) {
     deudorId: pago.deudorId.toString(),
     acreedorId: pago.acreedorId.toString(),
     monto: pago.monto,
-    estado: "confirmado" as const,
+    estado: pago.estado,
   }));
+}
+
+function transferenciasDe(viaje: ViajeConGastos) {
+  return transferenciasDirectas(gastosDe(viaje), pagosDe(viaje));
+}
+
+function hoy() {
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
+}
+
+function pagoPublico(pago: ViajeConGastos["pagos"][number]) {
+  return {
+    id: pago.id,
+    deudorId: pago.deudorId.toString(),
+    acreedorId: pago.acreedorId.toString(),
+    monto: pago.monto,
+    fecha: pago.fecha,
+    estado: pago.estado,
+  };
 }
 
 rutasGastos.get("/", async (req, res) => {
@@ -111,61 +130,111 @@ rutasGastos.get("/saldos", async (req, res) => {
     return;
   }
   const usuarioId = res.locals.usuarioId as string;
-  const conVos = saldosPara(usuarioId, transferenciasDirectas(gastosDe(viaje), pagosDe(viaje)));
+  const conVos = saldosPara(usuarioId, transferenciasDe(viaje));
   const usuarioActual = await Usuario.findById(usuarioId).select("moneda").exec();
   res.json({
     viajeId: viaje._id.toString(),
     moneda: usuarioActual?.moneda ?? "ARS",
     saldos: viaje.miembros
       .filter((miembro) => miembro.usuarioId.toString() !== usuarioId)
-      .map((miembro) => ({
-        persona: { id: miembro.usuarioId.toString(), nombre: miembro.nombre, pinz: miembro.pinz ?? null },
-        monto: conVos.get(miembro.usuarioId.toString()) ?? 0,
-      })),
+      .map((miembro) => {
+        const personaId = miembro.usuarioId.toString();
+        const enviado = viaje.pagos.find((pago) =>
+          pago.estado === "pendiente" && pago.deudorId.toString() === usuarioId && pago.acreedorId.toString() === personaId);
+        return {
+          persona: { id: personaId, nombre: miembro.nombre, pinz: miembro.pinz ?? null },
+          monto: conVos.get(personaId) ?? 0,
+          pagoEnviado: enviado ? { id: enviado.id, monto: enviado.monto } : null,
+        };
+      }),
   });
 });
 
-rutasGastos.post("/pagos", async (req, res) => {
-  const datos = z.object({ personaId: z.string().min(1) }).safeParse(req.body);
-  if (!datos.success) {
-    res.status(400).json({ error: "datos-invalidos" });
+rutasGastos.get("/pagos", async (req, res) => {
+  const viaje = await viajeDelMiembro((req.params as { id: string }).id, res.locals.usuarioId as string);
+  if (!viaje) {
+    res.status(404).json({ error: "no-existe" });
     return;
   }
-  if (!mongoose.isValidObjectId(datos.data.personaId)) {
+  res.json(viaje.pagos.map(pagoPublico).reverse());
+});
+
+/** Quien registra es quien paga: el pago queda pendiente hasta que lo confirme quien lo recibe. */
+rutasGastos.post("/pagos", async (req, res) => {
+  const datos = z.object({ personaId: z.string().min(1) }).safeParse(req.body);
+  if (!datos.success || !mongoose.isValidObjectId(datos.data.personaId)) {
     res.status(400).json({ error: "datos-invalidos" });
     return;
   }
   const usuarioId = res.locals.usuarioId as string;
   const viaje = await viajeDelMiembro((req.params as { id: string }).id, usuarioId);
-  const deudor = viaje?.miembros.find((miembro) => miembro.usuarioId.toString() === datos.data.personaId);
-  const acreedor = viaje?.miembros.find((miembro) => miembro.usuarioId.toString() === usuarioId);
+  const acreedor = viaje?.miembros.find((miembro) => miembro.usuarioId.toString() === datos.data.personaId);
+  const deudor = viaje?.miembros.find((miembro) => miembro.usuarioId.toString() === usuarioId);
   if (!viaje || !deudor || !acreedor) {
     res.status(404).json({ error: "no-existe" });
     return;
   }
-  if (!puedeEditarViaje(viaje, usuarioId)) {
-    res.status(403).json({ error: "sin-permiso" });
+  const yaPendiente = viaje.pagos.some((pago) =>
+    pago.estado === "pendiente"
+    && pago.deudorId.toString() === usuarioId
+    && pago.acreedorId.toString() === datos.data.personaId);
+  if (yaPendiente) {
+    res.status(409).json({ error: "pago-ya-pendiente" });
     return;
   }
-  const netos = calcularNetos(gastosDe(viaje), pagosDe(viaje));
-  const monto = Math.min(
-    Math.max(0, -(netos.get(deudor.usuarioId.toString()) ?? 0)),
-    Math.max(0, netos.get(acreedor.usuarioId.toString()) ?? 0),
-  );
-  if (monto === 0) {
+  const monto = -(saldosPara(usuarioId, transferenciasDe(viaje)).get(datos.data.personaId) ?? 0);
+  if (monto <= 0) {
     res.status(409).json({ error: "sin-deuda-pendiente" });
     return;
   }
   viaje.pagos.push({
+    id: crypto.randomUUID(),
     deudorId: deudor.usuarioId,
     acreedorId: acreedor.usuarioId,
     monto,
-    fecha: new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date()),
+    fecha: hoy(),
+    estado: "pendiente",
+    resueltoEn: null,
   });
   registrarMovimiento(viaje, `${deudor.nombre} registró un pago a ${acreedor.nombre}`);
   await viaje.save();
-  res.status(204).end();
+  const pago = viaje.pagos[viaje.pagos.length - 1];
+  res.status(201).json(pago && pagoPublico(pago));
 });
+
+async function resolverPago(req: Request, res: Response, estado: "confirmado" | "rechazado") {
+  const { id, pagoId } = req.params as { id: string; pagoId: string };
+  const usuarioId = res.locals.usuarioId as string;
+  const viaje = await viajeDelMiembro(id, usuarioId);
+  const pago = viaje?.pagos.find((candidato) => candidato.id === pagoId);
+  if (!viaje || !pago) {
+    res.status(404).json({ error: "no-existe" });
+    return;
+  }
+  if (pago.acreedorId.toString() !== usuarioId) {
+    res.status(403).json({ error: "sin-permiso" });
+    return;
+  }
+  if (pago.estado !== "pendiente") {
+    res.status(409).json({ error: "pago-ya-resuelto" });
+    return;
+  }
+  pago.estado = estado;
+  pago.resueltoEn = new Date();
+  const nombre = (personaId: mongoose.Types.ObjectId) =>
+    viaje.miembros.find((miembro) => miembro.usuarioId.equals(personaId))?.nombre ?? "Alguien";
+  registrarMovimiento(
+    viaje,
+    estado === "confirmado"
+      ? `${nombre(pago.acreedorId)} confirmó el pago de ${nombre(pago.deudorId)}`
+      : `${nombre(pago.acreedorId)} rechazó el pago de ${nombre(pago.deudorId)}`,
+  );
+  await viaje.save();
+  res.json(pagoPublico(pago));
+}
+
+rutasGastos.post("/pagos/:pagoId/confirmar", (req, res) => resolverPago(req, res, "confirmado"));
+rutasGastos.post("/pagos/:pagoId/rechazar", (req, res) => resolverPago(req, res, "rechazado"));
 
 rutasGastos.post("/simplificar", async (req, res) => {
   const viaje = await viajeDelMiembro((req.params as { id: string }).id, res.locals.usuarioId as string);

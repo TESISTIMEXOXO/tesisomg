@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { pedir } from '../lib/api'
 import { GastoSchema, type NuevoGasto } from '../types/gasto'
+import { PagoSchema } from '../types/pago'
 import { SaldosSchema } from '../types/saldo'
 
 export async function listar(viajeId: string) {
@@ -16,9 +17,21 @@ export function agregar(viajeId: string, datos: NuevoGasto) {
   return pedir(`/viajes/${encodeURIComponent(viajeId)}/gastos`, { method: 'POST', body: datos, schema: GastoSchema })
 }
 
+export async function pagos(viajeId: string) {
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/gastos/pagos`, { schema: z.array(PagoSchema) })
+}
+
 /** Marca como hecho el pago a otra persona; se aplica cuando quien lo recibe lo confirma. */
 export function registrarPago(viajeId: string, personaId: string) {
-  return pedir(`/viajes/${encodeURIComponent(viajeId)}/gastos/pagos`, { method: 'POST', body: { personaId } })
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/gastos/pagos`, { method: 'POST', body: { personaId }, schema: PagoSchema })
+}
+
+export function confirmarPago(viajeId: string, pagoId: string) {
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/gastos/pagos/${encodeURIComponent(pagoId)}/confirmar`, { method: 'POST', schema: PagoSchema })
+}
+
+export function rechazarPago(viajeId: string, pagoId: string) {
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/gastos/pagos/${encodeURIComponent(pagoId)}/rechazar`, { method: 'POST', schema: PagoSchema })
 }
 
 export function simplificar(viajeId: string) {
