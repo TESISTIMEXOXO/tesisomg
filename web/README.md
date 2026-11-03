@@ -53,7 +53,7 @@ web/
       animaciones.css   keyframes y utilidades animate-* (siempre con motion-safe:)
     components/
       ui/               el design system: Button, Chip, StageSwitch, TextField, PollOption, BalanceRow,
-                        ItineraryItem, TripCard, AvatarStack, BottomNav, Ventana y Tarjeta
+                        ItineraryItem, TripCard, AvatarStack, BottomNav, Ventana, VistaArchivo y Tarjeta
       marca/            Logo, BarraMarca (la barra con la marca de la landing y las pantallas públicas), Pin,
                         PinzNote, ElegirPinz y los estados Cargando / NoCargo
       landing/          Camino: la ruta celeste que recorre la landing
@@ -74,7 +74,7 @@ web/
     services/           una función async por operación; hoy devuelven los mocks
     hooks/              React Query sobre cada servicio; las pantallas solo usan hooks
     mocks/datos.ts      todos los datos de ejemplo ("Bariloche con los chicos")
-    lib/                etapa (por fechas), fechas, moneda ($ 48.200), saldos, textos y el camino de la landing
+    lib/                etapa (por fechas), fechas, moneda ($ 48.200), saldos, textos, guardarArchivo y el camino de la landing
 ```
 
 ## 4. Pantallas
@@ -88,11 +88,11 @@ web/
 | `/unirse/:codigo` | `pages/unirse/VistaInvitacion.tsx` | `Tarjeta`, `AvatarStack`, `useInvitacion`, `useUnirse` |
 | `/viajes` | `pages/viajes/MisViajes.tsx` | `TripCard`, `PinzNote` (vacío), `useViajes`, `usePerfil` |
 | `/viajes/nuevo` | `pages/viajes/NuevoViaje.tsx` | `TextField`, `TripCard` (vista previa en desktop), `useCrearViaje` |
-| `/vos` | `pages/vos/Vos.tsx` | `Pin`, `Tarjeta`, `ArchivosSlot`, `usePerfil`, `useDocumentosPersonales` || `/viajes/:id` | `pages/viaje/resumen/Resumen.tsx` → `ResumenPrevaje`, `Hoy` o `ResumenPostViaje` según la etapa | `TarjetaVotacion`, `PinzNote` (tip), `MapaSlot`, `ItineraryItem`, `SaldosSlot` |
+| `/vos` | `pages/vos/Vos.tsx` | `Pin`, `Tarjeta`, `ArchivosSlot`, `VistaArchivo`, `usePerfil`, `useDocumentosPersonales` || `/viajes/:id` | `pages/viaje/resumen/Resumen.tsx` → `ResumenPrevaje`, `Hoy` o `ResumenPostViaje` según la etapa | `TarjetaVotacion`, `PinzNote` (tip), `MapaSlot`, `ItineraryItem`, `SaldosSlot` |
 | `/viajes/:id/agenda` | `pages/viaje/Agenda.tsx` | `ItineraryItem`, `MapaSlot`, `useItinerario` |
 | `/viajes/:id/listas` | `pages/viaje/Listas.tsx` | `TarjetaVotacion`, `useVotaciones`, `useTareas`, `useRequisitos` |
 | `/viajes/:id/cuentas` | `pages/viaje/Cuentas.tsx` | `SaldosSlot`, `ComprobanteSlot`, `Chip`, `useGastos`, `useSaldos`, `useAgregarGasto` |
-| `/viajes/:id/baul` | `pages/viaje/Baul.tsx` | `ArchivosSlot`, `Chip`, `useTareas`, `useRequisitos`, `useDocumentos` |
+| `/viajes/:id/baul` | `pages/viaje/Baul.tsx` | `ArchivosSlot`, `VistaArchivo`, `Chip`, `useTareas`, `useRequisitos`, `useDocumentos` |
 | `/viajes/:id/grupo` | `pages/viaje/Grupo.tsx` | `AvatarStack`, `QrSlot`, `useInvitacionGrupo`, `useMovimientos` |
 | `/viajes/:id/emergencias` | `pages/viaje/Emergencias.tsx` (sin pinz, nunca) | `useEmergencias` |
 | `*` | `pages/NoEncontrada.tsx` | `PinzNote` (error, genérico) |
@@ -117,7 +117,8 @@ Cada pantalla resuelve sus estados de carga, vacío y error con `Cargando`, `NoC
 | `TripCard` | `components/ui/TripCard.tsx` | `title`, `place`, `dates`, `stage`, `people`, `image`, `pending`, `to` | La card de un viaje en Mis viajes |
 | `AvatarStack` | `components/ui/AvatarStack.tsx` | `people` (nombres o `{ name, pinz }`), `max` | Siluetas de pin con inicial, en el tono del pinz |
 | `BottomNav` | `components/ui/BottomNav.tsx` | `items` (`{ id, label, icon, to, end }`, hasta 5), `sosTo` | La navegación de la app: barra flotante abajo, en todos los tamaños. Dentro de un viaje suma "SOS" en rojo, siempre al final: es el único acceso a Emergencias |
-| `Ventana` | `components/ui/Ventana.tsx` | `ventanaRef`, `idTitulo`, `onClose` | La ventana emergente con el fondo oscurecido (`dialog` nativo): el ingreso y el formulario de contacto |
+| `Ventana` | `components/ui/Ventana.tsx` | `ventanaRef`, `idTitulo`, `onClose`, `ancha` | La ventana emergente con el fondo oscurecido (`dialog` nativo): el ingreso y el formulario de contacto. Con `ancha` ocupa toda la pantalla, para `VistaArchivo` |
+| `VistaArchivo` | `components/ui/VistaArchivo.tsx` | `nombre` (null = cerrada), `archivo`, `error`, `onReintentar`, `onClose` | Muestra un PDF o una foto en una `Ventana` ancha, con "Descargar" y "Compartir" (menú de compartir del dispositivo, solo si el navegador puede mandar archivos). Si el navegador no muestra PDFs adentro de la página (Chrome en Android), ofrece descargarlo. Se usa con `useVistaDocumento()` |
 | `Tarjeta` / `Etiqueta` | `components/ui/Tarjeta.tsx` | `titulo`, `extra`, `fondo` | El bloque de contenido de la app y su badge |
 | `Logo` | `components/marca/Logo.tsx` | `variant` (`marca` · `simbolo` · `icono`), `size` (en `marca`, el alto de la palabra), `ink`, `label` | La marca: el pinz genérico coral pegado a "pinz" en Archivo 900. El pin es siempre coral. Las versiones en curvas (`pinz-logo.svg`) son para documentos y Open Graph; en la interfaz se usa el componente |
 | `Pin` | `components/marca/Pin.tsx` | `pinz` (elenco o `generico`), `color`, `size`, `label` | El pinz ilustrado |
@@ -187,7 +188,7 @@ La ruta celeste que recorre la página por detrás del contenido y termina en un
 - **Anclas:** cada tramo sigue a un elemento con `data-camino`: las pausas `banda1`…`banda5` (los espacios vacíos entre secciones, `Pausa` en `Seccion.tsx`), las cards `b-iti` y `b-hoy` del bento y el botón `cta`. Si una sección cambia de alto, el camino se acomoda solo. En mobile no hay `banda4` (entre el elenco y "Para quiénes") y la pausa del cierre es `banda5`, igual que en desktop.
 - **Rodeo de la barra:** un segundo camino, corto y con sus propios pinz (`rodeo.caminantes`), es un solo arco que baja desde el borde superior, pasa por debajo de los botones de acceso (`data-camino="acceso"` en `BarraLanding.tsx`) y sale horizontal por la derecha. Lo arma `armarRodeo` desde el borde real de los botones, con los valores de `rodeo` en `lib/caminoDatos.ts`. En desktop baja menos si el título le queda debajo; la entrada se achica si el menú está cerca y, si aun así no rodea los botones, no se dibuja.
 - **Al cargar:** el camino se mide antes del primer cuadro y se dibuja solo (`animate-trazar`). Los pinz que abren la marcha entran enseguida y el resto de a un grupo, con el dibujo terminado: montarlos juntos traba la página. Las fuentes latinas se precargan en `index.html` para que el texto no cambie de tipografía a la vista.
-- **Pinz que caminan:** van con `offset-path` sobre el mismo `path`, en grupos de uno, dos o tres, dando pasitos (`animate-paso`). La lista de `caminantes` se repite a lo largo del camino según `separacionGrupos` (`repartirGrupos` en `lib/camino.ts`), para que siempre haya alguno a la vista. Al llegar al botón final estallan en una nube de humo (`animate-llegada` y `animate-humo`). Los que quedan fuera de pantalla se pausan y retoman donde corresponde (`useCaminantesEnPantalla`), porque `offset-path` se recalcula en cada cuadro aunque no se vea. Con `prefers-reduced-motion` el camino queda dibujado y cada grupo, quieto en su tramo.
+- **Pinz que caminan:** siguen el mismo `path` con una animación de `transform` que arma `Camino` (`cuadrosDelRecorrido`), punto por punto desde `recorrido` (las mismas cúbicas del `d`, cada `PASO_RECORRIDO` px). Así los anima el navegador fuera del hilo principal; con `offset-path` se trababan cuando la página tenía otra tarea. Van en grupos de uno, dos o tres, dando pasitos (`animate-paso`). La lista de `caminantes` se repite a lo largo del camino según `separacionGrupos` (`repartirGrupos` en `lib/camino.ts`), para que siempre haya alguno a la vista. Al llegar al botón final estallan en una nube de humo (`animate-llegada` y `animate-humo`). Los que quedan fuera de pantalla se pausan y retoman donde corresponde (`useCaminantesEnPantalla`), porque sus animaciones corren aunque no se vean. Con `prefers-reduced-motion` el camino queda dibujado y cada grupo, quieto en su tramo.
 
 ## 9. Cómo conectar el backend
 
@@ -225,7 +226,7 @@ Cada archivo de `src/services/` es un dominio. Las lecturas validan la respuesta
 | | `marcarTarea(viajeId, tareaId, hecha)` | — |
 | | `agregarTarea(viajeId, datos: NuevaTarea)` | — |
 | | `subirDocumento(viajeId, archivo)` / `subirDocumentoPersonal(archivo)` | — |
-| | `abrirDocumento(id)` | link del documento |
+| | `archivoDocumento(id)` | `File` (con nombre y tipo), para `VistaArchivo` |
 | `grupo` | `invitacion(viajeId)` | `InvitacionGrupo` |
 | | `movimientos(viajeId)` | `Movimiento[]` |
 | | `invitarPorMail(viajeId, mail)` | — |
@@ -264,7 +265,7 @@ Una escritura igual: `crear(datos)` pasa de `sinBackend('viajes.crear', datos)` 
 | Mapa | `components/slots/MapaSlot.tsx` | `puntos: { id, nombre, lat, lng, tipo }[]`, `personas: { id, nombre, pinz, lat, lng }[]`, `contenedorRef`, `alto` | `onSeleccionarPunto(id)` | `pages/viaje/resumen/Hoy.tsx`, `pages/viaje/Agenda.tsx` |
 | Saldos | `components/slots/SaldosSlot.tsx` | `saldos: { persona, monto }[]` ya calculados (o `null`), `moneda` | `onRegistrarPago(personaId)` | `pages/viaje/Cuentas.tsx`, `pages/viaje/resumen/ResumenPostViaje.tsx` |
 | Auth | `components/slots/AuthSlot.tsx` | `estado` (`listo` · `cargando` · `error`) | `onElegirProveedor('google' \| 'mail')` | `pages/ingresar/Ingresar.tsx` |
-| Archivos | `components/slots/ArchivosSlot.tsx` | `archivos: { id, nombre, tipo, tamano }[]`, `ayuda` | `onSubir(archivo)`, `onAbrir(id)` | `pages/viaje/Baul.tsx`, `pages/vos/Vos.tsx` |
+| Archivos | `components/slots/ArchivosSlot.tsx` | `archivos: { id, nombre, tipo, tamano }[]`, `ayuda` | `onSubir(archivo)`, `onAbrir(archivo)` | `pages/viaje/Baul.tsx`, `pages/vos/Vos.tsx` |
 | Comprobante | `components/slots/ComprobanteSlot.tsx` | — | `onEscanear(archivo)` | `pages/viaje/Cuentas.tsx` |
 | QR | `components/slots/QrSlot.tsx` | `valor` (link de invitación) | — | `pages/viaje/Grupo.tsx` |
 

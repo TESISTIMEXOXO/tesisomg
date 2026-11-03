@@ -7,8 +7,9 @@ import { Button, ButtonLink } from '../../components/ui/Button'
 import { Chip } from '../../components/ui/Chip'
 import { Tarjeta } from '../../components/ui/Tarjeta'
 import { TextField } from '../../components/ui/TextField'
+import { VistaArchivo } from '../../components/ui/VistaArchivo'
 import { useCerrarSesion } from '../../hooks/auth'
-import { useAbrirDocumento, useDocumentosPersonales, useSubirDocumentoPersonal } from '../../hooks/baul'
+import { useDocumentosPersonales, useSubirDocumentoPersonal, useVistaDocumento } from '../../hooks/baul'
 import { useGuardarPerfil, usePerfil } from '../../hooks/perfil'
 import { useTema } from '../../hooks/tema'
 import { diasHasta, fechaCorta, mesYAnio } from '../../lib/fechas'
@@ -140,7 +141,7 @@ export function Vos() {
   const { data: perfil, isPending, error, refetch } = usePerfil()
   const documentos = useDocumentosPersonales()
   const subir = useSubirDocumentoPersonal()
-  const abrir = useAbrirDocumento()
+  const { abrir, vista } = useVistaDocumento()
   const cerrarSesion = useCerrarSesion()
   const [editandoPerfil, setEditandoPerfil] = useState(false)
 
@@ -214,7 +215,7 @@ export function Vos() {
               archivos={documentos.data}
               ayuda="DNI, pasaporte o licencia."
               onSubir={(archivo) => subir.mutate(archivo)}
-              onAbrir={(id) => abrir.mutate(id)}
+              onAbrir={abrir}
             />
           )}
         </Tarjeta>
@@ -237,6 +238,7 @@ export function Vos() {
 
         <Apariencia perfil={perfil} />
       </div>
+      <VistaArchivo {...vista} />
     </div>
   )
 }
