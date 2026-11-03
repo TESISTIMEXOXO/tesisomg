@@ -295,7 +295,7 @@ export function Checklists({ viajeId, personas, etapa, editable }: { viajeId: st
   return (
     <section aria-labelledby="para-llevar" className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 id="para-llevar" className="font-display text-titulo-1 font-black lg:text-display">Para llevar</h3>
+        <h2 id="para-llevar" className="font-display text-titulo-1 font-black lg:text-display">Para llevar</h2>
         {editable && !creando && (
           <Button variant="secundario" icon={Plus} onClick={() => setCreando(true)}>
             Crear

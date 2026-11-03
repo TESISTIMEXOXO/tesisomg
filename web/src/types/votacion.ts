@@ -1,5 +1,8 @@
 import { z } from 'zod'
 
+/** De qué se trata la votación. otros, para lo que no entra en ninguna. */
+export const CategoriaVotacionSchema = z.enum(['destino', 'fechas', 'alojamiento', 'actividad', 'comida', 'otros'])
+
 export const OpcionSchema = z.object({
   id: z.string(),
   nombre: z.string(),
@@ -13,7 +16,7 @@ export const VotacionSchema = z.object({
   id: z.string(),
   viajeId: z.string(),
   pregunta: z.string(),
-  categoria: z.enum(['destino', 'fechas', 'alojamiento', 'actividad', 'comida']),
+  categoria: CategoriaVotacionSchema,
   estado: z.enum(['abierta', 'cerrada']),
   /** Texto ya armado por el backend: "Cierra el viernes". */
   cierre: z.string().nullable(),
@@ -33,10 +36,11 @@ export const NuevaOpcionSchema = z.object({
 
 export const CrearVotacionSchema = z.object({
   pregunta: z.string().trim().min(1, 'Escribí la pregunta.'),
-  categoria: z.enum(['destino', 'fechas', 'alojamiento', 'actividad', 'comida']),
+  categoria: CategoriaVotacionSchema,
 })
 
 export type Opcion = z.infer<typeof OpcionSchema>
 export type Votacion = z.infer<typeof VotacionSchema>
 export type NuevaOpcion = z.infer<typeof NuevaOpcionSchema>
 export type CrearVotacion = z.infer<typeof CrearVotacionSchema>
+export type CategoriaVotacion = z.infer<typeof CategoriaVotacionSchema>
