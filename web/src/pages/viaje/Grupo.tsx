@@ -13,8 +13,9 @@ import { useViajeActual } from '../../layouts/contextoViaje'
 import { cuandoEnDias } from '../../lib/fechas'
 import { ELENCO } from '../../pinz/elenco'
 import { RolSchema, type Rol } from '../../types/persona'
+import { esOrganizador } from './nombres'
 
-const ROLES: Record<Rol, string> = { organizador: 'Organiza', miembro: 'Miembro', lector: 'Solo mira' }
+const ROLES: Record<Rol, string> = { organizador: 'Organizador', miembro: 'Miembro', lector: 'Solo lectura' }
 
 function InvitarPorMail({ viajeId }: { viajeId: string }) {
   const invitar = useInvitarPorMail(viajeId)
@@ -56,7 +57,7 @@ export function Grupo() {
   const salir = useSalirDelGrupo(viaje.id)
   const repetir = useRepetirViaje(viaje.id)
   const cambiarRol = useCambiarRol(viaje.id)
-  const puedeAdministrarRoles = viaje.personas.some((persona) => persona.esVos && persona.rol === 'organizador')
+  const puedeAdministrarRoles = esOrganizador(viaje.personas)
   const [confirmarSalida, setConfirmarSalida] = useState(false)
   const [copiado, setCopiado] = useState(false)
 
@@ -91,9 +92,11 @@ export function Grupo() {
                       }}
                       className="min-h-toque rounded-full trazo-fino bg-papel-hundido px-3 text-meta font-extrabold"
                     >
-                      <option value="organizador">Organiza</option>
-                      <option value="miembro">Miembro</option>
-                      <option value="lector">Solo mira</option>
+                      {RolSchema.options.map((rol) => (
+                        <option key={rol} value={rol}>
+                          {ROLES[rol]}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 ) : (

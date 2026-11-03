@@ -12,7 +12,8 @@ import { useCrearVotacion, useProponerOpcion, useVotaciones } from '../../hooks/
 import { useViajeActual } from '../../layouts/contextoViaje'
 import { CategoriaVotacionSchema, CrearVotacionSchema, type CategoriaVotacion, type Votacion } from '../../types/votacion'
 import { Checklists } from './Checklists'
-import { puedeEditar } from './nombres'
+import { EditarVotacion } from './EditarVotacion'
+import { esOrganizador, puedeEditar } from './nombres'
 import { TarjetaVotacion } from './TarjetaVotacion'
 
 function Desplegable({ titulo, abierta = true, children }: { titulo: string; abierta?: boolean; children: ReactNode }) {
@@ -170,7 +171,9 @@ export function Listas() {
   const votaciones = useVotaciones(viaje.id)
   const editable = puedeEditar(viaje.personas)
   const soloLectura = etapa === 'post' || !editable
-  const [formulario, setFormulario] = useState<'crear' | 'proponer' | null>(null)
+  /* En Post-viaje las votaciones quedan como recuerdo: ni quien organiza las toca. */
+  const administra = etapa !== 'post' && esOrganizador(viaje.personas)
+  const [formulario, setFormulario] = useState<'crear' | 'proponer' | { editar: Votacion } | null>(null)
   const ventana = useRef<HTMLDialogElement>(null)
   const idTitulo = useId()
 
@@ -209,6 +212,9 @@ export function Listas() {
               {formulario === 'proponer' && abiertas.length > 0 && (
                 <ProponerOpcion viajeId={viaje.id} abiertas={abiertas} idTitulo={idTitulo} onCerrar={cerrarFormulario} />
               )}
+              {typeof formulario === 'object' && formulario !== null && (
+                <EditarVotacion key={formulario.editar.id} votacion={formulario.editar} idTitulo={idTitulo} onCerrar={cerrarFormulario} />
+              )}
             </div>
           </Ventana>
           {votaciones.isPending && <p className="text-tinta-suave">Cargando las votaciones…</p>}
@@ -221,7 +227,13 @@ export function Listas() {
           {abiertas.length > 0 && (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {abiertas.map((votacion) => (
-                <TarjetaVotacion key={votacion.id} votacion={votacion} personas={viaje.personas} soloLectura={soloLectura} />
+                <TarjetaVotacion
+                  key={votacion.id}
+                  votacion={votacion}
+                  personas={viaje.personas}
+                  soloLectura={soloLectura}
+                  onEditar={administra ? () => setFormulario({ editar: votacion }) : undefined}
+                />
               ))}
             </div>
           )}
@@ -229,7 +241,13 @@ export function Listas() {
             <Desplegable titulo="Votaciones cerradas" abierta={false}>
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {cerradas.map((votacion) => (
-                  <TarjetaVotacion key={votacion.id} votacion={votacion} personas={viaje.personas} soloLectura />
+                  <TarjetaVotacion
+                    key={votacion.id}
+                    votacion={votacion}
+                    personas={viaje.personas}
+                    soloLectura
+                    onEditar={administra ? () => setFormulario({ editar: votacion }) : undefined}
+                  />
                 ))}
               </div>
             </Desplegable>

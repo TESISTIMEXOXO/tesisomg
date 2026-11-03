@@ -1,3 +1,5 @@
+import { Eye, EyeOff } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AvatarStack } from '../components/ui/AvatarStack'
 import { StageSwitch } from '../components/ui/StageSwitch'
@@ -15,6 +17,7 @@ type EncabezadoViajeProps = {
 
 /** Dónde estoy: el viaje, la etapa con su color y quiénes van. */
 export function EncabezadoViaje({ viaje, etapa, onCambiarEtapa }: EncabezadoViajeProps) {
+  const [verComoPublico, setVerComoPublico] = useState(false)
   const organiza = viaje.personas.find((p) => p.rol === 'organizador')
   const faltan = viaje.fechaIda ? diasHasta(viaje.fechaIda) : null
   const personas = viaje.personas.map((p) => ({ name: p.nombre, pinz: p.pinz }))
@@ -47,10 +50,25 @@ export function EncabezadoViaje({ viaje, etapa, onCambiarEtapa }: EncabezadoViaj
           </p>
         )}
       </div>
+      {/* Ocultarlo sirve para ver el encabezado como en producción. El botón queda siempre en el mismo lugar. */}
       {import.meta.env.DEV && (
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sobretitulo uppercase">Solo en desarrollo · ver otra etapa</span>
-          <StageSwitch value={etapa} onChange={onCambiarEtapa} />
+        <div className={`flex items-end justify-between gap-2 ${verComoPublico ? '-my-3' : ''}`}>
+          {!verComoPublico && (
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <span className="text-sobretitulo uppercase">Solo en desarrollo · ver otra etapa</span>
+              <StageSwitch value={etapa} onChange={onCambiarEtapa} />
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setVerComoPublico((actual) => !actual)}
+            aria-pressed={verComoPublico}
+            aria-label={verComoPublico ? 'Mostrar el selector de etapa' : 'Ocultar el selector de etapa'}
+            title={verComoPublico ? 'Mostrar el selector de etapa' : 'Ocultar el selector de etapa'}
+            className={`ml-auto grid size-11 flex-none place-items-center rounded-full hover:opacity-100 focus-visible:opacity-100 ${verComoPublico ? 'opacity-25' : 'opacity-40'}`}
+          >
+            {verComoPublico ? <Eye size={16} strokeWidth={2} aria-hidden /> : <EyeOff size={16} strokeWidth={2} aria-hidden />}
+          </button>
         </div>
       )}
     </header>

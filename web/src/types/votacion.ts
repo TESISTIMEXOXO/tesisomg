@@ -39,8 +39,20 @@ export const CrearVotacionSchema = z.object({
   categoria: CategoriaVotacionSchema,
 })
 
+/** Lo que puede cambiar quien organiza. Las opciones que no vengan en la lista se borran, con sus votos. */
+export const EditarVotacionSchema = z.object({
+  pregunta: z.string().trim().min(1, 'Escribí la pregunta.'),
+  opciones: z.array(
+    z.object({
+      id: z.string(),
+      nombre: z.string().trim().min(1, 'Ninguna opción puede quedar vacía.'),
+    }),
+  ),
+})
+
 export type Opcion = z.infer<typeof OpcionSchema>
 export type Votacion = z.infer<typeof VotacionSchema>
 export type NuevaOpcion = z.infer<typeof NuevaOpcionSchema>
 export type CrearVotacion = z.infer<typeof CrearVotacionSchema>
+export type EditarVotacion = z.infer<typeof EditarVotacionSchema>
 export type CategoriaVotacion = z.infer<typeof CategoriaVotacionSchema>

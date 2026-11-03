@@ -159,7 +159,7 @@ export function Cuentas() {
           onListo={() => setEditando(null)}
         />
       )}
-      {!editable && <p className="text-tinta-suave">Tenés rol de lector: podés ver las cuentas, pero no cargar gastos.</p>}
+      {!editable && <p className="text-tinta-suave">Tenés rol de solo lectura: podés ver las cuentas, pero no cargar gastos.</p>}
       </div>
     </>
   )
