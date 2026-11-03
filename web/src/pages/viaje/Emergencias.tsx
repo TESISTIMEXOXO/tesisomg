@@ -1,5 +1,6 @@
 import { ChevronDown, ExternalLink, LocateFixed, MapPin, Phone, TriangleAlert } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
+import { Despliegue } from '../../components/ui/Despliegue'
 import { estilosBoton } from '../../components/ui/estilosBoton'
 import { useUbicacionActual } from '../../hooks/ubicacion'
 import { useEmergencias, usePaisEn } from '../../hooks/viajes'
@@ -149,14 +150,31 @@ export function Emergencias() {
 }
 
 function Plegable({ titulo, children }: { titulo: string; children: ReactNode }) {
+  const [abierto, setAbierto] = useState(false)
+  const idContenido = useId()
   return (
-    <details className="group rounded-lg trazo bg-papel-elevado shadow-dura">
-      <summary className="flex min-h-control cursor-pointer list-none items-center justify-between gap-3 px-4 font-bold [&::-webkit-details-marker]:hidden">
-        {titulo}
-        <ChevronDown size={20} strokeWidth={2} aria-hidden className="shrink-0 transition-transform group-open:rotate-180" />
-      </summary>
-      <div className="flex flex-col gap-3 px-4 pb-4">{children}</div>
-    </details>
+    <section className="rounded-lg trazo bg-papel-elevado shadow-dura">
+      <h3>
+        <button
+          type="button"
+          aria-expanded={abierto}
+          aria-controls={idContenido}
+          onClick={() => setAbierto((actual) => !actual)}
+          className="flex min-h-control w-full items-center justify-between gap-3 px-4 text-left font-bold select-none"
+        >
+          {titulo}
+          <ChevronDown
+            size={20}
+            strokeWidth={2}
+            aria-hidden
+            className={`shrink-0 transition-transform duration-300 motion-reduce:transition-none ${abierto ? 'rotate-180' : ''}`}
+          />
+        </button>
+      </h3>
+      <Despliegue abierta={abierto} id={idContenido}>
+        <div className="flex flex-col gap-3 px-4 pb-4">{children}</div>
+      </Despliegue>
+    </section>
   )
 }
 

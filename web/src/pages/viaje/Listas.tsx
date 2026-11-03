@@ -1,9 +1,10 @@
-import { Check, Plus } from 'lucide-react'
+import { Check, ChevronDown, Plus } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { CaminosDeLaVentana } from '../../components/marca/CaminosDeLaVentana'
 import { NoCargo } from '../../components/marca/Estados'
 import { PinzNote } from '../../components/marca/PinzNote'
 import { Button } from '../../components/ui/Button'
+import { Despliegue } from '../../components/ui/Despliegue'
 import { Tarjeta } from '../../components/ui/Tarjeta'
 import { TextField } from '../../components/ui/TextField'
 import { Ventana } from '../../components/ui/Ventana'
@@ -16,12 +17,33 @@ import { EditarVotacion } from './EditarVotacion'
 import { esOrganizador, puedeEditar } from './nombres'
 import { TarjetaVotacion } from './TarjetaVotacion'
 
-function Desplegable({ titulo, abierta = true, children }: { titulo: string; abierta?: boolean; children: ReactNode }) {
+function Desplegable({ titulo, abierta: abiertaAlInicio = true, children }: { titulo: string; abierta?: boolean; children: ReactNode }) {
+  const [abierta, setAbierta] = useState(abiertaAlInicio)
+  const idContenido = useId()
+
   return (
-    <details open={abierta} className="rounded-lg trazo bg-papel-elevado p-4 shadow-grande md:p-6">
-      <summary className="flex min-h-toque cursor-pointer items-center font-display text-titulo-1 font-black">{titulo}</summary>
-      <div className="mt-3 flex flex-col gap-4">{children}</div>
-    </details>
+    <section className="rounded-lg trazo bg-papel-elevado p-4 shadow-grande md:p-6">
+      <h3>
+        <button
+          type="button"
+          aria-expanded={abierta}
+          aria-controls={idContenido}
+          onClick={() => setAbierta((actual) => !actual)}
+          className="flex min-h-toque w-full items-center justify-between gap-3 text-left font-display text-titulo-1 font-black select-none"
+        >
+          {titulo}
+          <ChevronDown
+            size={22}
+            strokeWidth={2}
+            aria-hidden
+            className={`shrink-0 text-tinta-suave transition-transform duration-300 motion-reduce:transition-none ${abierta ? 'rotate-180' : ''}`}
+          />
+        </button>
+      </h3>
+      <Despliegue abierta={abierta} id={idContenido}>
+        <div className="flex flex-col gap-4 pt-3">{children}</div>
+      </Despliegue>
+    </section>
   )
 }
 
@@ -246,7 +268,6 @@ export function Listas() {
                     votacion={votacion}
                     personas={viaje.personas}
                     soloLectura
-                    onEditar={administra ? () => setFormulario({ editar: votacion }) : undefined}
                   />
                 ))}
               </div>

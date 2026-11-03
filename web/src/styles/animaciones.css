@@ -163,3 +163,18 @@
     }
   }
 }
+
+/* Un bloque que se abre y se cierra animando el alto: la fila de la grilla pasa de 0fr a 1fr. */
+@utility despliegue {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease-out;
+
+  &[data-abierta='true'] {
+    grid-template-rows: 1fr;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}

@@ -69,7 +69,7 @@ export function ResumenPrevaje() {
             Tocá un avatar del encabezado para ver qué le falta a cada uno.
           </PinzNote>
         )}
-        <Tarjeta titulo="Para llevar" extra={<span className="font-display text-titulo-1 font-black numeros">{hechas}/{total}</span>}>
+        <Tarjeta titulo="Checklist" extra={<span className="font-display text-titulo-1 font-black numeros">{hechas}/{total}</span>}>
           <div
             role="progressbar"
             aria-label="Lo que falta llevar"

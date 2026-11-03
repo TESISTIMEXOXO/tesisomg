@@ -1,8 +1,9 @@
 import { Check, ChevronDown, Pencil, Plus, Trash2, X } from 'lucide-react'
-import { useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useId, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { AvatarStack } from '../../components/ui/AvatarStack'
 import { Button } from '../../components/ui/Button'
 import { Chip } from '../../components/ui/Chip'
+import { Despliegue } from '../../components/ui/Despliegue'
 import { TextField } from '../../components/ui/TextField'
 import { useAgregarItem, useBorrarItem, useBorrarLista, useCrearLista, useEditarLista, useListas, useMarcarItem } from '../../hooks/listas'
 import { conMayuscula } from '../../lib/texto'
@@ -235,12 +236,19 @@ function TarjetaLista({ lista, personas, etapa, editable, puedeBorrar }: { lista
   const [abierta, setAbierta] = useState(false)
   const [editando, setEditando] = useState(false)
   const [confirmaBorrar, setConfirmaBorrar] = useState(false)
+  const idContenido = useId()
   const hechas = lista.items.filter((item) => item.hecha).length
   const gente = personas.filter((persona) => lista.participantes.includes(persona.id)).map((persona) => ({ name: persona.nombre, pinz: persona.pinz }))
 
   return (
     <article className="overflow-hidden rounded-lg trazo bg-papel-elevado shadow-grande">
-      <button type="button" aria-expanded={abierta} onClick={() => setAbierta((actual) => !actual)} className={`flex w-full items-center gap-3 p-4 text-left ${FONDO_DESTACADO[lista.color]}`}>
+      <button
+        type="button"
+        aria-expanded={abierta}
+        aria-controls={idContenido}
+        onClick={() => setAbierta((actual) => !actual)}
+        className={`flex w-full items-center gap-3 p-4 text-left select-none ${FONDO_DESTACADO[lista.color]}`}
+      >
         <span className="flex min-w-0 flex-1 flex-col gap-2">
           <span className="font-display text-titulo-2 font-black">{lista.nombre}</span>
           <span className="flex min-w-0 items-center gap-2">
@@ -249,9 +257,14 @@ function TarjetaLista({ lista, personas, etapa, editable, puedeBorrar }: { lista
           </span>
         </span>
         <span className="font-display text-titulo-2 font-black numeros">{hechas}/{lista.items.length}</span>
-        <ChevronDown size={22} strokeWidth={2} aria-hidden className={`shrink-0 transition-transform ${abierta ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          size={22}
+          strokeWidth={2}
+          aria-hidden
+          className={`shrink-0 transition-transform duration-300 motion-reduce:transition-none ${abierta ? 'rotate-180' : ''}`}
+        />
       </button>
-      {abierta && (
+      <Despliegue abierta={abierta} id={idContenido}>
         <div className="flex flex-col gap-4 trazo-t p-4">
           <Items lista={lista} personas={personas} editable={editable} />
           {editable && <AgregarItem lista={lista} />}
@@ -281,21 +294,21 @@ function TarjetaLista({ lista, personas, etapa, editable, puedeBorrar }: { lista
           )}
           {borrar.isError && <p role="alert" className="font-semibold text-negativo">No pudimos borrar la lista.</p>}
         </div>
-      )}
+      </Despliegue>
     </article>
   )
 }
 
-/** Para llevar: todas las checklists de quien mira, personales y grupales, cada una con su nombre y su color. */
+/** Checklist: todas las checklists de quien mira, personales y grupales, cada una con su nombre y su color. */
 export function Checklists({ viajeId, personas, etapa, editable }: { viajeId: string; personas: Persona[]; etapa: Etapa; editable: boolean }) {
   const listas = useListas(viajeId)
   const [creando, setCreando] = useState(false)
   const yo = personas.find((persona) => persona.esVos)
 
   return (
-    <section aria-labelledby="para-llevar" className="flex flex-col gap-5">
+    <section aria-labelledby="checklist" className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="para-llevar" className="font-display text-titulo-1 font-black lg:text-display">Para llevar</h2>
+        <h2 id="checklist" className="font-display text-titulo-1 font-black lg:text-display">Checklist</h2>
         {editable && !creando && (
           <Button variant="secundario" icon={Plus} onClick={() => setCreando(true)}>
             Crear
