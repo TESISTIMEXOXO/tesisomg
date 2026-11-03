@@ -1,4 +1,5 @@
 import { Cargando, NoCargo } from '../../../components/marca/Estados'
+import { TituloPantalla } from '../../../components/marca/TituloPantalla'
 import { PinzNote } from '../../../components/marca/PinzNote'
 import { SaldosSlot } from '../../../components/slots/SaldosSlot'
 import { Button } from '../../../components/ui/Button'
@@ -20,7 +21,9 @@ export function ResumenPostViaje() {
   const todosAMano = data.saldos.every((s) => s.monto === 0)
 
   return (
-    <div className="flex max-w-180 flex-col gap-8">
+    <>
+      <TituloPantalla titulo="Así fue el viaje" pinz="postal" />
+      <div className="flex max-w-180 flex-col gap-8">
       {todosAMano && (
         <PinzNote tipo="festejo" pinz="vuelto" title="Listo, quedaron todos a mano" action="Repetir viaje" actionTo={`/viajes/${viaje.id}/grupo`}>
           El viaje se cerró. ¿Lo repetimos?
@@ -37,6 +40,7 @@ export function ResumenPostViaje() {
           )}
         </div>
       </Tarjeta>
-    </div>
+      </div>
+    </>
   )
 }

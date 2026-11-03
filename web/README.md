@@ -89,14 +89,15 @@ web/
 | `/viajes` | `pages/viajes/MisViajes.tsx` | `TripCard`, `PinzNote` (vacío), `useViajes`, `usePerfil` |
 | `/viajes/nuevo` | `pages/viajes/NuevoViaje.tsx` | `TextField`, `TripCard` (vista previa en desktop), `useCrearViaje` |
 | `/vos` | `pages/vos/Vos.tsx` | `Pin`, `Tarjeta`, `ArchivosSlot`, `usePerfil`, `useDocumentosPersonales` || `/viajes/:id` | `pages/viaje/resumen/Resumen.tsx` → `ResumenPrevaje`, `Hoy` o `ResumenPostViaje` según la etapa | `TarjetaVotacion`, `PinzNote` (tip), `MapaSlot`, `ItineraryItem`, `SaldosSlot` |
-| `/viajes/:id/plan` | `pages/viaje/Plan.tsx` | `TarjetaVotacion`, `ItineraryItem`, `MapaSlot`, `useVotaciones`, `useItinerario` |
+| `/viajes/:id/agenda` | `pages/viaje/Agenda.tsx` | `ItineraryItem`, `MapaSlot`, `useItinerario` |
+| `/viajes/:id/listas` | `pages/viaje/Listas.tsx` | `TarjetaVotacion`, `useVotaciones`, `useTareas`, `useRequisitos` |
 | `/viajes/:id/cuentas` | `pages/viaje/Cuentas.tsx` | `SaldosSlot`, `ComprobanteSlot`, `Chip`, `useGastos`, `useSaldos`, `useAgregarGasto` |
 | `/viajes/:id/baul` | `pages/viaje/Baul.tsx` | `ArchivosSlot`, `Chip`, `useTareas`, `useRequisitos`, `useDocumentos` |
 | `/viajes/:id/grupo` | `pages/viaje/Grupo.tsx` | `AvatarStack`, `QrSlot`, `useInvitacionGrupo`, `useMovimientos` |
 | `/viajes/:id/emergencias` | `pages/viaje/Emergencias.tsx` (sin pinz, nunca) | `useEmergencias` |
 | `*` | `pages/NoEncontrada.tsx` | `PinzNote` (error, genérico) |
 
-Cada pantalla resuelve sus estados de carga, vacío y error con `Cargando`, `NoCargo` y `PinzNote`, usando el pinz de su sección (Chispa en Decidir, Brújula en Plan, Vuelto en Cuentas, Valija en el Baúl, Siesta en Hoy, Postal en Post-viaje). Los errores van con el genérico.
+Cada pantalla resuelve sus estados de carga, vacío y error con `Cargando`, `NoCargo` y `PinzNote`, usando el pinz de su sección (Brújula en Agenda, Valija en Listas, Vuelto en Cuentas, Postal en el Baúl, Siesta en Hoy, Postal en Post-viaje). Los errores van con el genérico.
 
 **Agregar gasto:** `pages/viaje/IrAAgregarGasto.tsx` está en la tarjeta de saldos de las tres etapas y lleva a `cuentas#nuevo-gasto`; el formulario baja solo y enfoca el primer campo.
 
@@ -115,7 +116,7 @@ Cada pantalla resuelve sus estados de carga, vacío y error con `Cargando`, `NoC
 | `ItineraryItem` | `components/ui/ItineraryItem.tsx` | `time`, `title`, `place`, `done`, `current`, `last` | Un momento del día; es un `<li>`, va dentro de un `<ol>` |
 | `TripCard` | `components/ui/TripCard.tsx` | `title`, `place`, `dates`, `stage`, `people`, `image`, `pending`, `to` | La card de un viaje en Mis viajes |
 | `AvatarStack` | `components/ui/AvatarStack.tsx` | `people` (nombres o `{ name, pinz }`), `max` | Siluetas de pin con inicial, en el tono del pinz |
-| `BottomNav` | `components/ui/BottomNav.tsx` | `items` (`{ id, label, icon, to, end }`, hasta 4), `sosTo` | La navegación de la app: barra flotante abajo, en todos los tamaños. Dentro de un viaje suma "SOS" en rojo, siempre al final: es el único acceso a Emergencias |
+| `BottomNav` | `components/ui/BottomNav.tsx` | `items` (`{ id, label, icon, to, end }`, hasta 5), `sosTo` | La navegación de la app: barra flotante abajo, en todos los tamaños. Dentro de un viaje suma "SOS" en rojo, siempre al final: es el único acceso a Emergencias |
 | `Ventana` | `components/ui/Ventana.tsx` | `ventanaRef`, `idTitulo`, `onClose` | La ventana emergente con el fondo oscurecido (`dialog` nativo): el ingreso y el formulario de contacto |
 | `Tarjeta` / `Etiqueta` | `components/ui/Tarjeta.tsx` | `titulo`, `extra`, `fondo` | El bloque de contenido de la app y su badge |
 | `Logo` | `components/marca/Logo.tsx` | `variant` (`marca` · `simbolo` · `icono`), `size` (en `marca`, el alto de la palabra), `ink`, `label` | La marca: el pinz genérico coral pegado a "pinz" en Archivo 900. El pin es siempre coral. Las versiones en curvas (`pinz-logo.svg`) son para documentos y Open Graph; en la interfaz se usa el componente |
@@ -260,7 +261,7 @@ Una escritura igual: `crear(datos)` pasa de `sinBackend('viajes.crear', datos)` 
 
 | Slot | Archivo | Recibe | Emite | Dónde se monta |
 | --- | --- | --- | --- | --- |
-| Mapa | `components/slots/MapaSlot.tsx` | `puntos: { id, nombre, lat, lng, tipo }[]`, `personas: { id, nombre, pinz, lat, lng }[]`, `contenedorRef`, `alto` | `onSeleccionarPunto(id)` | `pages/viaje/resumen/Hoy.tsx`, `pages/viaje/Plan.tsx` |
+| Mapa | `components/slots/MapaSlot.tsx` | `puntos: { id, nombre, lat, lng, tipo }[]`, `personas: { id, nombre, pinz, lat, lng }[]`, `contenedorRef`, `alto` | `onSeleccionarPunto(id)` | `pages/viaje/resumen/Hoy.tsx`, `pages/viaje/Agenda.tsx` |
 | Saldos | `components/slots/SaldosSlot.tsx` | `saldos: { persona, monto }[]` ya calculados (o `null`), `moneda` | `onRegistrarPago(personaId)` | `pages/viaje/Cuentas.tsx`, `pages/viaje/resumen/ResumenPostViaje.tsx` |
 | Auth | `components/slots/AuthSlot.tsx` | `estado` (`listo` · `cargando` · `error`) | `onElegirProveedor('google' \| 'mail')` | `pages/ingresar/Ingresar.tsx` |
 | Archivos | `components/slots/ArchivosSlot.tsx` | `archivos: { id, nombre, tipo, tamano }[]`, `ayuda` | `onSubir(archivo)`, `onAbrir(id)` | `pages/viaje/Baul.tsx`, `pages/vos/Vos.tsx` |

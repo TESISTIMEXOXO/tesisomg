@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 import { z } from "zod";
 import { mandarInvitacion } from "../auth/mail.js";
 import { requiereSesion } from "../auth/sesion.js";
+import { netosDe } from "../cuentas/delViaje.js";
+import { conListasAlDia, listasDe } from "../listasDelViaje.js";
 import { Usuario } from "../modelos/Usuario.js";
 import { UbicacionCompartida } from "../modelos/UbicacionCompartida.js";
 import { Viaje } from "../modelos/Viaje.js";
@@ -160,6 +162,7 @@ rutasViajes.post("/", async (req, res) => {
     ...datos.data,
     etapas: etapas.data.map((etapa) => ({ id: crypto.randomUUID(), ...etapa })),
     creadoPor: usuario._id,
+    moneda: usuario.moneda,
     codigoInvitacion,
     miembros: [
       {
@@ -327,6 +330,10 @@ rutasViajes.delete("/:id/miembros/yo", async (req, res) => {
     res.status(409).json({ error: "transferir-organizacion-antes-de-salir" });
     return;
   }
+  if ((netosDe(viaje).get(usuarioId) ?? 0) !== 0) {
+    res.status(409).json({ error: "saldo-pendiente" });
+    return;
+  }
   await UbicacionCompartida.deleteOne({ viajeId: viaje._id, usuarioId }).exec();
   if (viaje.miembros.length === 1) {
     await Promise.all([
@@ -371,6 +378,7 @@ rutasViajes.post("/:id/repetir", async (req, res) => {
       fechaVuelta: null,
     })),
     creadoPor: usuario._id,
+    moneda: usuario.moneda,
     codigoInvitacion: crypto.randomUUID().replaceAll("-", "").slice(0, 6).toUpperCase(),
     miembros: pedido.data.modo === "mismas-personas"
       ? original.miembros.map((persona) => ({
@@ -394,8 +402,8 @@ rutasViajes.get("/:id/resumen", async (req, res) => {
     res.status(404).json({ error: "no-existe" });
     return;
   }
-  const tareas = viaje.tareas.filter((tarea) => tarea.lista === "compartida");
-  res.json({ viajeId: viaje._id.toString(), pendientes: [], checklist: { hechas: tareas.filter((tarea) => tarea.hecha).length, total: tareas.length } });
+  const items = listasDe(await conListasAlDia(viaje), usuarioId).flatMap((lista) => lista.items);
+  res.json({ viajeId: viaje._id.toString(), pendientes: [], checklist: { hechas: items.filter((item) => item.hecha).length, total: items.length } });
 });
 
 rutasViajes.get("/:id", async (req, res) => {

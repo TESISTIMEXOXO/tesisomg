@@ -3,6 +3,7 @@ import { pedir } from '../lib/api'
 import {
   EmergenciasSchema,
   InvitacionSchema,
+  PaisSchema,
   ResumenViajeSchema,
   ViajeSchema,
   type NuevoViaje,
@@ -24,6 +25,10 @@ export async function resumen(id: string) {
 
 export function buscarLugares(consulta: string) {
   return pedir(`/lugares?q=${encodeURIComponent(consulta)}`, { schema: z.array(SugerenciaLugarSchema) })
+}
+
+export function paisEn(lat: number, lng: number) {
+  return pedir(`/lugares/pais?lat=${lat}&lng=${lng}`, { schema: PaisSchema })
 }
 
 /** Guarda el viaje asociado a la cuenta que tiene abierta la sesión. */

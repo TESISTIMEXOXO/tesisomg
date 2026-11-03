@@ -1,11 +1,8 @@
 import { z } from 'zod'
 import { bajarArchivo, pedir } from '../lib/api'
 import { DocumentoSchema } from '../types/documento'
-import { RequisitoSchema, TareaSchema, type NuevaTarea } from '../types/tarea'
+import { RequisitoSchema } from '../types/tarea'
 
-export async function tareas(viajeId: string) {
-  return pedir(`/viajes/${encodeURIComponent(viajeId)}/tareas`, { schema: z.array(TareaSchema) })
-}
 
 export async function requisitos(viajeId: string) {
   return pedir(`/viajes/${encodeURIComponent(viajeId)}/tareas/requisitos`, { schema: z.array(RequisitoSchema) })
@@ -20,9 +17,6 @@ export async function documentosPersonales() {
   return pedir('/documentos-personales', { schema: z.array(DocumentoSchema) })
 }
 
-export function marcarTarea(viajeId: string, tareaId: string, hecha: boolean) {
-  return pedir(`/viajes/${encodeURIComponent(viajeId)}/tareas/${encodeURIComponent(tareaId)}`, { method: 'PATCH', body: { hecha } })
-}
 
 export function marcarRequisito(viajeId: string, requisitoId: string, cumplido: boolean) {
   return pedir(`/viajes/${encodeURIComponent(viajeId)}/tareas/requisitos/${encodeURIComponent(requisitoId)}`, {
@@ -31,9 +25,6 @@ export function marcarRequisito(viajeId: string, requisitoId: string, cumplido: 
   })
 }
 
-export function agregarTarea(viajeId: string, datos: NuevaTarea) {
-  return pedir(`/viajes/${encodeURIComponent(viajeId)}/tareas`, { method: 'POST', body: datos, schema: TareaSchema })
-}
 
 export function subirDocumento(viajeId: string, archivo: File) {
   const form = new FormData()

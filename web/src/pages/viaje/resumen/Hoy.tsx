@@ -1,5 +1,6 @@
 import { Briefcase, Route } from 'lucide-react'
 import { Cargando, NoCargo } from '../../../components/marca/Estados'
+import { TituloPantalla } from '../../../components/marca/TituloPantalla'
 import { MapaSlot } from '../../../components/slots/MapaSlot'
 import { ButtonLink } from '../../../components/ui/Button'
 import { ItineraryItem } from '../../../components/ui/ItineraryItem'
@@ -28,7 +29,7 @@ export function Hoy() {
         <span className="self-start rounded-full trazo-fino bg-papel-elevado px-3 py-1 text-sobretitulo uppercase">
           Día {hoy.dia} de {hoy.totalDias} · {diaCorto(hoy.fecha)}
         </span>
-        <h2 className="font-display text-display font-black">Hoy, {hoy.titulo}.</h2>
+        <TituloPantalla titulo={`Hoy, ${hoy.titulo}.`} pinz="siesta" />
         {hoy.aviso && (
           <p role="status" className="rounded-lg trazo bg-sol-tinte px-4 py-3 font-semibold">
             {hoy.aviso}
@@ -57,7 +58,7 @@ export function Hoy() {
           ))}
         </ol>
         <div className="grid grid-cols-2 gap-2.5">
-          <ButtonLink to={`/viajes/${viaje.id}/plan`} variant="secundario" size="sm" icon={Route}>
+          <ButtonLink to={`/viajes/${viaje.id}/agenda`} variant="secundario" size="sm" icon={Route}>
             Ruta
           </ButtonLink>
           <ButtonLink to={`/viajes/${viaje.id}/baul`} variant="secundario" size="sm" icon={Briefcase}>

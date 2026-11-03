@@ -88,6 +88,12 @@ export const EmergenciasSchema = z.object({
   }),
 })
 
+/** El país de unas coordenadas. Sin país (en el mar, por ejemplo), codigo es null. */
+export const PaisSchema = z.object({
+  codigo: z.string().nullable(),
+  nombre: z.string().nullable(),
+})
+
 export type Etapa = z.infer<typeof EtapaSchema>
 export type Viaje = z.infer<typeof ViajeSchema>
 export type LugarViaje = z.infer<typeof LugarViajeSchema>
@@ -97,3 +103,4 @@ export type NuevoViaje = z.infer<typeof NuevoViajeSchema>
 export type Invitacion = z.infer<typeof InvitacionSchema>
 export type ResumenViaje = z.infer<typeof ResumenViajeSchema>
 export type Emergencias = z.infer<typeof EmergenciasSchema>
+export type Pais = z.infer<typeof PaisSchema>

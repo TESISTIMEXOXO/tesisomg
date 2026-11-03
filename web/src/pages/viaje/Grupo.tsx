@@ -7,6 +7,7 @@ import { AvatarStack } from '../../components/ui/AvatarStack'
 import { Button } from '../../components/ui/Button'
 import { Tarjeta } from '../../components/ui/Tarjeta'
 import { TextField } from '../../components/ui/TextField'
+import { mensajeAlSalir } from '../../lib/erroresCuentas'
 import { useCambiarRol, useInvitacionGrupo, useInvitarPorMail, useMovimientos, useRepetirViaje, useSalirDelGrupo } from '../../hooks/grupo'
 import { useViajeActual } from '../../layouts/contextoViaje'
 import { cuandoEnDias } from '../../lib/fechas'
@@ -172,7 +173,7 @@ export function Grupo() {
               Salir del grupo
             </Button>
           )}
-          {salir.isError && <p role="alert" className="text-negativo">No pudimos salir del grupo. Si sos organizador, primero transferí la organización.</p>}
+          {salir.isError && <p role="alert" className="text-negativo">{mensajeAlSalir(salir.error)}</p>}
         </section>
         {repetir.isError && <p role="alert" className="text-negativo">No pudimos crear el nuevo viaje. Probá de nuevo.</p>}
       </div>

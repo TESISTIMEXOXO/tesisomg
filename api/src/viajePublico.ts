@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { netosDe } from "./cuentas/delViaje.js";
 import { Viaje, type DocViaje } from "./modelos/Viaje.js";
 
 type EtapaViaje = NonNullable<DocViaje["etapas"]>[number];
@@ -26,6 +27,12 @@ export function puedeEditarViaje(viaje: DocViaje, usuarioId: string) {
 
 export function registrarMovimiento(viaje: DocViaje, texto: string) {
   viaje.movimientos.push({ id: crypto.randomUUID(), texto, creadoEn: new Date() });
+}
+
+/** "todos a mano" cuando hubo gastos y ya nadie le debe nada a nadie. */
+function estadoDeCuentas(viaje: DocViaje) {
+  if (viaje.gastos.length === 0) return null;
+  return [...netosDe(viaje).values()].every((neto) => neto === 0) ? "todos a mano" : null;
 }
 
 export function etapasDelViaje(viaje: DocViaje): EtapaViaje[] {
@@ -66,6 +73,6 @@ export function viajePublico(viaje: DocViaje, usuarioId: string) {
       esVos: miembro.usuarioId.toString() === usuarioId,
     })),
     pendiente: null,
-    estadoCuentas: null,
+    estadoCuentas: estadoDeCuentas(viaje),
   };
 }

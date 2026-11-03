@@ -52,6 +52,77 @@ rutasLugares.get("/", async (req, res) => {
   res.json(await buscarEnPhoton(consulta.data));
 });
 
+/** El país de unas coordenadas, para Emergencias. Responde el código ISO (en mayúsculas) y el nombre. */
+rutasLugares.get("/pais", async (req, res) => {
+  const coordenadas = z.object({
+    lat: z.coerce.number().min(-90).max(90),
+    lng: z.coerce.number().min(-180).max(180),
+  }).safeParse(req.query);
+  if (!coordenadas.success) {
+    res.status(400).json({ error: "coordenadas-invalidas" });
+    return;
+  }
+  const { lat, lng } = coordenadas.data;
+
+  if (Date.now() - nominatimFalloEn > PAUSA_NOMINATIM_MS) {
+    try {
+      res.json(await paisEnNominatim(lat, lng));
+      return;
+    } catch (error) {
+      nominatimFalloEn = Date.now();
+      console.warn("Nominatim no respondió, se usa Photon", error);
+    }
+  }
+  try {
+    res.json(await paisEnPhoton(lat, lng));
+  } catch (error) {
+    console.warn("Photon tampoco respondió", error);
+    res.status(502).json({ error: "sin-geocodificador" });
+  }
+});
+
+/** Sin país (en el mar, por ejemplo) responde codigo null. */
+async function paisEnNominatim(lat: number, lng: number) {
+  const url = new URL("https://nominatim.openstreetmap.org/reverse");
+  url.searchParams.set("lat", lat.toString());
+  url.searchParams.set("lon", lng.toString());
+  url.searchParams.set("format", "jsonv2");
+  url.searchParams.set("zoom", "3");
+  url.searchParams.set("accept-language", "es");
+
+  const resultado = z.object({
+    address: z.object({ country: z.string().optional(), country_code: z.string().optional() }).optional(),
+  }).safeParse(await consultarGeocodificador(url));
+  if (!resultado.success) {
+    throw new Error("El servicio de mapas devolvió resultados con un formato inesperado.");
+  }
+  const direccion = resultado.data.address;
+  return { codigo: direccion?.country_code?.toUpperCase() ?? null, nombre: direccion?.country ?? null };
+}
+
+async function paisEnPhoton(lat: number, lng: number) {
+  const url = new URL("https://photon.komoot.io/reverse");
+  url.searchParams.set("lat", lat.toString());
+  url.searchParams.set("lon", lng.toString());
+
+  const respuesta = await fetch(url, {
+    headers: { "User-Agent": "PinzTravelPlanner/1.0 (https://pinz.app)" },
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!respuesta.ok) throw new Error(`El servicio de mapas respondió HTTP ${respuesta.status}.`);
+
+  const resultado = z.object({
+    features: z.array(z.object({
+      properties: z.object({ country: z.string().optional(), countrycode: z.string().optional() }),
+    })),
+  }).safeParse(await respuesta.json());
+  if (!resultado.success) {
+    throw new Error("El servicio de mapas devolvió resultados con un formato inesperado.");
+  }
+  const lugar = resultado.data.features[0]?.properties;
+  return { codigo: lugar?.countrycode?.toUpperCase() ?? null, nombre: lugar?.country ?? null };
+}
+
 async function buscarEnNominatim(consulta: string) {
   const url = new URL("https://nominatim.openstreetmap.org/search");
   url.searchParams.set("q", consulta);

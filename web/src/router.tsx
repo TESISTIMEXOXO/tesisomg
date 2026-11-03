@@ -1,7 +1,8 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from './layouts/AppLayout'
 import { ConSesion } from './layouts/ConSesion'
 import { PublicLayout } from './layouts/PublicLayout'
+import { RaizLayout } from './layouts/RaizLayout'
 import { ViajeLayout } from './layouts/ViajeLayout'
 import { NoEncontrada } from './pages/NoEncontrada'
 
@@ -9,6 +10,7 @@ import { NoEncontrada } from './pages/NoEncontrada'
 export const router = createBrowserRouter([
   {
     path: '/',
+    element: <RaizLayout />,
     hydrateFallbackElement: <div aria-busy="true" className="min-h-dvh" />,
     children: [
       {
@@ -47,7 +49,10 @@ export const router = createBrowserRouter([
             element: <ViajeLayout />,
             children: [
               { index: true, lazy: () => import('./pages/viaje/resumen/Resumen').then((m) => ({ Component: m.Resumen })) },
-              { path: 'plan', lazy: () => import('./pages/viaje/Plan').then((m) => ({ Component: m.Plan })) },
+              { path: 'agenda', lazy: () => import('./pages/viaje/Agenda').then((m) => ({ Component: m.Agenda })) },
+              { path: 'listas', lazy: () => import('./pages/viaje/Listas').then((m) => ({ Component: m.Listas })) },
+              /* Los enlaces viejos a Plan siguen andando. */
+              { path: 'plan', element: <Navigate to="../agenda" replace /> },
               { path: 'cuentas', lazy: () => import('./pages/viaje/Cuentas').then((m) => ({ Component: m.Cuentas })) },
               { path: 'baul', lazy: () => import('./pages/viaje/Baul').then((m) => ({ Component: m.Baul })) },
               { path: 'grupo', lazy: () => import('./pages/viaje/Grupo').then((m) => ({ Component: m.Grupo })) },
