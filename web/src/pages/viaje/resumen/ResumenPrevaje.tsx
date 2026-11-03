@@ -39,7 +39,7 @@ export function ResumenPrevaje() {
   return (
     <>
       <TituloPantalla titulo={tituloPrevaje(viaje.fechaIda)} />
-      <div className="grid gap-8 lg:grid-cols-3 lg:gap-7">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-7">
       <div className="flex flex-col gap-8 lg:col-span-2 lg:gap-7">
         {resumen.data.pendientes.length > 0 && (
           <section aria-label="Tus pendientes" className="rounded-lg trazo bg-sol-tinte p-4 shadow-dura">

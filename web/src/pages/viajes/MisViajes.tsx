@@ -44,7 +44,7 @@ function Seccion({ titulo, viajes }: { titulo: string; viajes: Viaje[] }) {
   return (
     <section className="flex flex-col gap-4">
       <h2 className="font-display text-titulo-1 font-black">{titulo}</h2>
-      <ul className="grid gap-5 md:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {viajes.map((viaje) => (
           <li key={viaje.id}>
             <TripCard
@@ -109,7 +109,7 @@ export function MisViajes() {
       {pasados.length > 0 && (
         <section className="flex flex-col gap-4">
           <h2 className="font-display text-titulo-1 font-black">Viajes pasados</h2>
-          <ul className="grid gap-3 md:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {pasados.map((viaje) => (
               <li key={viaje.id}>
                 <ViajePasado viaje={viaje} />

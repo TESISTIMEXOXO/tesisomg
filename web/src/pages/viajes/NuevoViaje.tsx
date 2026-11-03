@@ -139,7 +139,7 @@ export function NuevoViaje() {
                 onSelect={(ubicacion) => cambiarEtapa(indice, { destino: ubicacion.nombre, ubicacion })}
               />
               {!sinFechas && (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <CampoFecha
                     label="Ida"
                     min={indice > 0 && etapas[indice - 1]?.fechaVuelta ? diaSiguiente(etapas[indice - 1].fechaVuelta) : undefined}

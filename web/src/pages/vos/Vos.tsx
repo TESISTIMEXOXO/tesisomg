@@ -165,7 +165,7 @@ export function Vos() {
           No pudimos cerrar la sesión. Probá de nuevo.
         </p>
       )}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Tarjeta>
           <div className="flex items-center gap-4">
             <Pin pinz={perfil.pinz ?? 'generico'} size={96} label="" />

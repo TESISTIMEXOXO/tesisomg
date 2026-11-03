@@ -207,7 +207,7 @@ export function Listas() {
             </PinzNote>
           )}
           {abiertas.length > 0 && (
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {abiertas.map((votacion) => (
                 <TarjetaVotacion key={votacion.id} votacion={votacion} personas={viaje.personas} soloLectura={soloLectura} />
               ))}
@@ -217,7 +217,7 @@ export function Listas() {
           {!soloLectura && votaciones.data && <ProponerOpcion viajeId={viaje.id} votaciones={votaciones.data} />}
           {cerradas.length > 0 && (
             <Desplegable titulo="Ya decidido" abierta={false}>
-              <div className="grid gap-6 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {cerradas.map((votacion) => (
                   <TarjetaVotacion key={votacion.id} votacion={votacion} personas={viaje.personas} soloLectura />
                 ))}

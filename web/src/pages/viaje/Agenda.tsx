@@ -126,7 +126,7 @@ function EditarEtapas({
             onChange={(destino) => cambiar(indice, { destino, ubicacion: null })}
             onSelect={(ubicacion) => cambiar(indice, { destino: ubicacion.nombre, ubicacion })}
           />
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <CampoFecha
               label="Ida"
               min={indice > 0 && etapas[indice - 1]?.fechaVuelta ? diaSiguiente(etapas[indice - 1].fechaVuelta!) : undefined}
@@ -207,7 +207,7 @@ function AgregarActividad({ viajeId }: { viajeId: string }) {
 
   return (
     <form onSubmit={enviar} noValidate className="flex flex-col gap-4 rounded-lg trazo bg-papel-hundido p-5">
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <CampoFecha label="Día" value={datos.fecha} onChange={(fecha) => cambiar('fecha', fecha)} />
         <TextField label="Hora" type="time" value={datos.hora} onChange={(evento) => cambiar('hora', evento.target.value)} />
       </div>
@@ -321,7 +321,7 @@ export function Agenda() {
     <>
       <TituloPantalla titulo="El plan, día por día" pinz="brujula" />
       <div className="flex flex-col gap-12">
-        <section aria-labelledby="itinerario" className="grid gap-6 lg:grid-cols-2">
+        <section aria-labelledby="itinerario" className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="flex flex-col gap-5">
             <h3 id="itinerario" className="sr-only">Actividades</h3>
             <div className="flex gap-2" role="group" aria-label="Cómo ver la agenda">

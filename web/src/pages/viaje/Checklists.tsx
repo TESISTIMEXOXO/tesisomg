@@ -307,7 +307,7 @@ export function Checklists({ viajeId, personas, etapa, editable }: { viajeId: st
       {listas.error && <p role="alert" className="text-negativo">No pudimos cargar las listas.</p>}
       {listas.data?.length === 0 && !creando && <p className="text-tinta-suave">Todavía no hay listas. Creá la primera: playa, documentos, auto.</p>}
       {listas.data && listas.data.length > 0 && (
-        <div className="grid items-start gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
           {listas.data.map((lista) => (
             <TarjetaLista
               key={lista.id}

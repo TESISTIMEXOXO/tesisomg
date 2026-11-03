@@ -141,7 +141,7 @@ Los tokens viven en `src/styles/index.css`, dentro de `@theme`, y salen de `toke
 | Espaciado (grilla de 4px) | `p-4` = `espacio-4`, `gap-8` = `espacio-8`; medidas: `min-h-toque` (44), `min-h-control` (50), `h-nav` (68) |
 | Contornos | `trazo-fino` (2px), `trazo` (2,5px), `trazo-grueso` (3,5px) y por lado: `trazo-b`, `trazo-t`, `trazo-r`, `trazo-grueso-b`… El color es siempre tinta |
 | Breakpoints | `md` (768), `lg` (1024), `xl` (1280); contenido con `max-w-contenido` (1200) |
-| Movimiento | `motion-safe:animate-bob`, `animate-jump`, `animate-cinta`, `animate-asoma`; en la landing también `animate-camino` (los pinz que caminan), `animate-repisa` (la repisa del cierre y Vuelto en Gastos) y `barras-se-llenan` (las barras de votación); `ease-rebote` |
+| Movimiento | `motion-safe:animate-bob`, `animate-jump`, `animate-cinta`, `animate-asoma`; en la landing también `animate-repisa` (la repisa del cierre y Vuelto en Gastos) y `barras-se-llenan` (las barras de votación); `ease-rebote` |
 
 **Regla:** nunca se escriben valores a mano (`bg-[#ff8a66]`, `p-[13px]`, hex sueltos). Si falta algo, se suma como token en `@theme` o como `@utility`. Las paletas de Tailwind están vaciadas, así que `bg-red-500` ni siquiera existe. La única excepción son los colores de accesorios de los pinz que no son de la paleta, que viven solo en `pinz/dibujos.ts`.
 

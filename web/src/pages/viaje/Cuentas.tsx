@@ -73,7 +73,7 @@ export function Cuentas() {
   return (
     <>
       <TituloPantalla titulo="Cuentas claras" pinz="vuelto" />
-      <div className="grid gap-8 lg:grid-cols-2 lg:gap-7">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-7">
       <div className="flex flex-col gap-8 lg:gap-7">
         <Tarjeta titulo="Cómo quedás" fondo="bg-lavanda-tinte">
           {saldos.error ? (

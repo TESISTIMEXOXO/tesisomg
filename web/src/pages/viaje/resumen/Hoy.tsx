@@ -24,7 +24,7 @@ export function Hoy() {
   const centroMapa = etapaDeHoy?.ubicacion ?? viaje.ubicacion
 
   return (
-    <div className="grid gap-8 lg:grid-cols-2 lg:gap-7">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-7">
       <div className="flex flex-col gap-4">
         <span className="self-start rounded-full trazo-fino bg-papel-elevado px-3 py-1 text-sobretitulo uppercase">
           Día {hoy.dia} de {hoy.totalDias} · {diaCorto(hoy.fecha)}
