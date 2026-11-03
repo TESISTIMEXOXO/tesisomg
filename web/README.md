@@ -74,7 +74,7 @@ web/
     services/           una función async por operación; hoy devuelven los mocks
     hooks/              React Query sobre cada servicio; las pantallas solo usan hooks. `ahora.ts`: la hora, renovada cada minuto
     mocks/datos.ts      todos los datos de ejemplo ("Bariloche con los chicos")
-    lib/                etapa (por fechas), fechas, moneda ($ 48.200), saldos, textos, guardarArchivo y el camino de la landing
+    lib/                etapa (por fechas), fechas, moneda ($ 48.200), saldos, textos, guardarArchivo, zonasHorarias y el camino de la landing
 ```
 
 ## 4. Pantallas
@@ -89,7 +89,7 @@ web/
 | `/viajes` | `pages/viajes/MisViajes.tsx` | `TripCard`, `PinzNote` (vacío), `useViajes`, `usePerfil` |
 | `/viajes/nuevo` | `pages/viajes/NuevoViaje.tsx` | `TextField`, `TripCard` (vista previa en desktop), `useCrearViaje` |
 | `/vos` | `pages/vos/Vos.tsx` | `Pin`, `Tarjeta`, `ArchivosSlot`, `VistaArchivo`, `usePerfil`, `useDocumentosPersonales` || `/viajes/:id` | `pages/viaje/resumen/Resumen.tsx` → `ResumenPrevaje`, `Hoy` o `ResumenPostViaje` según la etapa | `TarjetaVotacion`, `PinzNote` (tip), `MapaSlot`, `ItineraryItem`, `SaldosSlot` |
-| `/viajes/:id/agenda` | `pages/viaje/Agenda.tsx`. Abre en el próximo día con actividades; en semana y mes se pintan los días que tienen actividades y el elegido lleva un anillo. En el día, lo que viene va de lo más próximo a lo más lejano y lo que ya pasó se tilda solo (`useAhora`, cada minuto, con la hora del dispositivo) y baja al final | `ItineraryItem`, `MapaSlot`, `useItinerario`, `useAhora` |
+| `/viajes/:id/agenda` | `pages/viaje/Agenda.tsx`. Abre en el próximo día con actividades; en semana y mes se pintan los días que tienen actividades y el elegido lleva un anillo. En el día, lo que viene va de lo más próximo a lo más lejano y lo que ya pasó se tilda solo (`useAhora`, cada minuto) y baja al final. Las horas son las del destino de ese día: el último destino que ya empezó según sus fechas, con su zona horaria (`useZonasHorarias` + `lib/zonasHorarias.ts`: país por `/lugares/pais` y, en países con varias zonas, la ciudad de referencia más cercana). Sin zona conocida, vale la hora del dispositivo | `ItineraryItem`, `MapaSlot`, `useItinerario`, `useAhora`, `useZonasHorarias` |
 | `/viajes/:id/listas` | `pages/viaje/Listas.tsx` | `TarjetaVotacion`, `useVotaciones`, `useTareas`, `useRequisitos` |
 | `/viajes/:id/cuentas` | `pages/viaje/Cuentas.tsx` | `SaldosSlot`, `ComprobanteSlot`, `Chip`, `useGastos`, `useSaldos`, `useAgregarGasto` |
 | `/viajes/:id/baul` | `pages/viaje/Baul.tsx` | `ArchivosSlot`, `VistaArchivo`, `Chip`, `useTareas`, `useRequisitos`, `useDocumentos` |

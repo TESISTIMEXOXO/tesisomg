@@ -11,10 +11,11 @@ import { SelectorLugar } from '../../components/ui/SelectorLugar'
 import { TextField } from '../../components/ui/TextField'
 import { useAhora } from '../../hooks/ahora'
 import { useAgregarActividad, useExportarCalendario, useItinerario } from '../../hooks/itinerario'
-import { useActualizarEtapas } from '../../hooks/viajes'
+import { useActualizarEtapas, useZonasHorarias } from '../../hooks/viajes'
 import { useViajeActual } from '../../layouts/contextoViaje'
 import { diaCorto, diasDeLaSemana, hoyISO, leerFecha, mesYAnio, semanasDelMes, sumarDias, sumarMeses, yaPaso } from '../../lib/fechas'
 import { conMayuscula } from '../../lib/texto'
+import { relojEn } from '../../lib/zonasHorarias'
 import type { PuntoMapa } from '../../types/itinerario'
 import type { EtapaViaje, LugarViaje } from '../../types/viaje'
 import { puedeEditar } from './nombres'
@@ -244,6 +245,16 @@ function AgregarActividad({ viajeId }: { viajeId: string }) {
   )
 }
 
+/**
+ * En qué destino se está ese día: el último que ya empezó. Las etapas son consecutivas, así que
+ * el día que se llega al segundo destino ya cuenta con su hora. Antes del viaje, el primero; sin fechas, también.
+ */
+function etapaDelDia(etapas: Pick<EtapaViaje, 'fechaIda'>[], dia: string) {
+  if (!etapas.length) return null
+  const empezadas = etapas.flatMap((etapaViaje, indice) => (etapaViaje.fechaIda && etapaViaje.fechaIda <= dia ? [indice] : []))
+  return empezadas.at(-1) ?? 0
+}
+
 type Vista = 'dia' | 'semana' | 'mes'
 
 const VISTAS: { id: Vista; nombre: string }[] = [
@@ -290,10 +301,15 @@ export function Agenda() {
   const primera = fechas.find((dia) => dia >= hoy) ?? fechas.at(-1) ?? viaje.fechaIda ?? hoy
   const fecha = fechaElegida ?? primera
   const ahora = useAhora()
+  const zonas = useZonasHorarias(etapas.map((etapaViaje) => etapaViaje.ubicacion))
+  /* Las horas se cargan en la hora del destino de ese día: con su reloj se sabe si ya pasaron. */
+  const destinoDelDia = etapaDelDia(etapas, fecha)
+  const zonaDelDia = destinoDelDia === null ? null : zonas[destinoDelDia]
+  const relojDelDia = relojEn(zonaDelDia, ahora)
   /* Lo que viene, de lo más próximo a lo más lejano; lo que ya pasó se tilda solo y baja al final. */
   const delDia = actividades
     .filter((actividad) => actividad.fecha === fecha)
-    .map((actividad) => ({ ...actividad, hecha: actividad.estado === 'hecho' || yaPaso(actividad.fecha, actividad.hora, ahora) }))
+    .map((actividad) => ({ ...actividad, hecha: actividad.estado === 'hecho' || yaPaso(actividad.fecha, actividad.hora, relojDelDia) }))
     .sort((a, b) => Number(a.hecha) - Number(b.hecha) || a.hora.localeCompare(b.hora))
   const cantidad = (dia: string) => actividades.filter((actividad) => actividad.fecha === dia).length
   const centroMapa = etapas[0]?.ubicacion ?? viaje.ubicacion
@@ -350,6 +366,9 @@ export function Agenda() {
               </p>
               <Button variant="fantasma" size="sm" icon={ChevronRight} aria-label="Siguiente" onClick={() => mover(1)} />
             </div>
+            {vista === 'dia' && destinoDelDia !== null && zonaDelDia && (
+              <p className="-mt-3 text-center text-meta text-tinta-suave">Horarios en hora local de {etapas[destinoDelDia].destino}</p>
+            )}
             {itinerario.isPending && <p className="text-tinta-suave">Cargando el itinerario…</p>}
             {itinerario.error && <NoCargo error={itinerario.error} onReintentar={() => itinerario.refetch()} />}
             {vista === 'dia' && itinerario.data && (
