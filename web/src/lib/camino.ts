@@ -112,20 +112,68 @@ function nodos(puntos: Punto[], cada: number): Punto[] {
 
 const redondo = (n: number) => Math.round(n * 10) / 10
 
-/* Catmull-Rom pasado a cúbicas: la curva pasa por cada nodo, sin quiebres. */
-function curva(puntos: Punto[]) {
-  const [inicio] = puntos
-  let d = `M${redondo(inicio[0])} ${redondo(inicio[1])}`
-  for (let i = 0; i < puntos.length - 1; i++) {
-    const p0 = puntos[i - 1] ?? puntos[i]
-    const p1 = puntos[i]
+type Cubica = readonly [Punto, Punto, Punto, Punto]
+
+const redondear = ([x, y]: Punto): Punto => [redondo(x), redondo(y)]
+
+/* Catmull-Rom pasado a cúbicas: la curva pasa por cada nodo, sin quiebres. Redondeadas igual que en el `d`. */
+function cubicas(puntos: Punto[]): Cubica[] {
+  return puntos.slice(0, -1).map((p1, i) => {
+    const p0 = puntos[i - 1] ?? p1
     const p2 = puntos[i + 1]
     const p3 = puntos[i + 2] ?? p2
-    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6]
-    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6]
-    d += ` C${redondo(c1[0])} ${redondo(c1[1])}, ${redondo(c2[0])} ${redondo(c2[1])}, ${redondo(p2[0])} ${redondo(p2[1])}`
+    const c1: Punto = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6]
+    const c2: Punto = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6]
+    return [redondear(p1), redondear(c1), redondear(c2), redondear(p2)]
+  })
+}
+
+function curva(tramos: Cubica[]) {
+  const [inicio] = tramos[0]
+  return tramos.reduce((d, [, c1, c2, fin]) => `${d} C${c1[0]} ${c1[1]}, ${c2[0]} ${c2[1]}, ${fin[0]} ${fin[1]}`, `M${inicio[0]} ${inicio[1]}`)
+}
+
+/* Cuántos tramos rectos alcanzan para seguir una cúbica sin que se note: cada nodo está a unos 150 px del siguiente. */
+const PARTES_POR_CUBICA = 16
+
+function enCubica([p0, c1, c2, p1]: Cubica, t: number): Punto {
+  const u = 1 - t
+  const a = u * u * u
+  const b = 3 * u * u * t
+  const c = 3 * u * t * t
+  const e = t * t * t
+  return [a * p0[0] + b * c1[0] + c * c2[0] + e * p1[0], a * p0[1] + b * c1[1] + c * c2[1] + e * p1[1]]
+}
+
+/** Lo mismo que muestrear, pero sobre las cúbicas y sin el DOM. */
+function recorrerCubicas(tramos: Cubica[], paso: number): Punto[] {
+  const linea: Punto[] = [tramos[0][0]]
+  for (const tramo of tramos) {
+    for (let k = 1; k <= PARTES_POR_CUBICA; k++) linea.push(enCubica(tramo, k / PARTES_POR_CUBICA))
   }
-  return d
+  return aPasosParejos(linea, paso)
+}
+
+/* Arranca y termina en los extremos; en el medio, un punto cada `paso` px. El último tramo puede ser más corto. */
+function aPasosParejos(linea: Punto[], paso: number): Punto[] {
+  const resultado: Punto[] = [linea[0]]
+  let falta = paso
+  for (let i = 1; i < linea.length; i++) {
+    let [x1, y1] = linea[i - 1]
+    const [x2, y2] = linea[i]
+    let tramo = Math.hypot(x2 - x1, y2 - y1)
+    while (tramo >= falta) {
+      const t = falta / tramo
+      x1 += (x2 - x1) * t
+      y1 += (y2 - y1) * t
+      resultado.push([x1, y1])
+      tramo -= falta
+      falta = paso
+    }
+    falta -= tramo
+  }
+  if (falta < paso) resultado.push(linea[linea.length - 1])
+  return resultado
 }
 
 /**
@@ -163,16 +211,24 @@ export function armarRodeo(datos: DatosCamino, botones: { izquierda: number; aba
   }
 }
 
-/** Los puntos de un `path` corto, a intervalos parejos. */
+/*
+ * Cada cuántos px se toma un punto del recorrido. Entre dos puntos el pinz va en línea recta:
+ * en las curvas de la landing, 12 px se apartan de la curva menos de medio px.
+ */
+export const PASO_RECORRIDO = 12
+
+/** Los puntos de un `path` corto, a intervalos parejos y con el final incluido. */
 export function muestrear(d: string, paso: number): Punto[] {
   const camino = document.createElementNS('http://www.w3.org/2000/svg', 'path')
   camino.setAttribute('d', d)
   const largo = camino.getTotalLength()
   const puntos: Punto[] = []
-  for (let s = 0; s <= largo; s += paso) {
+  for (let s = 0; s < largo; s += paso) {
     const { x, y } = camino.getPointAtLength(s)
     puntos.push([x, y])
   }
+  const { x, y } = camino.getPointAtLength(largo)
+  puntos.push([x, y])
   return puntos
 }
 
@@ -187,12 +243,13 @@ export function repartirGrupos(datos: DatosCamino, largo: number, ancho: number)
  * Las x se escalan del ancho del diseño al de la pantalla; las y siguen a las anclas.
  * `largo` es el recorrido en px, para que los pinz caminen siempre a la misma velocidad.
  * `finX` es dónde termina el camino, escondido detrás del botón final.
- * `puntos` lo recorre a intervalos parejos: alcanza para saber por dónde va un pinz sin medir el `path`, que en uno tan largo es caro.
+ * `recorrido` sigue el `d` a intervalos parejos, calculado sobre las cúbicas: medir un `path` tan largo con el DOM tarda segundos.
  */
 export function armarCamino(datos: DatosCamino, anclas: Anclas, ancho: number) {
   const puntos = suavizar(remuestrear(guia(datos, anclas, ancho / datos.ancho), datos.paso), datos.sigma)
   if (puntos.length < 2) return null
   let largo = 0
   for (let i = 1; i < puntos.length; i++) largo += distancia(puntos[i - 1], puntos[i])
-  return { d: curva(nodos(puntos, datos.cada)), largo, finX: puntos[puntos.length - 1][0], puntos }
+  const tramos = cubicas(nodos(puntos, datos.cada))
+  return { d: curva(tramos), largo, finX: puntos[puntos.length - 1][0], recorrido: recorrerCubicas(tramos, PASO_RECORRIDO) }
 }
