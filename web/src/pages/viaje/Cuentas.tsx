@@ -74,7 +74,8 @@ export function Cuentas() {
     <>
       <TituloPantalla titulo="Cuentas claras" pinz="vuelto" />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-7">
-      <div className="flex flex-col gap-8 lg:gap-7">
+      {/* contain-size: en desktop la altura la marca el formulario y la lista de gastos scrollea adentro en vez de estirar la fila. En mobile la lista tiene tope propio para no empujar el formulario al fondo. */}
+      <div className={`flex flex-col gap-8 lg:gap-7 ${editable ? 'lg:contain-size' : ''}`}>
         <Tarjeta titulo="Cómo quedás" fondo="bg-lavanda-tinte">
           {saldos.error ? (
             <p role="alert" className="text-negativo">
@@ -115,8 +116,8 @@ export function Cuentas() {
             Cuando alguien pague algo, anotalo acá.
           </PinzNote>
         ) : (
-          <Tarjeta titulo="Gastos">
-            <ul className="flex flex-col">
+          <Tarjeta titulo="Gastos" className="lg:min-h-80">
+            <ul className="-mr-2 flex max-h-96 min-h-0 flex-col overflow-y-auto overscroll-contain pr-2 lg:max-h-none">
               {gastos.data.map((gasto) => {
                 const tuParte = gasto.partes.find((parte) => parte.personaId === yo?.id)
                 const contenido = (
