@@ -67,6 +67,11 @@ export function hoyISO(hoy = new Date()) {
   return aISO(hoy)
 }
 
+/** Si ese día a esa hora (HH:MM) ya pasó, con la hora del dispositivo. */
+export function yaPaso(fecha: string, hora: string, ahora = new Date()) {
+  return new Date(`${fecha}T${hora}`) <= ahora
+}
+
 export function sumarDias(fecha: string, dias: number) {
   const d = leerFecha(fecha)
   d.setDate(d.getDate() + dias)

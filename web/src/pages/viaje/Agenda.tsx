@@ -9,10 +9,11 @@ import { Chip } from '../../components/ui/Chip'
 import { ItineraryItem } from '../../components/ui/ItineraryItem'
 import { SelectorLugar } from '../../components/ui/SelectorLugar'
 import { TextField } from '../../components/ui/TextField'
+import { useAhora } from '../../hooks/ahora'
 import { useAgregarActividad, useExportarCalendario, useItinerario } from '../../hooks/itinerario'
 import { useActualizarEtapas } from '../../hooks/viajes'
 import { useViajeActual } from '../../layouts/contextoViaje'
-import { diaCorto, diasDeLaSemana, hoyISO, leerFecha, mesYAnio, semanasDelMes, sumarDias, sumarMeses } from '../../lib/fechas'
+import { diaCorto, diasDeLaSemana, hoyISO, leerFecha, mesYAnio, semanasDelMes, sumarDias, sumarMeses, yaPaso } from '../../lib/fechas'
 import { conMayuscula } from '../../lib/texto'
 import type { PuntoMapa } from '../../types/itinerario'
 import type { EtapaViaje, LugarViaje } from '../../types/viaje'
@@ -251,6 +252,7 @@ const VISTAS: { id: Vista; nombre: string }[] = [
   { id: 'mes', nombre: 'Mes' },
 ]
 
+/* Lo que resalta es que haya actividades; el día en el que estás parado lleva solo un anillo. */
 function CeldaDia({ fecha, cantidad, elegido, mesActual = true, onElegir }: { fecha: string; cantidad: number; elegido: boolean; mesActual?: boolean; onElegir: () => void }) {
   return (
     <button
@@ -258,7 +260,9 @@ function CeldaDia({ fecha, cantidad, elegido, mesActual = true, onElegir }: { fe
       aria-label={`${diaCorto(fecha)}: ${cantidad === 1 ? '1 actividad' : `${cantidad} actividades`}`}
       aria-pressed={elegido}
       onClick={onElegir}
-      className={`flex min-h-toque flex-col items-center justify-center rounded-sm trazo-fino numeros ${elegido ? 'tema-claro bg-coral' : 'bg-papel-elevado'} ${mesActual ? '' : 'opacity-50'}`}
+      className={`flex min-h-toque flex-col items-center justify-center rounded-sm trazo-fino numeros ${cantidad > 0 ? 'tema-claro bg-coral' : 'bg-papel-elevado'} ${
+        elegido ? 'ring-3 ring-tinta ring-offset-2 ring-offset-papel' : ''
+      } ${mesActual ? '' : 'opacity-50'}`}
     >
       <span className="font-bold">{leerFecha(fecha).getDate()}</span>
       {cantidad > 0 && <span aria-hidden className="size-1.5 rounded-full bg-tinta" />}
@@ -282,9 +286,15 @@ export function Agenda() {
   const actividades = itinerario.data ?? []
   const fechas = actividades.map((actividad) => actividad.fecha).sort()
   const hoy = hoyISO()
-  const primera = fechas.includes(hoy) ? hoy : (fechas[0] ?? viaje.fechaIda ?? hoy)
+  /* Abre en lo más próximo: hoy, o el próximo día con actividades; si ya pasaron todas, el último. */
+  const primera = fechas.find((dia) => dia >= hoy) ?? fechas.at(-1) ?? viaje.fechaIda ?? hoy
   const fecha = fechaElegida ?? primera
-  const delDia = actividades.filter((actividad) => actividad.fecha === fecha)
+  const ahora = useAhora()
+  /* Lo que viene, de lo más próximo a lo más lejano; lo que ya pasó se tilda solo y baja al final. */
+  const delDia = actividades
+    .filter((actividad) => actividad.fecha === fecha)
+    .map((actividad) => ({ ...actividad, hecha: actividad.estado === 'hecho' || yaPaso(actividad.fecha, actividad.hora, ahora) }))
+    .sort((a, b) => Number(a.hecha) - Number(b.hecha) || a.hora.localeCompare(b.hora))
   const cantidad = (dia: string) => actividades.filter((actividad) => actividad.fecha === dia).length
   const centroMapa = etapas[0]?.ubicacion ?? viaje.ubicacion
   const puntosMapa: PuntoMapa[] = [
@@ -353,8 +363,8 @@ export function Agenda() {
                       time={item.hora}
                       title={item.titulo}
                       place={item.lugar}
-                      done={item.estado === 'hecho'}
-                      current={etapa === 'viaje' && item.estado === 'ahora'}
+                      done={item.hecha}
+                      current={etapa === 'viaje' && item.estado === 'ahora' && !item.hecha}
                       last={i === delDia.length - 1}
                     />
                   ))}
