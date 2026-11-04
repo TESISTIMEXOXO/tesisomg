@@ -1,4 +1,6 @@
 import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
+import { basename } from "node:path";
+import { fileURLToPath } from "node:url";
 import nodemailer from "nodemailer";
 import { config } from "../config.js";
 import { CodigoVerificacion, type Proposito } from "../modelos/CodigoVerificacion.js";
@@ -8,6 +10,52 @@ const VIGENCIA_MINUTOS = 10;
 export const MAX_INTENTOS = 5;
 
 const transporte = config.mail.smtpUrl ? nodemailer.createTransport(config.mail.smtpUrl) : null;
+
+/* Relativas a este archivo y no al directorio de trabajo: funcionan igual en Docker y en producción. */
+const ENCABEZADOS = ["cielo", "lavanda", "mar", "rosa", "sol"].map((color) =>
+  fileURLToPath(new URL(`../correo/encabezados/encabezado-${color}.png`, import.meta.url)),
+);
+const CID_ENCABEZADO = "pinz-encabezado";
+
+let ultimoEncabezado = -1;
+
+/**
+ * Cada mail sale con uno de los encabezados, elegido al azar en cada envío, sin repetir el del mail
+ * anterior: con azar puro, dos mails seguidos salían del mismo color una de cada cinco veces.
+ */
+export function encabezadorandom() {
+  const opciones = ENCABEZADOS.map((_, i) => i).filter((i) => i !== ultimoEncabezado);
+  ultimoEncabezado = opciones[Math.floor(Math.random() * opciones.length)]!;
+  return ENCABEZADOS[ultimoEncabezado]!;
+}
+
+/**
+ * Envuelve el cuerpo del mail en un diseño de 600px con un encabezado de Pinz arriba. Sólo tablas y
+ * estilos en línea, que es lo que respetan los clientes de correo. La imagen va adjunta (cid), no como
+ * URL externa ni data: URI, porque Gmail las bloquea.
+ */
+function conEncabezado(cuerpo: string) {
+  const encabezado = encabezadorandom();
+  const nombre = basename(encabezado);
+  console.info(`[mail] Encabezado: ${nombre}`);
+  return {
+    html: `<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f6eedf">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f6eedf">
+<tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#fff8ee;border:3px solid #1c1b22;border-radius:16px;border-collapse:separate;overflow:hidden">
+<tr><td style="padding:0;line-height:0;font-size:0"><img src="cid:${CID_ENCABEZADO}" width="600" alt="Pinz" style="display:block;width:100%;height:auto;border:0"></td></tr>
+<tr><td style="padding:24px 28px;color:#1c1b22;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5">
+${cuerpo}
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`,
+    attachments: [{ filename: nombre, path: encabezado, cid: CID_ENCABEZADO }],
+  };
+}
 
 export function correoConfigurado() {
   return transporte !== null;
@@ -52,9 +100,9 @@ export async function mandarCodigo(email: string, proposito: Proposito, contrase
     to: email,
     subject: `${codigo} es tu código para ${para}`,
     text: `Tu código para ${para} es ${codigo}. Vence en ${VIGENCIA_MINUTOS} minutos.\n\nSi no lo pediste, ignorá este mail.`,
-    html: `<p>Tu código para ${para} es:</p>
+    ...conEncabezado(`<p>Tu código para ${para} es:</p>
 <p style="font-size:28px;font-weight:bold;letter-spacing:6px">${codigo}</p>
-<p>Vence en ${VIGENCIA_MINUTOS} minutos. Si no lo pediste, ignorá este mail.</p>`,
+<p>Vence en ${VIGENCIA_MINUTOS} minutos. Si no lo pediste, ignorá este mail.</p>`),
   });
 }
 
@@ -69,7 +117,7 @@ export async function mandarInvitacion(email: string, viaje: { nombre: string; d
     to: email,
     subject: `${invita} te invitó a ${viaje.nombre}`,
     text: `${invita} te invitó a organizar ${viaje.nombre} (${viaje.destino}) en Pinz.\n\nUnite desde este enlace: ${link}`,
-    html: `<p>${invita} te invitó a organizar <strong>${viaje.nombre}</strong> (${viaje.destino}) en Pinz.</p><p><a href="${link}">Unirme al viaje</a></p>`,
+    ...conEncabezado(`<p>${invita} te invitó a organizar <strong>${viaje.nombre}</strong> (${viaje.destino}) en Pinz.</p><p><a href="${link}">Unirme al viaje</a></p>`),
   });
 }
 
@@ -87,9 +135,9 @@ export async function mandarConfirmacionConsulta(email: string) {
     to: email,
     subject: "¡Recibimos tu consulta!",
     text: "¡Recibimos tu consulta! Te responderemos a la brevedad.\n\n¡Gracias por usar Pinz!",
-    html: `<p style="font-size:20px;font-weight:bold">¡Recibimos tu consulta!</p>
+    ...conEncabezado(`<p style="font-size:20px;font-weight:bold">¡Recibimos tu consulta!</p>
 <p>Te responderemos a la brevedad.</p>
-<p>¡Gracias por usar Pinz!</p>`,
+<p>¡Gracias por usar Pinz!</p>`),
   });
 }
 
@@ -111,8 +159,8 @@ export async function avisarConsultaAlEquipo(consulta: { email: string; asunto: 
     replyTo: consulta.email,
     subject: `Consulta nueva: ${asunto}`,
     text: `De: ${consulta.email}\nAsunto: ${asunto}\n\n${consulta.descripcion}`,
-    html: `<p><strong>De:</strong> ${escaparHtml(consulta.email)}<br><strong>Asunto:</strong> ${escaparHtml(asunto)}</p>
-<p style="white-space:pre-wrap">${escaparHtml(consulta.descripcion)}</p>`,
+    ...conEncabezado(`<p><strong>De:</strong> ${escaparHtml(consulta.email)}<br><strong>Asunto:</strong> ${escaparHtml(asunto)}</p>
+<p style="white-space:pre-wrap">${escaparHtml(consulta.descripcion)}</p>`),
   });
 }
 
@@ -129,9 +177,9 @@ export async function mandarRespuestaConsulta(
     replyTo: config.mail.equipo,
     subject: `Respuesta a tu consulta: ${asunto}`,
     text: `Hola,\n\n${respuesta}\n\n---\nTu consulta: ${consulta.descripcion}\n\nSaludos,\nEquipo Pinz`,
-    html: `<p>Hola,</p><p style="white-space:pre-wrap">${escaparHtml(respuesta)}</p>
+    ...conEncabezado(`<p>Hola,</p><p style="white-space:pre-wrap">${escaparHtml(respuesta)}</p>
 <hr><p><strong>Tu consulta:</strong></p><p style="white-space:pre-wrap">${escaparHtml(consulta.descripcion)}</p>
-<p>Saludos,<br>Equipo Pinz</p>`,
+<p>Saludos,<br>Equipo Pinz</p>`),
   });
 }
 
