@@ -1,4 +1,4 @@
-import { Eye, EyeOff, HandCoins, Pencil } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, HandCoins, Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useMatch } from 'react-router-dom'
 import { AvatarStack } from '../components/ui/AvatarStack'
@@ -81,10 +81,17 @@ export function EncabezadoViaje({ viaje, etapa, onCambiarEtapa }: EncabezadoViaj
         <div className="flex flex-none flex-col items-end gap-4">
           <div className="flex flex-col items-end gap-2 md:flex-row">
             {enGrupo && <SalirDelViaje viaje={viaje} />}
-            {editable && (
-              <ButtonLink to={`/viajes/${viaje.id}/grupo`} variant="secundario" size="sm" icon={Pencil} className="max-md:size-11 max-md:gap-0 max-md:px-0">
-                <span className="max-md:sr-only">Editar viaje</span>
+            {/* Ya adentro de Editar viaje, el mismo lugar lleva de vuelta al Inicio del viaje. */}
+            {enGrupo ? (
+              <ButtonLink to={`/viajes/${viaje.id}`} variant="secundario" size="sm" icon={ArrowLeft} className="max-md:size-11 max-md:gap-0 max-md:px-0">
+                <span className="max-md:sr-only">Volver al viaje</span>
               </ButtonLink>
+            ) : (
+              editable && (
+                <ButtonLink to={`/viajes/${viaje.id}/grupo`} variant="secundario" size="sm" icon={Pencil} className="max-md:size-11 max-md:gap-0 max-md:px-0">
+                  <span className="max-md:sr-only">Editar viaje</span>
+                </ButtonLink>
+              )
             )}
             {editable && etapa === 'viaje' && (
               <ButtonLink
