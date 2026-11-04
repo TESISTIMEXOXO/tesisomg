@@ -67,7 +67,7 @@ web/
       AppLayout         fuera de un viaje: Mis viajes y Vos
       ViajeLayout       dentro de un viaje: encabezado de etapa, BottomNav con SOS (Emergencias), botón de gasto
       BarraSuperior     la marca (a Mis viajes) y "Tu perfil", en la app y dentro de un viaje
-      EncabezadoViaje   nombre, fechas, avatares (abren Grupo), "Editar viaje" (lleva a Agenda; no lo ven los lectores), caminos sutiles de fondo y, solo en dev, el StageSwitch
+      EncabezadoViaje   nombre, fechas, avatares (abren Grupo), "Editar viaje" (lleva a Grupo; no lo ven los lectores), caminos sutiles de fondo y, solo en dev, el StageSwitch
       contextoViaje.ts  useViajeActual(): el viaje y la etapa que se está mirando
     pages/              una carpeta por pantalla (ver la tabla de abajo)
     types/              esquemas zod por entidad: el contrato con el backend
@@ -93,7 +93,7 @@ web/
 | `/viajes/:id/listas` | `pages/viaje/Listas.tsx`, sin título de pantalla: arranca en "Votaciones grupales" (abiertas y, plegadas, las cerradas), sigue "Checklist" y "Requisitos". Quien organiza ve un lápiz en cada votación abierta (salvo en Post-viaje) que abre `EditarVotacion.tsx`: cambia la pregunta y las opciones, saca opciones o borra la votación | `TarjetaVotacion`, `useVotaciones`, `useEditarVotacion`, `useEliminarVotacion`, `useTareas`, `useRequisitos` |
 | `/viajes/:id/cuentas` | `pages/viaje/Cuentas.tsx` | `SaldosSlot`, `ComprobanteSlot`, `Chip`, `useGastos`, `useSaldos`, `useAgregarGasto` |
 | `/viajes/:id/baul` | `pages/viaje/Baul.tsx` | `ArchivosSlot`, `VistaArchivo`, `Chip`, `useTareas`, `useRequisitos`, `useDocumentos` |
-| `/viajes/:id/grupo` | `pages/viaje/Grupo.tsx` | `AvatarStack`, `QrSlot`, `useInvitacionGrupo`, `useMovimientos` |
+| `/viajes/:id/grupo` | `pages/viaje/Grupo.tsx`: se abre desde los avatares o desde "Editar viaje" del encabezado. "Quiénes van" y "Últimos movimientos" bajan con scroll: en mobile con un tope, en desktop repartiéndose mitad y mitad el alto de "Invitar al grupo" y "Repetir el viaje" | `AvatarStack`, `QrSlot`, `useInvitacionGrupo`, `useMovimientos` |
 | `/viajes/:id/emergencias` | `pages/viaje/Emergencias.tsx` (sin pinz, nunca) | `useEmergencias` |
 | `*` | `pages/NoEncontrada.tsx` | `PinzNote` (error, genérico) |
 
@@ -271,7 +271,7 @@ Una escritura igual: `crear(datos)` pasa de `sinBackend('viajes.crear', datos)` 
 | Auth | `components/slots/AuthSlot.tsx` | `estado` (`listo` · `cargando` · `error`) | `onElegirProveedor('google' \| 'mail')` | `pages/ingresar/Ingresar.tsx` |
 | Archivos | `components/slots/ArchivosSlot.tsx` | `archivos: { id, nombre, tipo, tamano }[]`, `ayuda` | `onSubir(archivo)`, `onAbrir(archivo)` | `pages/viaje/Baul.tsx`, `pages/vos/Vos.tsx` |
 | Comprobante | `components/slots/ComprobanteSlot.tsx` | — | `onEscanear(archivo)` | `pages/viaje/Cuentas.tsx` |
-| QR | `components/slots/QrSlot.tsx` | `valor` (link de invitación) | — | `pages/viaje/Grupo.tsx` |
+| QR | `components/slots/QrSlot.tsx` | `valor` (link de invitación), `className` (tamaño; en Grupo, `max-w-72`) | — | `pages/viaje/Grupo.tsx` |
 
 Mientras no estén conectados, muestran `EsperaSlot`: un recuadro punteado que dice qué va ahí. Nunca simulan el contenido real. La librería de mapas se monta en el elemento de `contenedorRef`, que tiene tamaño fijo. El cálculo de saldos lo hace siempre el backend; el front solo los ordena (primero lo que tenés que poner, después lo que te deben, al final con quién estás a mano).
 

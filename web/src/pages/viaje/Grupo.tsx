@@ -17,6 +17,13 @@ import { esOrganizador } from './nombres'
 
 const ROLES: Record<Rol, string> = { organizador: 'Organizador', miembro: 'Miembro', lector: 'Solo lectura' }
 
+/*
+ * Las dos listas crecen con el viaje, así que bajan con scroll. En mobile tienen un tope fijo; en desktop
+ * se reparten mitad y mitad el alto de la columna de al lado (de "Invitar al grupo" a "Repetir el viaje").
+ * Con tabIndex también se recorren con el teclado.
+ */
+const LISTA_CON_SCROLL = 'flex max-h-72 flex-col overflow-y-auto overscroll-contain rounded-sm pr-2 lg:max-h-none lg:min-h-0 lg:flex-1'
+
 function InvitarPorMail({ viajeId }: { viajeId: string }) {
   const invitar = useInvitarPorMail(viajeId)
   const [mail, setMail] = useState('')
@@ -68,58 +75,60 @@ export function Grupo() {
 
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-7">
-      <div className="flex flex-col gap-8 lg:gap-7">
-        <Tarjeta titulo="Quiénes van">
-          <ul className="flex flex-col">
-            {viaje.personas.map((persona) => (
-              <li key={persona.id} className="flex items-center gap-3 border-b border-linea py-3 last:border-b-0">
-                <AvatarStack people={[{ name: persona.nombre, pinz: persona.pinz }]} max={1} />
-                <span className="flex flex-1 flex-col">
-                  <span className="font-bold">{persona.esVos ? `${persona.nombre} (vos)` : persona.nombre}</span>
-                  <span className="text-meta text-tinta-suave">
-                    {persona.pinz ? `${ELENCO[persona.pinz].nombre}, ${ELENCO[persona.pinz].apodo}` : 'Todavía no eligió su pinz'}
+      <div className="relative">
+        <div className="flex flex-col gap-8 lg:absolute lg:inset-0 lg:gap-7">
+          <Tarjeta titulo="Quiénes van" className="lg:min-h-0 lg:flex-1">
+            <ul tabIndex={0} aria-label="Quiénes van" className={LISTA_CON_SCROLL}>
+              {viaje.personas.map((persona) => (
+                <li key={persona.id} className="flex items-center gap-3 border-b border-linea py-3 last:border-b-0">
+                  <AvatarStack people={[{ name: persona.nombre, pinz: persona.pinz }]} max={1} />
+                  <span className="flex flex-1 flex-col">
+                    <span className="font-bold">{persona.esVos ? `${persona.nombre} (vos)` : persona.nombre}</span>
+                    <span className="text-meta text-tinta-suave">
+                      {persona.pinz ? `${ELENCO[persona.pinz].nombre}, ${ELENCO[persona.pinz].apodo}` : 'Todavía no eligió su pinz'}
+                    </span>
                   </span>
-                </span>
-                {puedeAdministrarRoles && !persona.esVos ? (
-                  <label>
-                    <span className="sr-only">Rol de {persona.nombre}</span>
-                    <select
-                      value={persona.rol}
-                      disabled={cambiarRol.isPending}
-                      onChange={(evento) => {
-                        const rol = RolSchema.safeParse(evento.target.value)
-                        if (rol.success) cambiarRol.mutate({ personaId: persona.id, rol: rol.data })
-                      }}
-                      className="min-h-toque rounded-full trazo-fino bg-papel-hundido px-3 text-meta font-extrabold"
-                    >
-                      {RolSchema.options.map((rol) => (
-                        <option key={rol} value={rol}>
-                          {ROLES[rol]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : (
-                  <span className="rounded-full trazo-fino bg-papel-hundido px-2.5 py-0.5 text-meta font-extrabold">{ROLES[persona.rol]}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-          {cambiarRol.isError && <p role="alert" className="mt-3 text-meta font-semibold text-negativo">No pudimos cambiar el rol. Revisá que siga habiendo al menos una persona organizadora.</p>}
-        </Tarjeta>
+                  {puedeAdministrarRoles && !persona.esVos ? (
+                    <label>
+                      <span className="sr-only">Rol de {persona.nombre}</span>
+                      <select
+                        value={persona.rol}
+                        disabled={cambiarRol.isPending}
+                        onChange={(evento) => {
+                          const rol = RolSchema.safeParse(evento.target.value)
+                          if (rol.success) cambiarRol.mutate({ personaId: persona.id, rol: rol.data })
+                        }}
+                        className="min-h-toque rounded-full trazo-fino bg-papel-hundido px-3 text-meta font-extrabold"
+                      >
+                        {RolSchema.options.map((rol) => (
+                          <option key={rol} value={rol}>
+                            {ROLES[rol]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : (
+                    <span className="rounded-full trazo-fino bg-papel-hundido px-2.5 py-0.5 text-meta font-extrabold">{ROLES[persona.rol]}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {cambiarRol.isError && <p role="alert" className="mt-3 text-meta font-semibold text-negativo">No pudimos cambiar el rol. Revisá que siga habiendo al menos una persona organizadora.</p>}
+          </Tarjeta>
 
-        <Tarjeta titulo="Últimos movimientos">
-          {movimientos.isPending && <p className="text-tinta-suave">Cargando…</p>}
-          {movimientos.error && <p className="text-negativo">No pudimos cargar los movimientos.</p>}
-          <ul className="flex flex-col gap-2">
-            {movimientos.data?.map((movimiento) => (
-              <li key={movimiento.id} className="flex justify-between gap-3">
-                <span>{movimiento.texto}</span>
-                <span className="text-meta whitespace-nowrap text-tinta-suave">{cuandoEnDias(movimiento.cuando)}</span>
-              </li>
-            ))}
-          </ul>
-        </Tarjeta>
+          <Tarjeta titulo="Últimos movimientos" className="lg:min-h-0 lg:flex-1">
+            {movimientos.isPending && <p className="text-tinta-suave">Cargando…</p>}
+            {movimientos.error && <p className="text-negativo">No pudimos cargar los movimientos.</p>}
+            <ul tabIndex={0} aria-label="Últimos movimientos" className={`gap-2 ${LISTA_CON_SCROLL}`}>
+              {movimientos.data?.map((movimiento) => (
+                <li key={movimiento.id} className="flex justify-between gap-3">
+                  <span>{movimiento.texto}</span>
+                  <span className="text-meta whitespace-nowrap text-tinta-suave">{cuandoEnDias(movimiento.cuando)}</span>
+                </li>
+              ))}
+            </ul>
+          </Tarjeta>
+        </div>
       </div>
 
       <div className="flex flex-col gap-8 lg:gap-7">
@@ -128,14 +137,18 @@ export function Grupo() {
           {invitacion.error && <NoCargo error={invitacion.error} onReintentar={() => invitacion.refetch()} />}
           {invitacion.data && (
             <>
-              <p className="flex flex-col">
-                <span className="text-sobretitulo uppercase">Código</span>
-                <span className="font-display text-display font-black tracking-widest">{invitacion.data.codigo}</span>
-              </p>
-              <Button variant="secundario" size="sm" icon={Copy} className="self-start" onClick={() => copiarLink(invitacion.data.link)}>
-                {copiado ? 'Link copiado' : 'Copiar el link'}
-              </Button>
-              <QrSlot valor={invitacion.data.link} />
+              <div className="flex justify-center py-1">
+                <QrSlot valor={invitacion.data.link} className="max-w-72" />
+              </div>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <p className="flex flex-col">
+                  <span className="text-sobretitulo uppercase">Código</span>
+                  <span className="font-display text-display font-black tracking-widest">{invitacion.data.codigo}</span>
+                </p>
+                <Button variant="secundario" size="sm" icon={Copy} onClick={() => copiarLink(invitacion.data.link)}>
+                  {copiado ? 'Link copiado' : 'Copiar el link'}
+                </Button>
+              </div>
             </>
           )}
           <InvitarPorMail viajeId={viaje.id} />
@@ -152,7 +165,9 @@ export function Grupo() {
             </Button>
           </div>
         </Tarjeta>
+      </div>
 
+      <div className="flex flex-col gap-8 lg:col-start-2 lg:gap-7">
         <section aria-label="Salir del grupo" className="flex flex-col gap-3">
           {confirmarSalida ? (
             <div role="alertdialog" aria-label="Confirmar salida" className="flex flex-col gap-3 rounded-lg trazo bg-coral-tinte p-5">

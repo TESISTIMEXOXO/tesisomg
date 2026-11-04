@@ -49,7 +49,7 @@ function Caminos() {
 export function EncabezadoViaje({ viaje, etapa, onCambiarEtapa }: EncabezadoViajeProps) {
   const [verComoPublico, setVerComoPublico] = useState(false)
   const organiza = viaje.personas.find((p) => p.rol === 'organizador')
-  /* Las fechas, destinos y actividades se editan en Agenda. */
+  /* Lleva a Grupo: invitación, QR, roles y movimientos del viaje. */
   const editable = puedeEditar(viaje.personas)
   const faltan = viaje.fechaIda ? diasHasta(viaje.fechaIda) : null
   const personas = viaje.personas.map((p) => ({ name: p.nombre, pinz: p.pinz }))
@@ -78,7 +78,7 @@ export function EncabezadoViaje({ viaje, etapa, onCambiarEtapa }: EncabezadoViaj
         </div>
         <div className="flex flex-none flex-col items-end gap-4">
           {editable && (
-            <ButtonLink to={`/viajes/${viaje.id}/agenda`} variant="secundario" size="sm" icon={Pencil}>
+            <ButtonLink to={`/viajes/${viaje.id}/grupo`} variant="secundario" size="sm" icon={Pencil}>
               <span className="max-md:sr-only">Editar viaje</span>
             </ButtonLink>
           )}
