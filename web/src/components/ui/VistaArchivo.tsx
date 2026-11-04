@@ -56,7 +56,7 @@ export function VistaArchivo({ nombre, archivo, error, onReintentar, onClose }: 
   }
 
   return (
-    <Ventana ventanaRef={ventana} idTitulo={idTitulo} onClose={cerrar} ancha>
+    <Ventana ventanaRef={ventana} idTitulo={idTitulo} onClose={cerrar} ancho="pantalla">
       {/*
        * Los botones van antes que el archivo: showModal enfoca lo primero, y un PDF se queda con el teclado.
        * En mobile se ven abajo, a mano del pulgar; en desktop, al lado del título.

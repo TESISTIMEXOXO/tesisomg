@@ -1,5 +1,5 @@
 export type VarianteBoton = 'primario' | 'secundario' | 'fantasma' | 'emergencia'
-export type TamanoBoton = 'md' | 'sm'
+export type TamanoBoton = 'md' | 'sm' | 'icono'
 
 const BASE =
   'inline-flex items-center justify-center gap-2 rounded-full trazo font-texto text-etiqueta text-center text-balance ' +
@@ -16,12 +16,14 @@ const RELLENO: Record<VarianteBoton, string> = {
 const TAMANO: Record<TamanoBoton, string> = {
   md: 'min-h-control px-5.5',
   sm: 'min-h-toque px-4',
+  icono: 'size-toque flex-none',
 }
 
 /* Al pasar el mouse sube y la sombra crece; al presionar se hunde 3px, como un botón real. */
 const SOMBRA: Record<TamanoBoton, string> = {
   md: 'shadow-dura hover:shadow-grande',
   sm: 'shadow-chica hover:shadow-dura',
+  icono: 'shadow-chica hover:shadow-dura',
 }
 const MOVIMIENTO =
   'hover:-translate-px active:translate-0.75 active:shadow-chica ' +

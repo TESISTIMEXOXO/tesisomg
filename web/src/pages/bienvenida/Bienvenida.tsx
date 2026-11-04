@@ -6,6 +6,7 @@ import { Chip } from '../../components/ui/Chip'
 import { TextField } from '../../components/ui/TextField'
 import { useSesion } from '../../hooks/auth'
 import { useGuardarPerfil } from '../../hooks/perfil'
+import { leerPinzDelTest } from '../../lib/pinzDelTest'
 import type { PinzId } from '../../pinz/elenco'
 import { DatosPerfilSchema, MonedaSchema, type Moneda } from '../../types/perfil'
 
@@ -17,7 +18,8 @@ export function Bienvenida() {
   const { data: sesion } = useSesion()
   const [nombre, setNombre] = useState(sesion?.nombre ?? '')
   const [moneda, setMoneda] = useState<Moneda>('ARS')
-  const [pinz, setPinz] = useState<PinzId | null>(null)
+  // Si hizo el test antes de tener cuenta, llega con ese pinz elegido.
+  const [pinz, setPinz] = useState<PinzId | null>(leerPinzDelTest)
   const [errorNombre, setErrorNombre] = useState<string>()
 
   function enviar(evento: FormEvent) {

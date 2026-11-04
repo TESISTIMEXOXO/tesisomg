@@ -55,13 +55,14 @@ web/
       ui/               el design system: Button, Chip, StageSwitch, TextField, PollOption, BalanceRow,
                         ItineraryItem, TripCard, AvatarStack, BottomNav, Ventana, VistaArchivo y Tarjeta
       marca/            Logo, BarraMarca (la barra con la marca de la landing y las pantallas públicas), Pin,
-                        PinzNote, ElegirPinz, CaminosDeLaVentana, CaminosDeFondo y los estados Cargando / NoCargo
+                        PinzNote, ElegirPinz, IconoInstagram, CaminosDeLaVentana, CaminosDeFondo y los estados Cargando / NoCargo
       landing/          Camino: la ruta celeste que recorre la landing
       slots/            MapaSlot, SaldosSlot, AuthSlot, ArchivosSlot, ComprobanteSlot, QrSlot, CompartirUbicacion y EsperaSlot
     pinz/
       elenco.ts         los 10 personajes: nombre, apodo, tono, sección, descripción y frase
       dibujos.ts        el dibujo de cada pinz, como datos (capas detrás, recortado y delante)
       tonos.ts          las clases de color de cada tono (fill-*, bg-*, bg-*-tinte)
+      test.ts           el test "¿Qué pinz sos?": las tres preguntas y cómo se calcula el resultado
     layouts/
       PublicLayout      bienvenida e invitaciones
       AppLayout         fuera de un viaje: Mis viajes y Vos
@@ -75,7 +76,7 @@ web/
     services/           una función async por operación; hoy devuelven los mocks
     hooks/              React Query sobre cada servicio; las pantallas solo usan hooks. `ahora.ts`: la hora, renovada cada minuto
     mocks/datos.ts      todos los datos de ejemplo ("Bariloche con los chicos")
-    lib/                etapa (por fechas), fechas, moneda ($ 48.200), saldos, textos, guardarArchivo, zonasHorarias y el camino de la landing
+    lib/                etapa (por fechas), fechas, moneda ($ 48.200), saldos, textos, guardarArchivo, zonasHorarias, pinzDelTest (guarda el resultado del test hasta Bienvenida) y el camino de la landing
 ```
 
 ## 4. Pantallas
@@ -84,12 +85,14 @@ web/
 | --- | --- | --- |
 | `/` | `pages/landing/Landing.tsx` (una sección por archivo en la misma carpeta; ver "La landing") | `Camino`, `Pin`, `Logo`, `Button`, `PollOption`, `BalanceRow`, `ItineraryItem`, `AvatarStack` |
 | `/ingresar` | `pages/ingresar/Ingresar.tsx`, una `Ventana` sobre la landing: es ruta hija de `Landing` y al cerrarla vuelve a `/` (bypass temporal: en desarrollo, cualquier proveedor lleva a `/viajes`). Con `?paso=ingreso` abre directo en "Iniciá sesión", que también ofrece "Iniciar con Google" | `AuthSlot`, `useIngresar` |
-| `/bienvenida` | `pages/bienvenida/Bienvenida.tsx` | `TextField`, `Chip`, `ElegirPinz`, `useGuardarPerfil` |
+| `/test` | `pages/test/TestPinz.tsx`, otra `Ventana` sobre la landing y sin cuenta: tres preguntas y el pinz que salió. "Quiero ser …" guarda el resultado en la pestaña (`lib/pinzDelTest.ts`) y lleva a `/ingresar`. Las preguntas y el puntaje están en `pinz/test.ts`; en un empate gana la última respuesta | `Pin`, `Button`, `CaminosDeLaVentana` |
+| `/bienvenida` | `pages/bienvenida/Bienvenida.tsx`. Si la persona hizo el test, llega con ese pinz elegido | `TextField`, `Chip`, `ElegirPinz`, `useGuardarPerfil` |
 | `/unirse` | `pages/unirse/Unirse.tsx`, con `FormularioCodigo.tsx` (el mismo formulario que abre el + de la barra en una ventana) | `TextField`, `Button` |
 | `/unirse/:codigo` | `pages/unirse/VistaInvitacion.tsx` | `Tarjeta`, `AvatarStack`, `useInvitacion`, `useUnirse` |
 | `/viajes` | `pages/viajes/MisViajes.tsx` | `TripCard`, `PinzNote` (vacío), `useViajes`, `usePerfil` |
 | `/viajes/nuevo` | `pages/viajes/NuevoViaje.tsx`, con `FormularioViaje.tsx` (el mismo formulario que abre el + de la barra en una ventana, sin la vista previa). Al crear el viaje, lleva a él | `TextField`, `TripCard` (vista previa en desktop), `useCrearViaje` |
-| `/vos` | `pages/vos/Vos.tsx` | `Pin`, `Tarjeta`, `ArchivosSlot`, `VistaArchivo`, `usePerfil`, `useDocumentosPersonales` || `/viajes/:id` | `pages/viaje/resumen/Resumen.tsx` → `ResumenPrevaje`, `Hoy` o `ResumenPostViaje` según la etapa | `TarjetaVotacion`, `PinzNote` (tip), `MapaSlot`, `ItineraryItem`, `SaldosSlot` |
+| `/vos` | `pages/vos/Vos.tsx`. Arriba, de ancho completo, `TuPinz.tsx`: tu nombre y tu pinz en su tinte, con su descripción y la sección que acompaña. "Cambiar tu pinz" abre una `Ventana` con `ElegirPinz` y guarda ahí mismo. Debajo, cuatro tarjetas en 2×2: preferencias, documentos, lugares y apariencia. `datosDelPerfil.ts` arma el perfil completo para guardar un solo cambio | `Pin`, `ElegirPinz`, `Ventana`, `Tarjeta`, `ArchivosSlot`, `VistaArchivo`, `usePerfil`, `useGuardarPerfil`, `useDocumentosPersonales` |
+| `/viajes/:id` | `pages/viaje/resumen/Resumen.tsx` → `ResumenPrevaje`, `Hoy` o `ResumenPostViaje` según la etapa | `TarjetaVotacion`, `PinzNote` (tip), `MapaSlot`, `ItineraryItem`, `SaldosSlot` |
 | `/viajes/:id/agenda` | `pages/viaje/Agenda.tsx`. Abre en el próximo día con actividades; en semana y mes se pintan los días que tienen actividades y el elegido lleva un anillo. En el día, lo que viene va de lo más próximo a lo más lejano y lo que ya pasó se tilda solo (`useAhora`, cada minuto) y baja al final. Las horas son las del destino de ese día: el último destino que ya empezó según sus fechas, con su zona horaria (`useZonasHorarias` + `lib/zonasHorarias.ts`: país por `/lugares/pais` y, en países con varias zonas, la ciudad de referencia más cercana). Sin zona conocida, vale la hora del dispositivo | `ItineraryItem`, `MapaSlot`, `useItinerario`, `useAhora`, `useZonasHorarias` |
 | `/viajes/:id/listas` | `pages/viaje/Listas.tsx`, sin título de pantalla: arranca en "Votaciones grupales" (abiertas y, plegadas, las cerradas), sigue "Checklist" y "Requisitos". Quien organiza ve un lápiz en cada votación abierta (salvo en Post-viaje) que abre `EditarVotacion.tsx`: cambia la pregunta y las opciones, saca opciones o borra la votación | `TarjetaVotacion`, `useVotaciones`, `useEditarVotacion`, `useEliminarVotacion`, `useTareas`, `useRequisitos` |
 | `/viajes/:id/cuentas` | `pages/viaje/Cuentas.tsx` | `SaldosSlot`, `ComprobanteSlot`, `Chip`, `useGastos`, `useSaldos`, `useAgregarGasto` |
@@ -108,7 +111,7 @@ Cada pantalla resuelve sus estados de carga, vacío y error con `Cargando`, `NoC
 
 | Componente | Archivo | Props principales | Para qué |
 | --- | --- | --- | --- |
-| `Button` / `ButtonLink` | `components/ui/Button.tsx` | `variant` (`primario` · `secundario` · `fantasma` · `emergencia`), `size` (`md` 50px · `sm` 44px), `icon`, `iconRight`, `full`; `ButtonLink` suma `to` | Toda acción. Un solo primario por pantalla. Las clases están en `estilosBoton.ts` por si un `<a>` o un `<label>` tiene que verse como botón |
+| `Button` / `ButtonLink` | `components/ui/Button.tsx` | `variant` (`primario` · `secundario` · `fantasma` · `emergencia`), `size` (`md` 50px · `sm` 44px · `icono` círculo de 44px, solo con un ícono y su `aria-label`), `icon`, `iconRight`, `full`; `ButtonLink` suma `to` | Toda acción. Un solo primario por pantalla. Las clases están en `estilosBoton.ts` por si un `<a>` o un `<label>` tiene que verse como botón |
 | `Chip` | `components/ui/Chip.tsx` | `selected`, `tone` (`neutro` o la etapa), `icon` | Filtros y opciones; seleccionado queda hundido y con check |
 | `StageSwitch` | `components/ui/StageSwitch.tsx` | `value`, `defaultValue`, `onChange` | Elegir qué etapa mirar |
 | `TextField` | `components/ui/TextField.tsx` | `label`, `hint`, `error` + props de `<input>` | Campos con label siempre visible |
@@ -118,14 +121,14 @@ Cada pantalla resuelve sus estados de carga, vacío y error con `Cargando`, `NoC
 | `TripCard` | `components/ui/TripCard.tsx` | `title`, `place`, `dates`, `stage`, `people`, `image`, `pending`, `to` | La card de un viaje en Mis viajes |
 | `AvatarStack` | `components/ui/AvatarStack.tsx` | `people` (nombres o `{ name, pinz }`), `max` | Siluetas de pin con inicial, en el tono del pinz |
 | `BottomNav` | `components/ui/BottomNav.tsx` | `items` (`{ id, label, icon, to, end }`, hasta 5), `sosTo` | La navegación de la app: barra flotante abajo, en todos los tamaños. Dentro de un viaje suma "SOS" en rojo, siempre al final: es el único acceso a Emergencias |
-| `Ventana` | `components/ui/Ventana.tsx` | `ventanaRef`, `idTitulo`, `onClose`, `ancha` | La ventana emergente con el fondo oscurecido (`dialog` nativo): el ingreso, el formulario de contacto y, en Listas, "Crear votación", "Proponer una opción" y "Editar votación". Con `ancha` ocupa toda la pantalla, para `VistaArchivo` |
-| `VistaArchivo` | `components/ui/VistaArchivo.tsx` | `nombre` (null = cerrada), `archivo`, `error`, `onReintentar`, `onClose` | Muestra un PDF o una foto en una `Ventana` ancha, con "Descargar" y "Compartir" (menú de compartir del dispositivo, solo si el navegador puede mandar archivos). Si el navegador no muestra PDFs adentro de la página (Chrome en Android), ofrece descargarlo. Se usa con `useVistaDocumento()` |
+| `Ventana` | `components/ui/Ventana.tsx` | `ventanaRef`, `idTitulo`, `onClose`, `ancho` (`normal` · `amplia` · `pantalla`) | La ventana emergente con el fondo oscurecido (`dialog` nativo): el ingreso, el formulario de contacto y, en Listas, "Crear votación", "Proponer una opción" y "Editar votación". Con `ancho="amplia"` (800px) entra la grilla de pinz en Vos; con `ancho="pantalla"` ocupa toda la pantalla, para `VistaArchivo` |
+| `VistaArchivo` | `components/ui/VistaArchivo.tsx` | `nombre` (null = cerrada), `archivo`, `error`, `onReintentar`, `onClose` | Muestra un PDF o una foto en una `Ventana` de pantalla completa, con "Descargar" y "Compartir" (menú de compartir del dispositivo, solo si el navegador puede mandar archivos). Si el navegador no muestra PDFs adentro de la página (Chrome en Android), ofrece descargarlo. Se usa con `useVistaDocumento()` |
 | `Despliegue` | `components/ui/Despliegue.tsx` | `abierta`, `id` (para el `aria-controls` del botón) | El contenido de un menú desplegable: crece y se achica animando el alto (utilidad `despliegue`, en `animaciones.css`) y, cerrado, queda fuera del foco. Lo usan las votaciones cerradas, cada lista de Checklist y los plegables de Emergencias |
 | `Tarjeta` / `Etiqueta` | `components/ui/Tarjeta.tsx` | `titulo`, `extra`, `fondo` | El bloque de contenido de la app y su badge |
 | `Logo` | `components/marca/Logo.tsx` | `variant` (`marca` · `simbolo` · `icono`), `size` (en `marca`, el alto de la palabra), `ink`, `label` | La marca: el pinz genérico coral pegado a "pinz" en Archivo 900. El pin es siempre coral. Las versiones en curvas (`pinz-logo.svg`) son para documentos y Open Graph; en la interfaz se usa el componente |
 | `Pin` | `components/marca/Pin.tsx` | `pinz` (elenco o `generico`), `color`, `size`, `label` | El pinz ilustrado |
 | `PinzNote` | `components/marca/PinzNote.tsx` | `tipo` (`tip` · `vacio` · `error` · `festejo`), `pinz`, `title`, `action` + `onAction` o `actionTo`, `onClose` | El único lugar con pinz dentro de la app |
-| `ElegirPinz` | `components/marca/ElegirPinz.tsx` | `valor`, `onElegir` | La grilla para elegir personalidad |
+| `ElegirPinz` | `components/marca/ElegirPinz.tsx` | `valor`, `onElegir`, `leyenda` | La grilla para elegir personalidad. Usa una container query: cinco por fila si su caja mide 672px o más (la `Ventana` amplia de Vos), si no dos (Bienvenida). Así las filas siempre quedan parejas |
 | `Cargando` / `NoCargo` | `components/marca/Estados.tsx` | `pinz` / `error`, `onReintentar` | Estados de carga y error de las pantallas |
 | `CaminosDeLaVentana` | `components/marca/CaminosDeLaVentana.tsx` | — | Dos tramos del camino celeste en las esquinas de una `Ventana`, detrás del contenido: el ingreso y los popups de Listas. El contenido va en un bloque `relative` y el título con `pr-24` |
 | `CaminosDeFondo` | `components/marca/CaminosDeFondo.tsx` | — | El fondo de la app: bandas de camino en `papel-hundido` (apenas más oscuras que el fondo) que bajan con la página: bandas de lado a lado, una vuelta por costado y dos caminos que empalman un dibujo con el siguiente, sin cruzarse. El dibujo es la utilidad `fondo-caminos` (`index.css`), una máscara SVG que se repite hacia abajo. Lo ponen `AppLayout` y `ViajeLayout` dentro de un bloque `relative isolate`; Emergencias no lo lleva |
@@ -174,11 +177,11 @@ Es la única página donde los pinz son protagonistas. El fondo es `papel` de pu
 | Del caos del chat a un solo lugar | `ElProblema.tsx` |
 | Todo el viaje, ordenado (bento) | `Funciones.tsx` (en mobile, sin la card de Hoy) |
 | Pinz cambia con el viaje | `TresEtapas.tsx` |
-| Cada uno, su pinz | `ElegiTuPinz.tsx` (en mobile, nueve pinz en tres columnas) |
+| Cada uno, su pinz | `ElegiTuPinz.tsx` (en mobile, nueve pinz en tres columnas). "Hacé el test" abre `/test` |
 | Para quiénes | `ParaQuienes.tsx` |
 | ¿Dudas? | `Preguntas.tsx` (en mobile, el bloque de contacto va al final) |
 | Cierre y repisa | `Cierre.tsx` |
-| Pie | `Pie.tsx` |
+| Pie | `Pie.tsx`: logo, links en dos grupos ("Pinz" y "Sumate", donde "Escribinos" abre el mismo `FormularioContacto` de Preguntas) y, abajo, "Hecho en Argentina · © año Pinz" con el botón redondo de Instagram (`@pinz.app`, con `IconoInstagram` porque lucide ya no trae marcas) |
 
 `Seccion.tsx` tiene las piezas comunes: `Seccion` (ancho de contenido y por encima del camino), `Pausa`, `Titular`, `Bajada`, `Sobretitulo` y la clase `TARJETA`.
 

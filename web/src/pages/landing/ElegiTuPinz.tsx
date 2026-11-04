@@ -12,7 +12,7 @@ const GIRO_DESKTOP = [-2, 1.5, -1, 2, -1.5]
 
 function HaceElTest({ className }: { className: string }) {
   return (
-    <ButtonLink to="/ingresar" variant="secundario" iconRight={ChevronRight} className={className}>
+    <ButtonLink to="/test" variant="secundario" iconRight={ChevronRight} className={className}>
       Hacé el test
     </ButtonLink>
   )

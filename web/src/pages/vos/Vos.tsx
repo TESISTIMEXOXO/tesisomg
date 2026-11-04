@@ -1,9 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { LogOut, MapPin, MonitorSmartphone, Moon, Sun, type LucideIcon } from 'lucide-react'
 import { Cargando, NoCargo } from '../../components/marca/Estados'
-import { Pin } from '../../components/marca/Pin'
 import { ArchivosSlot } from '../../components/slots/ArchivosSlot'
-import { Button, ButtonLink } from '../../components/ui/Button'
+import { Button } from '../../components/ui/Button'
 import { Chip } from '../../components/ui/Chip'
 import { Tarjeta } from '../../components/ui/Tarjeta'
 import { TextField } from '../../components/ui/TextField'
@@ -16,7 +15,8 @@ import { diasHasta, fechaCorta, mesYAnio } from '../../lib/fechas'
 import { monto } from '../../lib/moneda'
 import type { PreferenciaTema } from '../../lib/tema'
 import { DatosPerfilSchema, MonedaSchema, type Perfil } from '../../types/perfil'
-import { ELENCO } from '../../pinz/elenco'
+import { datosDelPerfil } from './datosDelPerfil'
+import { TuPinz } from './TuPinz'
 
 function Dato({ etiqueta, valor }: { etiqueta: string; valor: string | null }) {
   return (
@@ -114,17 +114,7 @@ function Apariencia({ perfil }: { perfil: Perfil }) {
               icon={opcion.icono}
               selected={preferencia === opcion.id}
               disabled={guardar.isPending}
-              onClick={() => guardar.mutate(
-                {
-                  nombre: perfil.nombre,
-                  pinz: perfil.pinz,
-                  moneda: perfil.moneda,
-                  tema: opcion.id,
-                  preferencias: perfil.preferencias,
-                  aeropuertos: perfil.aeropuertos,
-                },
-                { onSuccess: () => elegir(opcion.id) },
-              )}
+              onClick={() => guardar.mutate({ ...datosDelPerfil(perfil), tema: opcion.id }, { onSuccess: () => elegir(opcion.id) })}
             >
               {opcion.texto}
             </Chip>
@@ -148,7 +138,6 @@ export function Vos() {
   if (isPending) return <Cargando />
   if (error) return <NoCargo error={error} onReintentar={() => refetch()} />
 
-  const personaje = perfil.pinz ? ELENCO[perfil.pinz] : null
   const porVencer = (documentos.data ?? []).filter((d) => d.vence && diasHasta(d.vence) <= 180)
   const { preferencias } = perfil
 
@@ -166,20 +155,7 @@ export function Vos() {
         </p>
       )}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Tarjeta>
-          <div className="flex items-center gap-4">
-            <Pin pinz={perfil.pinz ?? 'generico'} size={96} label="" />
-            <div className="flex flex-col">
-              <p className="font-display text-titulo-1 font-black">{perfil.nombre}</p>
-              <p className="font-bold text-tinta-suave">
-                {personaje ? `${personaje.nombre}, ${personaje.apodo}` : 'Todavía no elegiste tu pinz'}
-              </p>
-            </div>
-          </div>
-          <ButtonLink to="/bienvenida" variant="secundario" size="sm" className="self-start">
-            Cambiar tu pinz
-          </ButtonLink>
-        </Tarjeta>
+        <TuPinz perfil={perfil} className="lg:col-span-2" />
 
         <Tarjeta titulo="Preferencias de viaje">
           {editandoPerfil ? (
