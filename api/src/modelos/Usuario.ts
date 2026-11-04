@@ -28,7 +28,8 @@ const usuarioSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-export type DocUsuario = mongoose.HydratedDocument<InferSchemaType<typeof usuarioSchema>>;
+export type DatosUsuario = InferSchemaType<typeof usuarioSchema>;
+export type DocUsuario = mongoose.HydratedDocument<DatosUsuario>;
 
 export const Usuario = mongoose.model("Usuario", usuarioSchema);
 

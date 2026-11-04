@@ -9,6 +9,10 @@ export const MAX_INTENTOS = 5;
 
 const transporte = config.mail.smtpUrl ? nodemailer.createTransport(config.mail.smtpUrl) : null;
 
+export function correoConfigurado() {
+  return transporte !== null;
+}
+
 const TEXTOS: Record<Proposito, { para: string; log: string }> = {
   registro: { para: "crear tu cuenta en Pinz", log: "registro" },
   recuperar: { para: "cambiar tu contraseña de Pinz", log: "cambio de contraseña" },
@@ -109,6 +113,25 @@ export async function avisarConsultaAlEquipo(consulta: { email: string; asunto: 
     text: `De: ${consulta.email}\nAsunto: ${asunto}\n\n${consulta.descripcion}`,
     html: `<p><strong>De:</strong> ${escaparHtml(consulta.email)}<br><strong>Asunto:</strong> ${escaparHtml(asunto)}</p>
 <p style="white-space:pre-wrap">${escaparHtml(consulta.descripcion)}</p>`,
+  });
+}
+
+/** Responde una consulta desde el panel usando la cuenta de correo configurada para Pinz. */
+export async function mandarRespuestaConsulta(
+  consulta: { email: string; asunto: string; descripcion: string },
+  respuesta: string,
+) {
+  if (!transporte) throw new Error("SMTP no está configurado");
+  const asunto = consulta.asunto.replace(/\s+/g, " ").trim();
+  await transporte.sendMail({
+    from: config.mail.remitente,
+    to: consulta.email,
+    replyTo: config.mail.equipo,
+    subject: `Respuesta a tu consulta: ${asunto}`,
+    text: `Hola,\n\n${respuesta}\n\n---\nTu consulta: ${consulta.descripcion}\n\nSaludos,\nEquipo Pinz`,
+    html: `<p>Hola,</p><p style="white-space:pre-wrap">${escaparHtml(respuesta)}</p>
+<hr><p><strong>Tu consulta:</strong></p><p style="white-space:pre-wrap">${escaparHtml(consulta.descripcion)}</p>
+<p>Saludos,<br>Equipo Pinz</p>`,
   });
 }
 

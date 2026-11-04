@@ -28,6 +28,8 @@ type EmergenciasDoc = {
 };
 
 export type ViajeData = {
+  createdAt?: Date;
+  updatedAt?: Date;
   nombre: string;
   destino: string;
   fechaIda: string | null;
