@@ -69,7 +69,7 @@ export function ViajeLayout() {
 
   return (
     <div className="relative isolate min-h-dvh">
-      {!enEmergencias && <CaminosDeFondo />}
+      <CaminosDeFondo />
       {!enEmergencias && <BarraSuperior antesDelPerfil={compartirUbicacion} />}
       <main className="mx-auto max-w-contenido px-4 pt-4 pb-29 md:px-6 lg:px-10 lg:pt-8">{contenido}</main>
       <BottomNav items={items} sosTo={`/viajes/${id}/emergencias`} />
