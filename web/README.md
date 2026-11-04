@@ -181,7 +181,7 @@ Es la única página donde los pinz son protagonistas. El fondo es `papel` de pu
 | Para quiénes | `ParaQuienes.tsx` |
 | ¿Dudas? | `Preguntas.tsx` (en mobile, el bloque de contacto va al final) |
 | Cierre y repisa | `Cierre.tsx` |
-| Pie | `Pie.tsx`: logo, links en dos grupos ("Pinz" y "Sumate", donde "Escribinos" abre el mismo `FormularioContacto` de Preguntas) y, abajo, "Hecho en Argentina · © año Pinz" con el botón redondo de Instagram (`@pinz.app`, con `IconoInstagram` porque lucide ya no trae marcas) |
+| Pie | `Pie.tsx`: logo, links en dos grupos ("Pinz" y "Sumate", donde "Escribinos" abre el mismo `FormularioContacto` de Preguntas) y, abajo, "Hecho en Argentina · © año Pinz" con los botones redondos de mail (`BotonMail.tsx`: en el celu abre `mailto:pinz.tesis@gmail.com`; en la compu, donde el mailto suele no hacer nada, copia la dirección y muestra "¡Mail copiado!" con `animate-copiado`) e Instagram (`@pinz.app`, con `IconoInstagram` porque lucide ya no trae marcas) |
 
 `Seccion.tsx` tiene las piezas comunes: `Seccion` (ancho de contenido y por encima del camino), `Pausa`, `Titular`, `Bajada`, `Sobretitulo` y la clase `TARJETA`.
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { IconoInstagram } from '../../components/marca/IconoInstagram'
 import { Logo } from '../../components/marca/Logo'
 import { estilosBoton } from '../../components/ui/estilosBoton'
+import { BotonMail } from './BotonMail'
 import { FormularioContacto } from './FormularioContacto'
 
 const INSTAGRAM = 'https://www.instagram.com/pinz.app/'
@@ -42,15 +43,18 @@ export function Pie() {
         </div>
         <div className="flex items-center justify-between gap-4 border-t-2 border-dashed border-contorno pt-5">
           <p className="text-meta font-bold lg:text-cuerpo">Hecho en Argentina · © {new Date().getFullYear()} Pinz</p>
-          <a
-            href={INSTAGRAM}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Instagram de Pinz (se abre en otra pestaña)"
-            className={estilosBoton('secundario', 'icono')}
-          >
-            <IconoInstagram />
-          </a>
+          <div className="flex items-center gap-2">
+            <BotonMail />
+            <a
+              href={INSTAGRAM}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram de Pinz (se abre en otra pestaña)"
+              className={estilosBoton('secundario', 'icono')}
+            >
+              <IconoInstagram />
+            </a>
+          </div>
         </div>
       </div>
     </footer>
