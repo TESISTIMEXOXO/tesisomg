@@ -9,7 +9,8 @@ export function BarraSuperior() {
   return (
     <header className="mx-auto flex max-w-contenido items-center justify-between gap-3 px-4 pt-4 md:px-6 lg:px-10">
       <Link to="/viajes" className="rounded-sm">
-        <Logo size={30} />
+        <Logo size={30} className="lg:hidden" />
+        <Logo size={40} className="max-lg:hidden" />
       </Link>
       {perfil && (
         <Link

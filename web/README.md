@@ -67,7 +67,7 @@ web/
       AppLayout         fuera de un viaje: Mis viajes y Vos
       ViajeLayout       dentro de un viaje: encabezado de etapa, BottomNav con SOS (Emergencias), botón de gasto
       BarraSuperior     la marca (a Mis viajes) y "Tu perfil", en la app y dentro de un viaje
-      EncabezadoViaje   nombre, fechas, avatares (abren Grupo) y, solo en dev, el StageSwitch
+      EncabezadoViaje   nombre, fechas, avatares (abren Grupo), "Editar viaje" (lleva a Agenda; no lo ven los lectores), caminos sutiles de fondo y, solo en dev, el StageSwitch
       contextoViaje.ts  useViajeActual(): el viaje y la etapa que se está mirando
     pages/              una carpeta por pantalla (ver la tabla de abajo)
     types/              esquemas zod por entidad: el contrato con el backend
