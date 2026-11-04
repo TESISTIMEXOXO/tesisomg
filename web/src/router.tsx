@@ -42,7 +42,9 @@ export const router = createBrowserRouter([
             children: [
               { path: 'viajes', lazy: () => import('./pages/viajes/MisViajes').then((m) => ({ Component: m.MisViajes })) },
               { path: 'viajes/nuevo', lazy: () => import('./pages/viajes/NuevoViaje').then((m) => ({ Component: m.NuevoViaje })) },
-              { path: 'vos', lazy: () => import('./pages/vos/Vos').then((m) => ({ Component: m.Vos })) },            ],
+              { path: 'vos', lazy: () => import('./pages/vos/Vos').then((m) => ({ Component: m.Vos })) },
+              { path: 'admin', lazy: () => import('./pages/admin/Admin').then((m) => ({ Component: m.Admin })) },
+            ],
           },
           {
             path: 'viajes/:id',

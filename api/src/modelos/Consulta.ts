@@ -9,6 +9,7 @@ const consultaSchema = new mongoose.Schema(
     email: { type: String, required: true, lowercase: true, trim: true },
     asunto: { type: String, required: true, trim: true },
     descripcion: { type: String, required: true, trim: true },
+    atendida: { type: Boolean, default: false },
     /** Para el tope de consultas por hora desde una misma conexión. */
     ip: { type: String, default: null },
     /** false si falló el mail de confirmación (la consulta igual queda guardada). */

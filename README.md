@@ -8,3 +8,5 @@ Web (React + Vite) y API (Express + MongoDB) con todo en Docker :p
 Para preparar el entorno, copiá `.env.example` como `.env`. Para que varias personas compartan los mismos viajes, cada una debe configurar `MONGODB_URI` con el mismo cluster de MongoDB Atlas. Pasen esa URI y las credenciales de Google OAuth por un medio privado, nunca en GitHub. Si `MONGODB_URI` queda vacía, la app usa el Mongo local de Docker y los datos no se comparten.
 
 Los mapas usan OpenStreetMap; no hace falta configurar una clave de mapas ni habilitar facturación para esa función.
+
+El panel privado `/admin` está reservado a `pinz.tesis@gmail.com`. Permite consultar mensajes de “Escribinos”, marcarlos como atendidos o eliminarlos, y ver resúmenes, usuarios y viajes. La API valida el correo de la sesión en cada ruta administrativa; no alcanza con conocer la URL.
