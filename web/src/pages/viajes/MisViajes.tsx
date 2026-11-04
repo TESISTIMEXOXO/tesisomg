@@ -1,4 +1,4 @@
-import { Calendar, ChevronRight, Plus } from 'lucide-react'
+import { Calendar, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Cargando, NoCargo } from '../../components/marca/Estados'
 import { PinzNote } from '../../components/marca/PinzNote'
@@ -118,14 +118,6 @@ export function MisViajes() {
           </ul>
         </section>
       )}
-      <div className="flex flex-col gap-3 md:flex-row">
-        <ButtonLink to="/viajes/nuevo" icon={Plus} full className="md:w-auto">
-          Armar un viaje
-        </ButtonLink>
-        <ButtonLink to="/unirse" variant="fantasma">
-          Unirme con código
-        </ButtonLink>
-      </div>
     </div>
   )
 }

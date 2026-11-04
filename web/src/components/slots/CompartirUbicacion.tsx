@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { MapPin } from 'lucide-react'
+import { useEffect, useId, useState } from 'react'
 import { useDejarDeCompartir, useEnviarUbicacion } from '../../hooks/ubicaciones'
-import { Button } from '../ui/Button'
 
 function posicionActual(): Promise<{ lat: number; lng: number }> {
   return new Promise((resolve, reject) => {
@@ -12,12 +12,17 @@ function posicionActual(): Promise<{ lat: number; lng: number }> {
   })
 }
 
+/**
+ * El botón de la barra de arriba, solo en etapa Viaje: comparte tu ubicación con el grupo cada 30 segundos
+ * hasta que lo apagás. En mobile es solo el ícono; prendido, se pinta del color de la etapa y late.
+ */
 export function CompartirUbicacion({ viajeId }: { viajeId: string }) {
   const enviar = useEnviarUbicacion(viajeId)
   const enviarUbicacion = enviar.mutateAsync
   const dejar = useDejarDeCompartir(viajeId)
   const [compartiendo, setCompartiendo] = useState(false)
   const [error, setError] = useState('')
+  const idAyuda = useId()
 
   useEffect(() => {
     if (!compartiendo) return
@@ -64,21 +69,41 @@ export function CompartirUbicacion({ viajeId }: { viajeId: string }) {
     }
   }
 
+  const ayuda = compartiendo ? 'Visible solo para el grupo mientras dure el viaje.' : 'La ubicación se comparte solo si la activás.'
+
   return (
-    <div className="flex flex-wrap items-center gap-3 py-4">
-      <Button
+    <div className="relative">
+      <button
         type="button"
-        variant={compartiendo ? 'secundario' : 'fantasma'}
-        size="sm"
+        aria-pressed={compartiendo}
+        aria-describedby={idAyuda}
+        title={ayuda}
         disabled={enviar.isPending || dejar.isPending}
         onClick={() => void cambiarCompartir()}
+        className={`relative inline-flex min-h-toque items-center justify-center gap-2 rounded-full trazo px-4 max-md:size-11 max-md:gap-0 max-md:px-0 text-etiqueta shadow-chica transition-[translate,box-shadow] duration-120 ease-rebote hover:-translate-px hover:shadow-dura disabled:cursor-wait motion-reduce:transition-none ${
+          compartiendo ? 'tema-claro bg-mar text-tinta' : 'bg-papel-elevado text-tinta'
+        }`}
       >
-        {compartiendo ? 'Dejar de compartir ubicación' : 'Compartir mi ubicación'}
-      </Button>
-      <span className="text-meta text-tinta-suave">
-        {compartiendo ? 'Visible solo para el grupo mientras dure el viaje.' : 'La ubicación se comparte solo si la activás.'}
+        <MapPin size={20} strokeWidth={2} aria-hidden />
+        <span className="max-md:sr-only">{compartiendo ? 'Compartiendo ubicación' : 'Compartir ubicación'}</span>
+        {compartiendo && (
+          <span aria-hidden className="absolute -top-0.5 -right-0.5 grid size-3">
+            <span className="absolute inset-0 rounded-full bg-positivo motion-safe:animate-ping" />
+            <span className="relative rounded-full trazo-fino bg-positivo" />
+          </span>
+        )}
+      </button>
+      <span id={idAyuda} className="sr-only">
+        {ayuda}
       </span>
-      {error && <p role="alert" className="w-full text-meta font-semibold text-negativo">{error}</p>}
+      {error && (
+        <p
+          role="alert"
+          className="absolute top-full right-0 z-30 mt-2 w-64 rounded-md trazo bg-papel-elevado p-3 text-meta font-semibold text-negativo shadow-dura"
+        >
+          {error}
+        </p>
+      )}
     </div>
   )
 }

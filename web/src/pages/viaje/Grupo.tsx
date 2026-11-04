@@ -1,4 +1,4 @@
-import { Copy, LogOut } from 'lucide-react'
+import { Copy } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Cargando, NoCargo } from '../../components/marca/Estados'
@@ -7,13 +7,13 @@ import { AvatarStack } from '../../components/ui/AvatarStack'
 import { Button } from '../../components/ui/Button'
 import { Tarjeta } from '../../components/ui/Tarjeta'
 import { TextField } from '../../components/ui/TextField'
-import { mensajeAlSalir } from '../../lib/erroresCuentas'
-import { useCambiarRol, useInvitacionGrupo, useInvitarPorMail, useMovimientos, useRepetirViaje, useSalirDelGrupo } from '../../hooks/grupo'
+import { useCambiarRol, useInvitacionGrupo, useInvitarPorMail, useMovimientos, useRepetirViaje } from '../../hooks/grupo'
 import { useViajeActual } from '../../layouts/contextoViaje'
 import { cuandoEnDias } from '../../lib/fechas'
 import { ELENCO } from '../../pinz/elenco'
 import { RolSchema, type Rol } from '../../types/persona'
-import { esOrganizador } from './nombres'
+import { DestinosYFechas } from './DestinosYFechas'
+import { esOrganizador, puedeEditar } from './nombres'
 
 const ROLES: Record<Rol, string> = { organizador: 'Organizador', miembro: 'Miembro', lector: 'Solo lectura' }
 
@@ -55,18 +55,20 @@ function InvitarPorMail({ viajeId }: { viajeId: string }) {
   )
 }
 
-/** Grupo: quiénes van, invitar, movimientos, repetir el viaje o salir. Se abre desde los avatares del encabezado. */
+/** Grupo (editar viaje): destinos y fechas, quiénes van, invitar, movimientos y repetir el viaje. Se abre desde los avatares y desde "Editar viaje" del encabezado. */
 export function Grupo() {
   const navigate = useNavigate()
-  const { viaje } = useViajeActual()
+  const { viaje, etapa } = useViajeActual()
   const invitacion = useInvitacionGrupo(viaje.id)
   const movimientos = useMovimientos(viaje.id)
-  const salir = useSalirDelGrupo(viaje.id)
   const repetir = useRepetirViaje(viaje.id)
   const cambiarRol = useCambiarRol(viaje.id)
   const puedeAdministrarRoles = esOrganizador(viaje.personas)
-  const [confirmarSalida, setConfirmarSalida] = useState(false)
   const [copiado, setCopiado] = useState(false)
+
+  function repetirViaje(modo: 'mismas-personas' | 'mismo-destino') {
+    repetir.mutate(modo, { onSuccess: (nuevo) => navigate(`/viajes/${nuevo.id}`) })
+  }
 
   async function copiarLink(link: string) {
     await navigator.clipboard.writeText(link)
@@ -75,6 +77,10 @@ export function Grupo() {
 
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-7">
+      <Tarjeta className="lg:col-span-2">
+        <DestinosYFechas viaje={viaje} soloLectura={etapa === 'post' || !puedeEditar(viaje.personas)} />
+      </Tarjeta>
+
       <div className="relative">
         <div className="flex flex-col gap-8 lg:absolute lg:inset-0 lg:gap-7">
           <Tarjeta titulo="Quiénes van" className="lg:min-h-0 lg:flex-1">
@@ -157,43 +163,15 @@ export function Grupo() {
         <Tarjeta titulo="Repetir el viaje">
           <p className="text-tinta-suave">Arranca un viaje nuevo en Previaje, sin empezar de cero.</p>
           <div className="flex flex-wrap gap-3">
-            <Button variant="secundario" size="sm" disabled={repetir.isPending} onClick={() => repetir.mutate('mismas-personas')}>
+            <Button variant="secundario" size="sm" disabled={repetir.isPending} onClick={() => repetirViaje('mismas-personas')}>
               Mismas personas
             </Button>
-            <Button variant="secundario" size="sm" disabled={repetir.isPending} onClick={() => repetir.mutate('mismo-destino')}>
+            <Button variant="secundario" size="sm" disabled={repetir.isPending} onClick={() => repetirViaje('mismo-destino')}>
               Mismo destino
             </Button>
           </div>
+          {repetir.isError && <p role="alert" className="text-negativo">No pudimos crear el nuevo viaje. Probá de nuevo.</p>}
         </Tarjeta>
-      </div>
-
-      <div className="flex flex-col gap-8 lg:col-start-2 lg:gap-7">
-        <section aria-label="Salir del grupo" className="flex flex-col gap-3">
-          {confirmarSalida ? (
-            <div role="alertdialog" aria-label="Confirmar salida" className="flex flex-col gap-3 rounded-lg trazo bg-coral-tinte p-5">
-              <p className="font-bold">¿Salís de “{viaje.nombre}”? Si tenés plata o reservas pendientes, te las mostramos antes.</p>
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  variant="secundario"
-                  size="sm"
-                  disabled={salir.isPending}
-                  onClick={() => salir.mutate(undefined, { onSuccess: () => navigate('/viajes') })}
-                >
-                  Sí, salir del grupo
-                </Button>
-                <Button variant="fantasma" size="sm" onClick={() => setConfirmarSalida(false)}>
-                  Me quedo
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Button variant="fantasma" icon={LogOut} className="self-start" onClick={() => setConfirmarSalida(true)}>
-              Salir del grupo
-            </Button>
-          )}
-          {salir.isError && <p role="alert" className="text-negativo">{mensajeAlSalir(salir.error)}</p>}
-        </section>
-        {repetir.isError && <p role="alert" className="text-negativo">No pudimos crear el nuevo viaje. Probá de nuevo.</p>}
       </div>
     </div>
   )

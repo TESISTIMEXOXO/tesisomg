@@ -1,6 +1,6 @@
-import { Eye, EyeOff, Pencil } from 'lucide-react'
+import { Eye, EyeOff, HandCoins, Pencil } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useMatch } from 'react-router-dom'
 import { AvatarStack } from '../components/ui/AvatarStack'
 import { ButtonLink } from '../components/ui/Button'
 import { StageSwitch } from '../components/ui/StageSwitch'
@@ -9,6 +9,7 @@ import { diasHasta, rangoDeFechas } from '../lib/fechas'
 import { FONDO_DESTACADO } from '../pinz/tonos'
 import type { Etapa, Viaje } from '../types/viaje'
 import { puedeEditar } from '../pages/viaje/nombres'
+import { SalirDelViaje } from '../pages/viaje/SalirDelViaje'
 
 type EncabezadoViajeProps = {
   viaje: Viaje
@@ -51,6 +52,7 @@ export function EncabezadoViaje({ viaje, etapa, onCambiarEtapa }: EncabezadoViaj
   const organiza = viaje.personas.find((p) => p.rol === 'organizador')
   /* Lleva a Grupo: invitación, QR, roles y movimientos del viaje. */
   const editable = puedeEditar(viaje.personas)
+  const enGrupo = useMatch('/viajes/:id/grupo') !== null
   const faltan = viaje.fechaIda ? diasHasta(viaje.fechaIda) : null
   const personas = viaje.personas.map((p) => ({ name: p.nombre, pinz: p.pinz }))
 
@@ -77,11 +79,24 @@ export function EncabezadoViaje({ viaje, etapa, onCambiarEtapa }: EncabezadoViaj
           </Link>
         </div>
         <div className="flex flex-none flex-col items-end gap-4">
-          {editable && (
-            <ButtonLink to={`/viajes/${viaje.id}/grupo`} variant="secundario" size="sm" icon={Pencil}>
-              <span className="max-md:sr-only">Editar viaje</span>
-            </ButtonLink>
-          )}
+          <div className="flex flex-col items-end gap-2 md:flex-row">
+            {enGrupo && <SalirDelViaje viaje={viaje} />}
+            {editable && (
+              <ButtonLink to={`/viajes/${viaje.id}/grupo`} variant="secundario" size="sm" icon={Pencil} className="max-md:size-11 max-md:gap-0 max-md:px-0">
+                <span className="max-md:sr-only">Editar viaje</span>
+              </ButtonLink>
+            )}
+            {editable && etapa === 'viaje' && (
+              <ButtonLink
+                to={`/viajes/${viaje.id}/cuentas#nuevo-gasto`}
+                size="sm"
+                icon={HandCoins}
+                aria-label="Agregar gasto"
+                title="Agregar gasto"
+                className="max-md:size-11 max-md:gap-0 max-md:px-0 md:hidden"
+              />
+            )}
+          </div>
           {etapa === 'previaje' && faltan !== null && faltan > 0 && (
             <p className="hidden flex-col items-center rounded-lg trazo-grueso bg-papel-elevado px-5.5 py-3.5 shadow-dura md:flex">
               <span className="font-display text-display font-black numeros">{faltan}</span>

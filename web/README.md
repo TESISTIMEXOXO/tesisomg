@@ -55,9 +55,9 @@ web/
       ui/               el design system: Button, Chip, StageSwitch, TextField, PollOption, BalanceRow,
                         ItineraryItem, TripCard, AvatarStack, BottomNav, Ventana, VistaArchivo y Tarjeta
       marca/            Logo, BarraMarca (la barra con la marca de la landing y las pantallas públicas), Pin,
-                        PinzNote, ElegirPinz, CaminosDeLaVentana y los estados Cargando / NoCargo
+                        PinzNote, ElegirPinz, CaminosDeLaVentana, CaminosDeFondo y los estados Cargando / NoCargo
       landing/          Camino: la ruta celeste que recorre la landing
-      slots/            MapaSlot, SaldosSlot, AuthSlot, ArchivosSlot, ComprobanteSlot, QrSlot y EsperaSlot
+      slots/            MapaSlot, SaldosSlot, AuthSlot, ArchivosSlot, ComprobanteSlot, QrSlot, CompartirUbicacion y EsperaSlot
     pinz/
       elenco.ts         los 10 personajes: nombre, apodo, tono, sección, descripción y frase
       dibujos.ts        el dibujo de cada pinz, como datos (capas detrás, recortado y delante)
@@ -66,8 +66,9 @@ web/
       PublicLayout      bienvenida e invitaciones
       AppLayout         fuera de un viaje: Mis viajes y Vos
       ViajeLayout       dentro de un viaje: encabezado de etapa, BottomNav con SOS (Emergencias), botón de gasto
-      BarraSuperior     la marca (a Mis viajes) y "Tu perfil", en la app y dentro de un viaje
-      EncabezadoViaje   nombre, fechas, avatares (abren Grupo), "Editar viaje" (lleva a Grupo; no lo ven los lectores), caminos sutiles de fondo y, solo en dev, el StageSwitch
+      BarraSuperior     la marca (a Mis viajes), tu pin (a tu perfil) y el +, en la app y dentro de un viaje. En etapa Viaje suma, antes del pin, el botón de CompartirUbicacion
+      MenuAgregar       el + naranja de la barra: despliega "Armar un viaje" y "Unirme con código", y cada uno se abre en una Ventana con FormularioViaje o FormularioCodigo (los mismos de /viajes/nuevo y /unirse)
+      EncabezadoViaje   nombre, fechas, avatares (abren Grupo), "Salir del viaje" en rojo, solo en Grupo (`pages/viaje/SalirDelViaje.tsx`, confirma en una `Ventana`), "Editar viaje" (lleva a Grupo; no lo ven los lectores), caminos sutiles de fondo y, solo en dev, el StageSwitch
       contextoViaje.ts  useViajeActual(): el viaje y la etapa que se está mirando
     pages/              una carpeta por pantalla (ver la tabla de abajo)
     types/              esquemas zod por entidad: el contrato con el backend
@@ -84,22 +85,22 @@ web/
 | `/` | `pages/landing/Landing.tsx` (una sección por archivo en la misma carpeta; ver "La landing") | `Camino`, `Pin`, `Logo`, `Button`, `PollOption`, `BalanceRow`, `ItineraryItem`, `AvatarStack` |
 | `/ingresar` | `pages/ingresar/Ingresar.tsx`, una `Ventana` sobre la landing: es ruta hija de `Landing` y al cerrarla vuelve a `/` (bypass temporal: en desarrollo, cualquier proveedor lleva a `/viajes`). Con `?paso=ingreso` abre directo en "Iniciá sesión", que también ofrece "Iniciar con Google" | `AuthSlot`, `useIngresar` |
 | `/bienvenida` | `pages/bienvenida/Bienvenida.tsx` | `TextField`, `Chip`, `ElegirPinz`, `useGuardarPerfil` |
-| `/unirse` | `pages/unirse/Unirse.tsx` | `TextField`, `Button` |
+| `/unirse` | `pages/unirse/Unirse.tsx`, con `FormularioCodigo.tsx` (el mismo formulario que abre el + de la barra en una ventana) | `TextField`, `Button` |
 | `/unirse/:codigo` | `pages/unirse/VistaInvitacion.tsx` | `Tarjeta`, `AvatarStack`, `useInvitacion`, `useUnirse` |
 | `/viajes` | `pages/viajes/MisViajes.tsx` | `TripCard`, `PinzNote` (vacío), `useViajes`, `usePerfil` |
-| `/viajes/nuevo` | `pages/viajes/NuevoViaje.tsx` | `TextField`, `TripCard` (vista previa en desktop), `useCrearViaje` |
+| `/viajes/nuevo` | `pages/viajes/NuevoViaje.tsx`, con `FormularioViaje.tsx` (el mismo formulario que abre el + de la barra en una ventana, sin la vista previa). Al crear el viaje, lleva a él | `TextField`, `TripCard` (vista previa en desktop), `useCrearViaje` |
 | `/vos` | `pages/vos/Vos.tsx` | `Pin`, `Tarjeta`, `ArchivosSlot`, `VistaArchivo`, `usePerfil`, `useDocumentosPersonales` || `/viajes/:id` | `pages/viaje/resumen/Resumen.tsx` → `ResumenPrevaje`, `Hoy` o `ResumenPostViaje` según la etapa | `TarjetaVotacion`, `PinzNote` (tip), `MapaSlot`, `ItineraryItem`, `SaldosSlot` |
 | `/viajes/:id/agenda` | `pages/viaje/Agenda.tsx`. Abre en el próximo día con actividades; en semana y mes se pintan los días que tienen actividades y el elegido lleva un anillo. En el día, lo que viene va de lo más próximo a lo más lejano y lo que ya pasó se tilda solo (`useAhora`, cada minuto) y baja al final. Las horas son las del destino de ese día: el último destino que ya empezó según sus fechas, con su zona horaria (`useZonasHorarias` + `lib/zonasHorarias.ts`: país por `/lugares/pais` y, en países con varias zonas, la ciudad de referencia más cercana). Sin zona conocida, vale la hora del dispositivo | `ItineraryItem`, `MapaSlot`, `useItinerario`, `useAhora`, `useZonasHorarias` |
 | `/viajes/:id/listas` | `pages/viaje/Listas.tsx`, sin título de pantalla: arranca en "Votaciones grupales" (abiertas y, plegadas, las cerradas), sigue "Checklist" y "Requisitos". Quien organiza ve un lápiz en cada votación abierta (salvo en Post-viaje) que abre `EditarVotacion.tsx`: cambia la pregunta y las opciones, saca opciones o borra la votación | `TarjetaVotacion`, `useVotaciones`, `useEditarVotacion`, `useEliminarVotacion`, `useTareas`, `useRequisitos` |
 | `/viajes/:id/cuentas` | `pages/viaje/Cuentas.tsx` | `SaldosSlot`, `ComprobanteSlot`, `Chip`, `useGastos`, `useSaldos`, `useAgregarGasto` |
 | `/viajes/:id/baul` | `pages/viaje/Baul.tsx` | `ArchivosSlot`, `VistaArchivo`, `Chip`, `useTareas`, `useRequisitos`, `useDocumentos` |
-| `/viajes/:id/grupo` | `pages/viaje/Grupo.tsx`: se abre desde los avatares o desde "Editar viaje" del encabezado. "Quiénes van" y "Últimos movimientos" bajan con scroll: en mobile con un tope, en desktop repartiéndose mitad y mitad el alto de "Invitar al grupo" y "Repetir el viaje" | `AvatarStack`, `QrSlot`, `useInvitacionGrupo`, `useMovimientos` |
+| `/viajes/:id/grupo` | `pages/viaje/Grupo.tsx`: se abre desde los avatares o desde "Editar viaje" del encabezado. Arriba, "Destinos y fechas" (`DestinosYFechas.tsx`, el mismo bloque que en Agenda). "Quiénes van" y "Últimos movimientos" bajan con scroll: en mobile con un tope, en desktop repartiéndose mitad y mitad el alto de "Invitar al grupo" y "Repetir el viaje" | `AvatarStack`, `QrSlot`, `useInvitacionGrupo`, `useMovimientos` |
 | `/viajes/:id/emergencias` | `pages/viaje/Emergencias.tsx` (sin pinz, nunca) | `useEmergencias` |
 | `*` | `pages/NoEncontrada.tsx` | `PinzNote` (error, genérico) |
 
 Cada pantalla resuelve sus estados de carga, vacío y error con `Cargando`, `NoCargo` y `PinzNote`, usando el pinz de su sección (Brújula en Agenda, Valija en Listas, Vuelto en Cuentas, Postal en el Baúl, Siesta en Hoy, Postal en Post-viaje). Los errores van con el genérico.
 
-**Agregar gasto:** `pages/viaje/IrAAgregarGasto.tsx` está en la tarjeta de saldos de las tres etapas y lleva a `cuentas#nuevo-gasto`; el formulario baja solo y enfoca el primer campo.
+**Agregar gasto:** `pages/viaje/IrAAgregarGasto.tsx` está en la tarjeta de saldos de las tres etapas y lleva a `cuentas#nuevo-gasto`; el formulario baja solo y enfoca el primer campo. En etapa Viaje hay además un atajo fijo: en desktop flota abajo a la derecha (`ViajeLayout`) y en mobile es un botón redondo debajo de "Editar viaje" en el encabezado (`EncabezadoViaje`, no lo ven los lectores).
 
 **La etapa** se calcula en `lib/etapa.ts` (`etapaDelViaje`): antes de la ida es Previaje, entre la ida y la vuelta es Viaje y después es Post-viaje. La etapa cambia sola con las fechas. El `StageSwitch` del encabezado, que deja mirar otra etapa, aparece solo en desarrollo (`import.meta.env.DEV`). Al lado de su etiqueta abajo a la derecha del encabezado hay un ojo casi transparente que lo oculta y lo vuelve a mostrar, para ver el encabezado como lo ve el público.
 
@@ -127,6 +128,7 @@ Cada pantalla resuelve sus estados de carga, vacío y error con `Cargando`, `NoC
 | `ElegirPinz` | `components/marca/ElegirPinz.tsx` | `valor`, `onElegir` | La grilla para elegir personalidad |
 | `Cargando` / `NoCargo` | `components/marca/Estados.tsx` | `pinz` / `error`, `onReintentar` | Estados de carga y error de las pantallas |
 | `CaminosDeLaVentana` | `components/marca/CaminosDeLaVentana.tsx` | — | Dos tramos del camino celeste en las esquinas de una `Ventana`, detrás del contenido: el ingreso y los popups de Listas. El contenido va en un bloque `relative` y el título con `pr-24` |
+| `CaminosDeFondo` | `components/marca/CaminosDeFondo.tsx` | — | El fondo de la app: bandas de camino en `papel-hundido` (apenas más oscuras que el fondo) que bajan con la página: bandas de lado a lado, una vuelta por costado y dos caminos que empalman un dibujo con el siguiente, sin cruzarse. El dibujo es la utilidad `fondo-caminos` (`index.css`), una máscara SVG que se repite hacia abajo. Lo ponen `AppLayout` y `ViajeLayout` dentro de un bloque `relative isolate`; Emergencias no lo lleva |
 
 ## 6. Tokens
 
@@ -272,6 +274,7 @@ Una escritura igual: `crear(datos)` pasa de `sinBackend('viajes.crear', datos)` 
 | Archivos | `components/slots/ArchivosSlot.tsx` | `archivos: { id, nombre, tipo, tamano }[]`, `ayuda` | `onSubir(archivo)`, `onAbrir(archivo)` | `pages/viaje/Baul.tsx`, `pages/vos/Vos.tsx` |
 | Comprobante | `components/slots/ComprobanteSlot.tsx` | — | `onEscanear(archivo)` | `pages/viaje/Cuentas.tsx` |
 | QR | `components/slots/QrSlot.tsx` | `valor` (link de invitación), `className` (tamaño; en Grupo, `max-w-72`) | — | `pages/viaje/Grupo.tsx` |
+| Compartir ubicación | `components/slots/CompartirUbicacion.tsx` | `viajeId` | manda tu posición cada 30 s con `useEnviarUbicacion` hasta que se apaga (`useDejarDeCompartir`) | `layouts/ViajeLayout.tsx` (en la `BarraSuperior`, solo en etapa Viaje) |
 
 Mientras no estén conectados, muestran `EsperaSlot`: un recuadro punteado que dice qué va ahí. Nunca simulan el contenido real. La librería de mapas se monta en el elemento de `contenedorRef`, que tiene tamaño fijo. El cálculo de saldos lo hace siempre el backend; el front solo los ordena (primero lo que tenés que poner, después lo que te deben, al final con quién estás a mano).
 
