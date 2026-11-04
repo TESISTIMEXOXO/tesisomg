@@ -15,7 +15,7 @@ import { direccionDe } from '../../../lib/saldo'
 import { conMayuscula } from '../../../lib/texto'
 import { IrAAgregarGasto } from '../IrAAgregarGasto'
 import { nombreEnElGrupo, puedeEditar } from '../nombres'
-import { TarjetaVotacion } from '../TarjetaVotacion'
+import { PorDecidir } from './PorDecidir'
 
 /** Previaje: ¿qué falta decidir y quién lo resuelve? */
 export function ResumenPrevaje() {
@@ -30,8 +30,6 @@ export function ResumenPrevaje() {
   if (resumen.error) return <NoCargo error={resumen.error} onReintentar={() => resumen.refetch()} />
   if (votaciones.error) return <NoCargo error={votaciones.error} onReintentar={() => votaciones.refetch()} />
 
-  const abiertas = votaciones.data.filter((v) => v.estado === 'abierta')
-  const principal = abiertas.find((v) => v.votoPropio === null) ?? abiertas[0]
   const { hechas, total } = resumen.data.checklist
   const proximas = (listas.data ?? []).flatMap((lista) => lista.items).filter((item) => !item.hecha).slice(0, 3)
   const pendienteDePlata = saldos.data?.saldos.find((s) => direccionDe(s.monto) === 'pendiente')
@@ -54,13 +52,7 @@ export function ResumenPrevaje() {
             </ul>
           </section>
         )}
-        {principal ? (
-          <TarjetaVotacion votacion={principal} personas={viaje.personas} soloLectura={!puedeEditar(viaje.personas)} />
-        ) : (
-          <Tarjeta titulo="Por decidir">
-            <p className="text-tinta-suave">No hay votaciones abiertas. Proponé algo desde Listas.</p>
-          </Tarjeta>
-        )}
+        <PorDecidir viajeId={viaje.id} votaciones={votaciones.data} personas={viaje.personas} soloLectura={!puedeEditar(viaje.personas)} />
       </div>
 
       <div className="flex flex-col gap-8 lg:gap-7">
