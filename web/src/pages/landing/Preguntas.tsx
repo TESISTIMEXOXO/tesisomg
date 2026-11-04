@@ -29,8 +29,8 @@ const PREGUNTAS = [
     signo: 'bg-lavanda rotate-8',
   },
   {
-    pregunta: '¿Funciona sin señal?',
-    respuesta: 'Los papeles del viaje y el itinerario del día quedan guardados en el celu.',
+    pregunta: '¿Y si alguien solo quiere mirar?',
+    respuesta: 'Le das rol de solo lectura: ve todo el viaje, pero no vota ni carga gastos.',
     giro: -0.5,
     signo: 'bg-cielo -rotate-6',
   },

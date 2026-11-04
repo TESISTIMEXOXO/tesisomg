@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useLayoutEffect, useMemo, useState, type CSSProperties } from 'react'
 import { flushSync } from 'react-dom'
-import { armarCamino, armarRodeo, muestrear, repartirGrupos, type Anclas, type DatosCamino, type Punto } from '../../lib/camino'
+import { armarCamino, armarRodeo, muestrear, PASO_RECORRIDO, repartirGrupos, type Anclas, type DatosCamino, type Punto } from '../../lib/camino'
 import { CAMINO_DESKTOP, CAMINO_MOBILE } from '../../lib/caminoDatos'
 import type { PinzId } from '../../pinz/elenco'
 import { Pin } from '../marca/Pin'
@@ -20,11 +20,11 @@ type Trazado = {
   d: string
   largo: number
   finX: number
-  puntos: Punto[]
+  recorrido: Punto[]
   /** Cuántos px del final del camino quedan tapados por el botón. */
   tapado: number
   plaza: Rect | null
-  rodeo: { d: string; largo: number } | null
+  rodeo: { d: string; largo: number; recorrido: Punto[] } | null
 }
 
 /* El ancho desde el que la landing pasa a desktop (breakpoint lg). */
@@ -81,13 +81,14 @@ function medir(contenedor: HTMLElement): Trazado | null {
     const h1 = datos.rodeo.esquivaTitulo ? contenedor.querySelector('h1')?.getBoundingClientRect() : null
     /* La barra es sticky y arranca arriba de la landing: se mide contra ella para que el scroll no corra el arco. */
     const barra = acceso.parentElement?.getBoundingClientRect().top ?? caja.top
-    rodeo = armarRodeo(
+    const arco = armarRodeo(
       datos,
       { izquierda: rect.left - caja.left, abajo: rect.bottom - barra },
       caja.width,
       vecino - caja.left + AIRE_VECINO,
       h1 ? { derecha: h1.right - caja.left, arriba: h1.top - caja.top } : null,
     )
+    rodeo = arco && { ...arco, recorrido: muestrear(arco.d, PASO_RECORRIDO) }
   }
   return { datos, ancho: caja.width, alto: caja.height, ...camino, tapado, plaza, rodeo }
 }
@@ -111,10 +112,47 @@ type CaminantesProps = {
   grupos: readonly (readonly PinzId[])[]
   /** Cuántos grupos ya entraron a la página. El lugar de cada uno se calcula siempre con el total. */
   montados: number
-  d: string
+  recorrido: readonly Punto[]
   largo: number
   /** Si el camino termina a la vista, cuántos px del final tapa el botón: el pinz explota antes de meterse debajo. */
   tapado?: number
+}
+
+/* Qué punto de la caja del pinz y de la nube va sobre el camino, en fracciones de su lado. */
+const PIE_DEL_PINZ: Punto = [0.5, 0.82]
+const CENTRO_DEL_HUMO: Punto = [0.5, 0.62]
+
+const ladoDelPinz = (datos: DatosCamino) => datos.grosor * 1.3
+
+/** Cuánto del recorrido se hizo al llegar a cada punto, de 0 a 1. */
+function avances(recorrido: readonly Punto[]) {
+  const hechos = [0]
+  for (let i = 1; i < recorrido.length; i++) {
+    hechos.push(hechos[i - 1] + Math.hypot(recorrido[i][0] - recorrido[i - 1][0], recorrido[i][1] - recorrido[i - 1][1]))
+  }
+  const total = hechos[hechos.length - 1] || 1
+  return hechos.map((hecho) => hecho / total)
+}
+
+function enLaCaja([x, y]: Punto, lado: number, [ax, ay]: Punto) {
+  return `translate(${(x - lado * ax).toFixed(1)}px, ${(y - lado * ay).toFixed(1)}px)`
+}
+
+/** Dónde queda la caja a esa altura del recorrido (0 a 1). Los puntos están parejos: alcanza con el más cercano. */
+function enAvance(recorrido: readonly Punto[], avance: number, lado: number, ancla: Punto) {
+  const indice = Math.round(Math.min(1, Math.max(0, avance)) * (recorrido.length - 1))
+  return enLaCaja(recorrido[indice], lado, ancla)
+}
+
+/*
+ * El recorrido, punto por punto, como un transform: el navegador lo anima fuera del hilo principal.
+ * Con offset-path lo recalculaba en el hilo principal en cada cuadro, y cualquier otra tarea frenaba a los pinz.
+ * Los cuadros dependen del camino medido, por eso no viven en animaciones.css. La duración y el desfase van en cada pinz.
+ */
+function cuadrosDelRecorrido(nombreTrazo: string, recorrido: readonly Punto[], lado: number) {
+  const nombre = `lp-recorre-${nombreTrazo}`
+  const cuadros = avances(recorrido).map((avance, i) => `${(avance * 100).toFixed(3)}%{transform:${enLaCaja(recorrido[i], lado, PIE_DEL_PINZ)}}`)
+  return `@keyframes ${nombre}{${cuadros.join('')}}@media (prefers-reduced-motion:no-preference){[data-trazo="${nombreTrazo}"]{animation:${nombre} linear infinite}}`
 }
 
 /** Una nube chica: los círculos se abren desde el centro al crecer. */
@@ -129,7 +167,8 @@ function Humo({ grosor }: { grosor: number }) {
   )
 }
 
-function Caminantes({ nombreTrazo, datos, grupos, montados, d, largo, tapado }: CaminantesProps) {
+function Caminantes({ nombreTrazo, datos, grupos, montados, recorrido, largo, tapado }: CaminantesProps) {
+  const ladoPinz = ladoDelPinz(datos)
   const duracion = largo / datos.velocidad
   const separacion = (datos.grosor * 1.15) / datos.velocidad
   const explosion = tapado === undefined ? 0 : (largo - tapado - datos.grosor * AIRE_EXPLOSION) / datos.velocidad
@@ -147,14 +186,11 @@ function Caminantes({ nombreTrazo, datos, grupos, montados, d, largo, tapado }: 
       const pinzCaminando = (
         /* Cada uno con su desfase: si dan el paso a la vez parecen una sola pieza. */
         <div className="motion-safe:animate-paso" style={{ transformOrigin: '50% 82%', animationDelay: `${-(i * 0.17 + j * 0.23)}s` }}>
-          <Pin pinz={pinz} size={datos.grosor * 1.3} label="" />
+          <Pin pinz={pinz} size={ladoPinz} label="" />
         </div>
       )
       const estilo: CSSProperties = {
-        offsetPath: `path('${d}')`,
-        offsetRotate: '0deg',
-        offsetAnchor: '50% 82%',
-        offsetDistance: `${quieto}%`,
+        transform: enAvance(recorrido, quieto / 100, ladoPinz, PIE_DEL_PINZ),
         animationDuration: `${duracion}s`,
         animationDelay: `${-atraso}s`,
       }
@@ -164,7 +200,7 @@ function Caminantes({ nombreTrazo, datos, grupos, montados, d, largo, tapado }: 
           <div
             data-trazo={nombreTrazo}
             data-entra-primero={i === 0 && j === grupo.length - 1 ? '' : undefined}
-            className="absolute top-0 left-0 motion-safe:animate-camino"
+            className="absolute top-0 left-0"
             style={estilo}
           >
             {tapado !== undefined ? (
@@ -180,7 +216,7 @@ function Caminantes({ nombreTrazo, datos, grupos, montados, d, largo, tapado }: 
             <div
               data-humo={(explosion / duracion) * 100}
               className="absolute top-0 left-0"
-              style={{ offsetPath: `path('${d}')`, offsetRotate: '0deg', offsetAnchor: '50% 62%', offsetDistance: `${(explosion / duracion) * 100}%` }}
+              style={{ transform: enAvance(recorrido, explosion / duracion, datos.grosor * 1.5, CENTRO_DEL_HUMO) }}
             >
               <div
                 className="opacity-0 motion-safe:animate-humo"
@@ -230,10 +266,14 @@ export function Camino({ contenedor }: CaminoProps) {
   }, [grupos, gruposMontados])
 
   const recorridos = useMemo(
-    () => (trazado ? { principal: trazado.puntos, ...(trazado.rodeo && { rodeo: muestrear(trazado.rodeo.d, 40) }) } : null),
+    () => (trazado ? { principal: trazado.recorrido, ...(trazado.rodeo && { rodeo: trazado.rodeo.recorrido }) } : null),
     [trazado],
   )
   useCaminantesEnPantalla(contenedor, recorridos, gruposMontados)
+  const cuadros = useMemo(
+    () => (trazado && recorridos ? Object.entries(recorridos).map(([nombre, recorrido]) => cuadrosDelRecorrido(nombre, recorrido, ladoDelPinz(trazado.datos))).join('') : ''),
+    [trazado, recorridos],
+  )
 
   if (!trazado) return null
   const { datos, ancho, alto, d, largo, tapado, plaza, rodeo } = trazado
@@ -243,6 +283,7 @@ export function Camino({ contenedor }: CaminoProps) {
 
   return (
     <div aria-hidden className="pointer-events-none absolute top-0 left-0 z-0" style={{ width: ancho, height: alto }}>
+      <style>{cuadros}</style>
       <svg width={ancho} height={alto} className="absolute top-0 left-0 overflow-visible">
         {rodeo && (
           <>
@@ -255,8 +296,10 @@ export function Camino({ contenedor }: CaminoProps) {
         <path {...trazo} strokeWidth={datos.grosor - BORDE * 2} className={`stroke-cielo ${trazo.className}`} />
         {plaza && <Plaza rect={plaza} className="fill-cielo motion-safe:animate-fundido [animation-delay:2.8s]" />}
       </svg>
-      <Caminantes nombreTrazo="principal" datos={datos} grupos={grupos} montados={gruposMontados} d={d} largo={largo} tapado={tapado} />
-      {rodeo && <Caminantes nombreTrazo="rodeo" datos={datos} grupos={datos.rodeo.caminantes} montados={gruposMontados} d={rodeo.d} largo={rodeo.largo} />}
+      <Caminantes nombreTrazo="principal" datos={datos} grupos={grupos} montados={gruposMontados} recorrido={trazado.recorrido} largo={largo} tapado={tapado} />
+      {rodeo && (
+        <Caminantes nombreTrazo="rodeo" datos={datos} grupos={datos.rodeo.caminantes} montados={gruposMontados} recorrido={rodeo.recorrido} largo={rodeo.largo} />
+      )}
     </div>
   )
 }

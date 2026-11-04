@@ -34,7 +34,7 @@ export function TripCard({ title, place, dates, stage = 'previaje', people = [],
       >
         {image && <span aria-hidden className="absolute inset-x-0 top-1/2 bottom-0 bg-contorno/50" />}
         <span className={`relative rounded-full trazo-fino px-2.5 py-0.5 text-sobretitulo uppercase tema-claro ${FONDO[tono]}`}>{nombre}</span>
-        <h3 className={`relative pr-20 font-display text-titulo-1 font-black ${image ? 'text-papel' : 'text-tinta'}`}>{title}</h3>
+        <h3 className={`relative max-w-full pr-20 font-display text-titulo-1 font-black ${image ? 'text-papel' : 'text-tinta'}`}>{title}</h3>
         {!image && <Pin size={72} color={tono} label="" className="absolute right-3.5 bottom-2.5 rotate-10" />}
       </div>
       <div className="flex items-center justify-between gap-3 p-4">

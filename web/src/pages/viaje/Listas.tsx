@@ -1,37 +1,66 @@
-import { Check, Plus } from 'lucide-react'
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { Check, ChevronDown, Plus } from 'lucide-react'
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { CaminosDeLaVentana } from '../../components/marca/CaminosDeLaVentana'
 import { NoCargo } from '../../components/marca/Estados'
 import { PinzNote } from '../../components/marca/PinzNote'
-import { TituloPantalla } from '../../components/marca/TituloPantalla'
 import { Button } from '../../components/ui/Button'
+import { Despliegue } from '../../components/ui/Despliegue'
 import { Tarjeta } from '../../components/ui/Tarjeta'
 import { TextField } from '../../components/ui/TextField'
+import { Ventana } from '../../components/ui/Ventana'
 import { useMarcarRequisito, useRequisitos } from '../../hooks/baul'
 import { useCrearVotacion, useProponerOpcion, useVotaciones } from '../../hooks/votaciones'
 import { useViajeActual } from '../../layouts/contextoViaje'
-import { CrearVotacionSchema, type Votacion } from '../../types/votacion'
+import { CategoriaVotacionSchema, CrearVotacionSchema, type CategoriaVotacion, type Votacion } from '../../types/votacion'
 import { Checklists } from './Checklists'
-import { puedeEditar } from './nombres'
+import { EditarVotacion } from './EditarVotacion'
+import { esOrganizador, puedeEditar } from './nombres'
 import { TarjetaVotacion } from './TarjetaVotacion'
 
-function Desplegable({ titulo, abierta = true, children }: { titulo: string; abierta?: boolean; children: ReactNode }) {
+function Desplegable({ titulo, abierta: abiertaAlInicio = true, children }: { titulo: string; abierta?: boolean; children: ReactNode }) {
+  const [abierta, setAbierta] = useState(abiertaAlInicio)
+  const idContenido = useId()
+
   return (
-    <details open={abierta} className="rounded-lg trazo bg-papel-elevado p-4 shadow-grande md:p-6">
-      <summary className="flex min-h-toque cursor-pointer items-center font-display text-titulo-1 font-black">{titulo}</summary>
-      <div className="mt-3 flex flex-col gap-4">{children}</div>
-    </details>
+    <section className="rounded-lg trazo bg-papel-elevado p-4 shadow-grande md:p-6">
+      <h3>
+        <button
+          type="button"
+          aria-expanded={abierta}
+          aria-controls={idContenido}
+          onClick={() => setAbierta((actual) => !actual)}
+          className="flex min-h-toque w-full items-center justify-between gap-3 text-left font-display text-titulo-1 font-black select-none"
+        >
+          {titulo}
+          <ChevronDown
+            size={22}
+            strokeWidth={2}
+            aria-hidden
+            className={`shrink-0 text-tinta-suave transition-transform duration-300 motion-reduce:transition-none ${abierta ? 'rotate-180' : ''}`}
+          />
+        </button>
+      </h3>
+      <Despliegue abierta={abierta} id={idContenido}>
+        <div className="flex flex-col gap-4 pt-3">{children}</div>
+      </Despliegue>
+    </section>
   )
 }
 
-function ProponerOpcion({ viajeId, votaciones }: { viajeId: string; votaciones: Votacion[] }) {
+const CATEGORIAS: { id: CategoriaVotacion; nombre: string }[] = [
+  { id: 'destino', nombre: 'Destino' },
+  { id: 'fechas', nombre: 'Fechas' },
+  { id: 'alojamiento', nombre: 'Alojamiento' },
+  { id: 'actividad', nombre: 'Actividad' },
+  { id: 'comida', nombre: 'Comida' },
+  { id: 'otros', nombre: 'Otros' },
+]
+
+function ProponerOpcion({ viajeId, abiertas, idTitulo, onCerrar }: { viajeId: string; abiertas: Votacion[]; idTitulo: string; onCerrar: () => void }) {
   const proponer = useProponerOpcion(viajeId)
-  const abiertas = votaciones.filter((v) => v.estado === 'abierta')
-  const [abierto, setAbierto] = useState(false)
   const [votacionId, setVotacionId] = useState(abiertas[0]?.id ?? '')
   const [nombre, setNombre] = useState('')
   const [error, setError] = useState<string>()
-
-  if (abiertas.length === 0) return null
 
   function enviar(evento: FormEvent) {
     evento.preventDefault()
@@ -40,27 +69,12 @@ function ProponerOpcion({ viajeId, votaciones }: { viajeId: string; votaciones: 
       return
     }
     setError(undefined)
-    proponer.mutate(
-      { votacionId, nombre, detalle: null },
-      {
-        onSuccess: () => {
-          setNombre('')
-          setAbierto(false)
-        },
-      },
-    )
-  }
-
-  if (!abierto) {
-    return (
-      <Button variant="secundario" icon={Plus} className="self-start" onClick={() => setAbierto(true)}>
-        Proponer una opción
-      </Button>
-    )
+    proponer.mutate({ votacionId, nombre, detalle: null }, { onSuccess: onCerrar })
   }
 
   return (
-    <form onSubmit={enviar} noValidate className="flex flex-col gap-4 rounded-lg trazo bg-papel-hundido p-5">
+    <form onSubmit={enviar} noValidate aria-labelledby={idTitulo} className="flex flex-col gap-4">
+      <h2 id={idTitulo} className="pr-24 font-display text-titulo-1 font-black">Proponer una opción</h2>
       <label className="flex flex-col gap-1.5">
         <span className="text-etiqueta">¿Para qué votación?</span>
         <select
@@ -85,7 +99,7 @@ function ProponerOpcion({ viajeId, votaciones }: { viajeId: string; votaciones: 
         <Button type="submit" variant="secundario" disabled={proponer.isPending}>
           Proponer
         </Button>
-        <Button variant="fantasma" onClick={() => setAbierto(false)}>
+        <Button variant="fantasma" onClick={onCerrar}>
           Cancelar
         </Button>
       </div>
@@ -93,11 +107,10 @@ function ProponerOpcion({ viajeId, votaciones }: { viajeId: string; votaciones: 
   )
 }
 
-function CrearVotacion({ viajeId }: { viajeId: string }) {
+function CrearVotacion({ viajeId, idTitulo, onCerrar }: { viajeId: string; idTitulo: string; onCerrar: () => void }) {
   const crear = useCrearVotacion(viajeId)
-  const [abierto, setAbierto] = useState(false)
   const [pregunta, setPregunta] = useState('')
-  const [categoria, setCategoria] = useState<'destino' | 'fechas' | 'alojamiento' | 'actividad' | 'comida'>('actividad')
+  const [categoria, setCategoria] = useState<CategoriaVotacion>('actividad')
   const [error, setError] = useState<string>()
 
   function enviar(evento: FormEvent) {
@@ -108,39 +121,31 @@ function CrearVotacion({ viajeId }: { viajeId: string }) {
       return
     }
     setError(undefined)
-    crear.mutate(resultado.data, {
-      onSuccess: () => {
-        setPregunta('')
-        setAbierto(false)
-      },
-    })
-  }
-
-  if (!abierto) {
-    return <Button variant="secundario" icon={Plus} className="self-start" onClick={() => setAbierto(true)}>Crear votación</Button>
+    crear.mutate(resultado.data, { onSuccess: onCerrar })
   }
 
   return (
-    <form onSubmit={enviar} noValidate className="flex flex-col gap-4 rounded-lg trazo bg-papel-hundido p-5">
+    <form onSubmit={enviar} noValidate aria-labelledby={idTitulo} className="flex flex-col gap-4">
+      <h2 id={idTitulo} className="pr-24 font-display text-titulo-1 font-black">Crear votación</h2>
       <TextField label="¿Qué quieren decidir?" placeholder="¿Dónde nos alojamos?" value={pregunta} error={error} onChange={(evento) => setPregunta(evento.target.value)} />
       <label className="flex flex-col gap-1.5">
         <span className="text-etiqueta">Categoría</span>
         <select
           value={categoria}
-          onChange={(evento) => setCategoria(evento.target.value as typeof categoria)}
+          onChange={(evento) => setCategoria(CategoriaVotacionSchema.parse(evento.target.value))}
           className="min-h-control rounded-sm trazo bg-papel-elevado px-4 font-semibold shadow-chica"
         >
-          <option value="destino">Destino</option>
-          <option value="fechas">Fechas</option>
-          <option value="alojamiento">Alojamiento</option>
-          <option value="actividad">Actividad</option>
-          <option value="comida">Comida</option>
+          {CATEGORIAS.map(({ id, nombre }) => (
+            <option key={id} value={id}>
+              {nombre}
+            </option>
+          ))}
         </select>
       </label>
       {crear.isError && <p role="alert" className="font-semibold text-negativo">No pudimos crear la votación. Revisá la conexión y probá de nuevo.</p>}
       <div className="flex gap-3">
         <Button type="submit" variant="secundario" disabled={crear.isPending}>{crear.isPending ? 'Guardando…' : 'Crear'}</Button>
-        <Button variant="fantasma" onClick={() => setAbierto(false)}>Cancelar</Button>
+        <Button variant="fantasma" onClick={onCerrar}>Cancelar</Button>
       </div>
     </form>
   )
@@ -182,44 +187,88 @@ function Requisitos({ viajeId, editable }: { viajeId: string; editable: boolean 
   )
 }
 
-/** Listas: lo que el grupo tiene que decidir y lo que cada uno tiene que llevar. */
+/** Listas: las votaciones del grupo, lo que cada uno tiene que llevar y los requisitos. */
 export function Listas() {
   const { viaje, etapa } = useViajeActual()
   const votaciones = useVotaciones(viaje.id)
   const editable = puedeEditar(viaje.personas)
   const soloLectura = etapa === 'post' || !editable
+  /* En Post-viaje las votaciones quedan como recuerdo: ni quien organiza las toca. */
+  const administra = etapa !== 'post' && esOrganizador(viaje.personas)
+  const [formulario, setFormulario] = useState<'crear' | 'proponer' | { editar: Votacion } | null>(null)
+  const ventana = useRef<HTMLDialogElement>(null)
+  const idTitulo = useId()
 
+  /* Se abre después de pintar el formulario: showModal enfoca su primer campo. */
+  useEffect(() => {
+    if (formulario && !ventana.current?.open) ventana.current?.showModal()
+  }, [formulario])
 
   const abiertas = votaciones.data?.filter((votacion) => votacion.estado === 'abierta') ?? []
   const cerradas = votaciones.data?.filter((votacion) => votacion.estado !== 'abierta') ?? []
+  /* Cerrar la ventana dispara su onClose, que es el que limpia el formulario. */
+  const cerrarFormulario = () => ventana.current?.close()
 
   return (
     <>
-      <TituloPantalla titulo="Lo que falta resolver" pinz="valija" />
       <div className="flex flex-col gap-12">
-        <section aria-labelledby="por-decidir" className="flex flex-col gap-5">
-          <h3 id="por-decidir" className="font-display text-titulo-1 font-black lg:text-display">Por decidir</h3>
+        <section aria-labelledby="votaciones" className="flex flex-col gap-5">
+          <h2 id="votaciones" className="font-display text-titulo-1 font-black lg:text-display">Votaciones grupales</h2>
+          {!soloLectura && (
+            <div className="flex flex-wrap gap-3">
+              <Button variant="secundario" icon={Plus} aria-haspopup="dialog" onClick={() => setFormulario('crear')}>
+                Crear votación
+              </Button>
+              {abiertas.length > 0 && (
+                <Button variant="secundario" icon={Plus} aria-haspopup="dialog" onClick={() => setFormulario('proponer')}>
+                  Proponer una opción
+                </Button>
+              )}
+            </div>
+          )}
+          <Ventana ventanaRef={ventana} idTitulo={idTitulo} onClose={() => setFormulario(null)}>
+            <CaminosDeLaVentana />
+            {/* Como en el ingreso: sin el contorno del foco, el campo activo ya se marca con su sombra más grande. */}
+            <div className="relative [&_input]:outline-none">
+              {formulario === 'crear' && <CrearVotacion viajeId={viaje.id} idTitulo={idTitulo} onCerrar={cerrarFormulario} />}
+              {formulario === 'proponer' && abiertas.length > 0 && (
+                <ProponerOpcion viajeId={viaje.id} abiertas={abiertas} idTitulo={idTitulo} onCerrar={cerrarFormulario} />
+              )}
+              {typeof formulario === 'object' && formulario !== null && (
+                <EditarVotacion key={formulario.editar.id} votacion={formulario.editar} idTitulo={idTitulo} onCerrar={cerrarFormulario} />
+              )}
+            </div>
+          </Ventana>
           {votaciones.isPending && <p className="text-tinta-suave">Cargando las votaciones…</p>}
           {votaciones.error && <NoCargo error={votaciones.error} onReintentar={() => votaciones.refetch()} />}
           {votaciones.data && abiertas.length === 0 && (
-            <PinzNote tipo="vacio" pinz="chispa" title="No hay nada por decidir">
+            <PinzNote tipo="vacio" pinz="chispa" title="No hay votaciones abiertas">
               Guarden acá los planes que aparezcan y después los votan.
             </PinzNote>
           )}
           {abiertas.length > 0 && (
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {abiertas.map((votacion) => (
-                <TarjetaVotacion key={votacion.id} votacion={votacion} personas={viaje.personas} soloLectura={soloLectura} />
+                <TarjetaVotacion
+                  key={votacion.id}
+                  votacion={votacion}
+                  personas={viaje.personas}
+                  soloLectura={soloLectura}
+                  onEditar={administra ? () => setFormulario({ editar: votacion }) : undefined}
+                />
               ))}
             </div>
           )}
-          {!soloLectura && <CrearVotacion viajeId={viaje.id} />}
-          {!soloLectura && votaciones.data && <ProponerOpcion viajeId={viaje.id} votaciones={votaciones.data} />}
           {cerradas.length > 0 && (
-            <Desplegable titulo="Ya decidido" abierta={false}>
-              <div className="grid gap-6 lg:grid-cols-2">
+            <Desplegable titulo="Votaciones cerradas" abierta={false}>
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {cerradas.map((votacion) => (
-                  <TarjetaVotacion key={votacion.id} votacion={votacion} personas={viaje.personas} soloLectura />
+                  <TarjetaVotacion
+                    key={votacion.id}
+                    votacion={votacion}
+                    personas={viaje.personas}
+                    soloLectura
+                  />
                 ))}
               </div>
             </Desplegable>

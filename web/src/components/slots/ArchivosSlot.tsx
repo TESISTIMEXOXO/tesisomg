@@ -3,17 +3,20 @@ import { useId, useState, type DragEvent } from 'react'
 import { tamanoDeArchivo } from '../../lib/moneda'
 import type { Documento } from '../../types/documento'
 
+type ArchivoListado = Pick<Documento, 'id' | 'nombre' | 'tipo' | 'tamano'>
+
 export type ArchivosSlotProps = {
-  archivos: Pick<Documento, 'id' | 'nombre' | 'tipo' | 'tamano'>[]
+  archivos: ArchivoListado[]
   onSubir: (archivo: File) => void
-  onAbrir: (id: string) => void
+  /** Con el nombre, para que la vista se abra con su título mientras llega el archivo. */
+  onAbrir: (archivo: ArchivoListado) => void
   /** Qué se espera subir, para el texto de la zona de arrastre. */
   ayuda?: string
 }
 
 /**
  * Slot de archivos. El front muestra la lista y recibe el archivo; guardarlo,
- * abrirlo y dejarlo disponible sin conexión lo resuelve el backend.
+ * entregarlo para verlo y dejarlo disponible sin conexión lo resuelve el backend.
  */
 export function ArchivosSlot({ archivos, onSubir, onAbrir, ayuda = 'Vouchers, pasajes o seguros, en PDF o foto.' }: ArchivosSlotProps) {
   const idInput = useId()
@@ -34,7 +37,7 @@ export function ArchivosSlot({ archivos, onSubir, onAbrir, ayuda = 'Vouchers, pa
             <li key={archivo.id}>
               <button
                 type="button"
-                onClick={() => onAbrir(archivo.id)}
+                onClick={() => onAbrir(archivo)}
                 className="flex min-h-toque w-full items-center gap-3 rounded-md trazo bg-papel-elevado px-4 py-2.5 text-left shadow-chica"
               >
                 <span aria-hidden className="grid size-9 flex-none place-items-center rounded-sm trazo-fino tema-claro bg-cielo">

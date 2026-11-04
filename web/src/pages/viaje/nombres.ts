@@ -11,3 +11,8 @@ export function nombreEnElGrupo(personas: Persona[], id: string | null) {
 export function puedeEditar(personas: Persona[]) {
   return personas.find((p) => p.esVos)?.rol !== 'lector'
 }
+
+/** Si quien usa la app organiza el viaje: puede editar y borrar votaciones, y cambiar roles. */
+export function esOrganizador(personas: Persona[]) {
+  return personas.find((p) => p.esVos)?.rol === 'organizador'
+}

@@ -17,7 +17,7 @@ export function Tarjeta({ titulo, extra, fondo = 'bg-papel-elevado', className =
     <section className={`flex flex-col gap-3 rounded-lg trazo p-4 shadow-grande md:p-6 ${fondo} ${className}`}>
       {(titulo || extra) && (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          {titulo && <h2 className="font-display text-titulo-1 font-black">{titulo}</h2>}
+          {titulo && <h2 className="min-w-0 font-display text-titulo-1 font-black">{titulo}</h2>}
           {extra}
         </div>
       )}

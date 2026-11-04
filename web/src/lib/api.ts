@@ -1,4 +1,5 @@
 import type { z } from 'zod'
+import { guardarArchivo } from './guardarArchivo'
 
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000'
 
@@ -34,17 +35,18 @@ export async function pedir<T>(ruta: string, { method = 'GET', body, schema }: O
   if (schema) return schema.parse(await respuesta.json())
 }
 
-export async function bajarArchivo(ruta: string) {
+/** Trae un archivo con su nombre y su tipo, sin guardarlo: sirve para verlo en la página o para bajarlo. */
+export async function traerArchivo(ruta: string) {
   const respuesta = await fetch(`${API_URL}${ruta}`, { credentials: 'include' })
   if (!respuesta.ok) {
     const cuerpo: unknown = await respuesta.json().catch(() => null)
     throw new ErrorApi(respuesta.status, `GET ${ruta} respondió ${respuesta.status}`, cuerpo)
   }
   const blob = await respuesta.blob()
-  const url = URL.createObjectURL(blob)
-  const enlace = document.createElement('a')
-  enlace.href = url
-  enlace.download = decodeURIComponent(respuesta.headers.get('Content-Disposition')?.split("filename*=UTF-8''")[1] ?? 'documento')
-  enlace.click()
-  URL.revokeObjectURL(url)
+  const nombre = decodeURIComponent(respuesta.headers.get('Content-Disposition')?.split("filename*=UTF-8''")[1] ?? 'documento')
+  return new File([blob], nombre, { type: blob.type })
+}
+
+export async function bajarArchivo(ruta: string) {
+  guardarArchivo(await traerArchivo(ruta))
 }

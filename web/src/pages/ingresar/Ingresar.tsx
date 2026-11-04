@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { CaminosDeLaVentana } from '../../components/marca/CaminosDeLaVentana'
 import { AuthSlot } from '../../components/slots/AuthSlot'
 import { Button } from '../../components/ui/Button'
 import { TextField } from '../../components/ui/TextField'
@@ -65,24 +66,6 @@ export function Ingresar() {
         {paso === 'recuperar' && <Recuperar {...props} />}
       </div>
     </Ventana>
-  )
-}
-
-/** Dos tramos del camino de la landing, en las esquinas de la ventana. Quedan detrás del contenido. */
-function CaminosDeLaVentana() {
-  const tramos = [
-    { d: 'M30 -16C30 50 100 104 206 104', lugar: 'top-0 right-0 origin-top-right', ancho: 190, alto: 120 },
-    { d: 'M-16 16C60 16 130 60 130 126', lugar: 'bottom-0 left-0 origin-bottom-left', ancho: 150, alto: 110 },
-  ]
-  return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-lg">
-      {tramos.map(({ d, lugar, ancho, alto }) => (
-        <svg key={lugar} width={ancho} height={alto} className={`absolute max-md:scale-60 ${lugar}`}>
-          <path d={d} fill="none" strokeWidth={22} strokeLinecap="round" className="stroke-contorno" />
-          <path d={d} fill="none" strokeWidth={16} strokeLinecap="round" className="stroke-cielo" />
-        </svg>
-      ))}
-    </div>
   )
 }
 

@@ -323,6 +323,12 @@
     line-height: 24px;
     font-weight: 500;
     -webkit-font-smoothing: antialiased;
+    /*
+     * Lo que escribe la gente (nombres de viaje, votaciones) puede ser una palabra sin espacios más ancha
+     * que el celular: así se parte en vez de salirse. No achica a nadie (anywhere sí, y partía "Previaje"),
+     * así que el título que vive en un flex necesita además min-w-0 o max-w-full.
+     */
+    overflow-wrap: break-word;
   }
 
   /*
@@ -348,4 +354,17 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+}
+
+/*
+ * El fondo de la app: caminos como los de la landing, que bajan con la página. Dos bandas cruzan de lado a lado
+ * en direcciones opuestas, una vuelta entra y sale por cada costado, y dos caminos pasan de un dibujo al siguiente
+ * (en x = 600 y en x = 1080): salen por abajo y el siguiente dibujo los retoma arriba con un tramo recto y vertical,
+ * así no se nota la unión. Ninguno se cruza y la distancia entre ellos es pareja.
+ * El SVG es solo la máscara; el color lo pone un bg-* del mismo elemento. En mobile se ve el centro a tamaño real.
+ */
+@utility fondo-caminos {
+  --caminos: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='1200' viewBox='0 0 1440 1200' fill='none' stroke='black' stroke-width='44' stroke-linecap='round'%3E%3Cpath d='M-40 200C180 120 330 330 560 280S900 90 1120 170S1380 330 1480 260'/%3E%3Cpath d='M-40 420C140 400 270 470 250 540S90 620 -40 600'/%3E%3Cpath d='M1480 370C1300 345 1120 390 1095 470S1180 585 1320 575S1440 560 1480 570'/%3E%3Cpath d='M1480 720C1260 660 1180 850 960 820S620 580 420 660S120 880 -40 800'/%3E%3Cpath d='M1480 950C1340 935 1210 990 1130 1010S1080 1110 1080 1160L1080 1240'/%3E%3Cpath d='M1080 -40L1080 0C1080 50 1150 75 1260 65S1430 30 1480 30'/%3E%3Cpath d='M-40 1010C260 1000 600 1040 600 1140L600 1240'/%3E%3Cpath d='M600 -40L600 30C600 110 470 120 300 90S60 40 -40 60'/%3E%3C/svg%3E");
+  -webkit-mask: var(--caminos) top center / max(100%, 1440px) auto repeat-y;
+  mask: var(--caminos) top center / max(100%, 1440px) auto repeat-y;
 }

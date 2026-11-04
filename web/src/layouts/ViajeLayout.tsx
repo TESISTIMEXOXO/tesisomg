@@ -1,6 +1,7 @@
 import { Briefcase, CalendarDays, House, ListChecks, Plus, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { Outlet, useMatch, useParams } from 'react-router-dom'
+import { CaminosDeFondo } from '../components/marca/CaminosDeFondo'
 import { Cargando, NoCargo } from '../components/marca/Estados'
 import { CompartirUbicacion } from '../components/slots/CompartirUbicacion'
 import { BottomNav, type ItemNav } from '../components/ui/BottomNav'
@@ -32,6 +33,7 @@ export function ViajeLayout() {
   const items = secciones(id)
 
   let contenido
+  let compartirUbicacion = null
   // Emergencias nunca lleva pinz, ni siquiera mientras carga.
   if (isPending) contenido = enEmergencias ? <p role="status">Cargando el viaje…</p> : <Cargando />
   else if (error) {
@@ -44,18 +46,19 @@ export function ViajeLayout() {
     // La etapa sale de las fechas. El selector para mirar otra etapa existe solo en desarrollo.
     const etapa = import.meta.env.DEV && etapaElegida?.viajeId === viaje.id ? etapaElegida.etapa : etapaDelViaje(viaje)
     const contexto: ContextoViaje = { viaje, etapa }
+    if (etapa === 'viaje') compartirUbicacion = <CompartirUbicacion key={viaje.id} viajeId={viaje.id} />
     contenido = (
       <>
         <EncabezadoViaje viaje={viaje} etapa={etapa} onCambiarEtapa={(nueva) => setEtapaElegida({ viajeId: viaje.id, etapa: nueva })} />
-        {etapa === 'viaje' && <CompartirUbicacion key={viaje.id} viajeId={viaje.id} />}
         <div className="pt-8 lg:pt-12">
           <Outlet context={contexto} />
         </div>
+        {/* En mobile, este atajo va en el encabezado, debajo de "Editar viaje". */}
         {etapa === 'viaje' && (
           <ButtonLink
             to={`/viajes/${viaje.id}/cuentas#nuevo-gasto`}
             icon={Plus}
-            className="fixed right-4 bottom-27 z-20 lg:right-10"
+            className="fixed right-4 bottom-27 z-20 max-md:hidden lg:right-10"
           >
             Agregar gasto
           </ButtonLink>
@@ -65,10 +68,11 @@ export function ViajeLayout() {
   }
 
   return (
-    <>
-      {!enEmergencias && <BarraSuperior />}
+    <div className="relative isolate min-h-dvh">
+      <CaminosDeFondo />
+      {!enEmergencias && <BarraSuperior antesDelPerfil={compartirUbicacion} />}
       <main className="mx-auto max-w-contenido px-4 pt-4 pb-29 md:px-6 lg:px-10 lg:pt-8">{contenido}</main>
       <BottomNav items={items} sosTo={`/viajes/${id}/emergencias`} />
-    </>
+    </div>
   )
 }

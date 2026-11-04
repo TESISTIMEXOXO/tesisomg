@@ -15,7 +15,7 @@ import { direccionDe } from '../../../lib/saldo'
 import { conMayuscula } from '../../../lib/texto'
 import { IrAAgregarGasto } from '../IrAAgregarGasto'
 import { nombreEnElGrupo, puedeEditar } from '../nombres'
-import { TarjetaVotacion } from '../TarjetaVotacion'
+import { PorDecidir } from './PorDecidir'
 
 /** Previaje: ¿qué falta decidir y quién lo resuelve? */
 export function ResumenPrevaje() {
@@ -30,8 +30,6 @@ export function ResumenPrevaje() {
   if (resumen.error) return <NoCargo error={resumen.error} onReintentar={() => resumen.refetch()} />
   if (votaciones.error) return <NoCargo error={votaciones.error} onReintentar={() => votaciones.refetch()} />
 
-  const abiertas = votaciones.data.filter((v) => v.estado === 'abierta')
-  const principal = abiertas.find((v) => v.votoPropio === null) ?? abiertas[0]
   const { hechas, total } = resumen.data.checklist
   const proximas = (listas.data ?? []).flatMap((lista) => lista.items).filter((item) => !item.hecha).slice(0, 3)
   const pendienteDePlata = saldos.data?.saldos.find((s) => direccionDe(s.monto) === 'pendiente')
@@ -39,7 +37,7 @@ export function ResumenPrevaje() {
   return (
     <>
       <TituloPantalla titulo={tituloPrevaje(viaje.fechaIda)} />
-      <div className="grid gap-8 lg:grid-cols-3 lg:gap-7">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-7">
       <div className="flex flex-col gap-8 lg:col-span-2 lg:gap-7">
         {resumen.data.pendientes.length > 0 && (
           <section aria-label="Tus pendientes" className="rounded-lg trazo bg-sol-tinte p-4 shadow-dura">
@@ -54,13 +52,7 @@ export function ResumenPrevaje() {
             </ul>
           </section>
         )}
-        {principal ? (
-          <TarjetaVotacion votacion={principal} personas={viaje.personas} soloLectura={!puedeEditar(viaje.personas)} />
-        ) : (
-          <Tarjeta titulo="Por decidir">
-            <p className="text-tinta-suave">No hay votaciones abiertas. Proponé algo desde Listas.</p>
-          </Tarjeta>
-        )}
+        <PorDecidir viajeId={viaje.id} votaciones={votaciones.data} personas={viaje.personas} soloLectura={!puedeEditar(viaje.personas)} />
       </div>
 
       <div className="flex flex-col gap-8 lg:gap-7">
@@ -69,7 +61,7 @@ export function ResumenPrevaje() {
             Tocá un avatar del encabezado para ver qué le falta a cada uno.
           </PinzNote>
         )}
-        <Tarjeta titulo="Para llevar" extra={<span className="font-display text-titulo-1 font-black numeros">{hechas}/{total}</span>}>
+        <Tarjeta titulo="Checklist" extra={<span className="font-display text-titulo-1 font-black numeros">{hechas}/{total}</span>}>
           <div
             role="progressbar"
             aria-label="Lo que falta llevar"

@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import * as baul from '../services/baul'
+import type { Documento } from '../types/documento'
 
 
 export function useRequisitos(viajeId: string) {
@@ -33,8 +35,30 @@ export function useSubirDocumentoPersonal() {
   })
 }
 
-export function useAbrirDocumento() {
-  return useMutation({ mutationFn: (id: string) => baul.abrirDocumento(id) })
+/** El archivo de un documento, mientras esté abierto (id distinto de null). Un archivo no cambia: se trae una vez. */
+export function useArchivoDocumento(id: string | null) {
+  return useQuery({
+    queryKey: ['documentos', id, 'archivo'],
+    queryFn: () => baul.archivoDocumento(id ?? ''),
+    enabled: id !== null,
+    staleTime: Infinity,
+  })
+}
+
+/** Qué documento está abierto y lo que necesita VistaArchivo para mostrarlo. */
+export function useVistaDocumento() {
+  const [abierto, setAbierto] = useState<Pick<Documento, 'id' | 'nombre'> | null>(null)
+  const archivo = useArchivoDocumento(abierto?.id ?? null)
+  return {
+    abrir: setAbierto,
+    vista: {
+      nombre: abierto?.nombre ?? null,
+      archivo: archivo.data,
+      error: archivo.error,
+      onReintentar: () => void archivo.refetch(),
+      onClose: () => setAbierto(null),
+    },
+  }
 }
 
 export function useSubirDocumento(viajeId: string) {

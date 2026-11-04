@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { zonaHoraria } from '../lib/zonasHorarias'
 import * as lugares from '../services/viajes'
 import { useSesion } from './auth'
 import * as viajes from '../services/viajes'
@@ -47,14 +48,24 @@ export function useEmergencias(id: string) {
 }
 
 /** El país de unas coordenadas. Redondea a ~1 km para no volver a preguntar con cada paso. */
+/* Redondeado a ~1 km: mover el punto unos metros no tiene por qué cambiar el país ni volver a preguntar. */
+const redondear = (grados: number) => Math.round(grados * 100) / 100
+
+function consultaPais(lat: number, lng: number) {
+  return { queryKey: ['lugares', 'pais', lat, lng], queryFn: () => viajes.paisEn(lat, lng), staleTime: Infinity }
+}
+
 export function usePaisEn(coordenadas: { lat: number; lng: number } | null) {
-  const lat = coordenadas ? Math.round(coordenadas.lat * 100) / 100 : null
-  const lng = coordenadas ? Math.round(coordenadas.lng * 100) / 100 : null
-  return useQuery({
-    queryKey: ['lugares', 'pais', lat, lng],
-    queryFn: () => viajes.paisEn(lat!, lng!),
-    enabled: lat !== null && lng !== null,
-    staleTime: Infinity,
+  const lat = coordenadas ? redondear(coordenadas.lat) : null
+  const lng = coordenadas ? redondear(coordenadas.lng) : null
+  return useQuery({ ...consultaPais(lat ?? 0, lng ?? 0), enabled: lat !== null && lng !== null })
+}
+
+/** La zona horaria de cada lugar, en el mismo orden. null mientras se averigua el país o si no está en la tabla. */
+export function useZonasHorarias(puntos: { lat: number; lng: number }[]) {
+  return useQueries({
+    queries: puntos.map(({ lat, lng }) => consultaPais(redondear(lat), redondear(lng))),
+    combine: (resultados) => resultados.map((resultado, i) => zonaHoraria(resultado.data?.codigo ?? null, puntos[i].lat, puntos[i].lng)),
   })
 }
 

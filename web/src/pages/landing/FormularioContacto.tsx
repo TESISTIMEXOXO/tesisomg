@@ -9,8 +9,13 @@ import { ConsultaSchema } from '../../types/contacto'
 
 type Errores = Partial<Record<'email' | 'asunto' | 'descripcion', string>>
 
+type FormularioContactoProps = {
+  /** En el pie va como un link más de la lista; en Preguntas, como botón. */
+  comoLink?: string
+}
+
 /** El botón "Escribinos" y la ventana con el formulario. La consulta queda guardada y a la persona le llega un mail. */
-export function FormularioContacto() {
+export function FormularioContacto({ comoLink }: FormularioContactoProps) {
   const ventana = useRef<HTMLDialogElement>(null)
   const idTitulo = useId()
   const idDescripcion = useId()
@@ -59,9 +64,15 @@ export function FormularioContacto() {
 
   return (
     <>
-      <Button variant="secundario" iconRight={ChevronRight} onClick={abrir}>
-        Escribinos
-      </Button>
+      {comoLink ? (
+        <button type="button" className={comoLink} onClick={abrir}>
+          Escribinos
+        </button>
+      ) : (
+        <Button variant="secundario" iconRight={ChevronRight} onClick={abrir}>
+          Escribinos
+        </Button>
+      )}
       <Ventana ventanaRef={ventana} idTitulo={idTitulo} onClose={alCerrar}>
           {enviar.isSuccess ? (
             <div role="status" className="flex flex-col items-start gap-4 pr-10">

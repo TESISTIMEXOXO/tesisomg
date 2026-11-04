@@ -27,7 +27,7 @@ function enProgreso(puntos: readonly Punto[], progreso: number) {
 }
 
 /**
- * Los caminantes se mueven con offset-path, que el navegador recalcula en cada cuadro aunque estén fuera de pantalla.
+ * Cada caminante son varias animaciones que corren aunque esté fuera de pantalla.
  * Acá se pausan y se esconden los que no se ven, y al volver retoman donde estarían si nunca hubieran frenado.
  * `montados` avisa que se sumaron caminantes: entran de a poco para no trabar la página.
  */
@@ -72,12 +72,15 @@ export function useCaminantesEnPantalla(contenedor: HTMLElement | null, recorrid
       const [caminata] = elemento.getAnimations()
       const nombre = elemento.dataset.trazo ?? ''
       const puntos = recorridos[nombre]
-      if (!caminata || !puntos) return []
+      /* Se lee una vez: leerlo en cada revisión, después de esconder a otro, obliga a recalcular los estilos. */
+      const { delay, duration } = caminata?.effect?.getComputedTiming() ?? {}
+      if (!puntos || typeof duration !== 'number' || !duration) return []
       const humo = elemento.nextElementSibling instanceof HTMLElement && elemento.nextElementSibling.dataset.humo ? elemento.nextElementSibling : null
       return [
         {
           elemento,
-          caminata,
+          demora: Number(delay),
+          duracion: duration,
           puntos,
           origen: origenes.current[nombre] ?? 0,
           animaciones: elemento.getAnimations({ subtree: true }),
@@ -102,11 +105,9 @@ export function useCaminantesEnPantalla(contenedor: HTMLElement | null, recorrid
       const seVe = vista(MARGEN)
       const estaAdentro = vista(ASOMA)
 
-      for (const { elemento, caminata, puntos, origen, animaciones, humo, animacionesHumo, progresoHumo } of caminantes) {
-        const { delay, duration } = caminata.effect?.getComputedTiming() ?? {}
-        if (typeof duration !== 'number' || !duration) continue
-        const transcurrido = (((ahora - origen - Number(delay)) % duration) + duration) % duration
-        const progreso = transcurrido / duration
+      for (const { elemento, demora, duracion, puntos, origen, animaciones, humo, animacionesHumo, progresoHumo } of caminantes) {
+        const transcurrido = (((ahora - origen - demora) % duracion) + duracion) % duracion
+        const progreso = transcurrido / duracion
         const punto = enProgreso(puntos, progreso)
         if (!revisados.current.has(elemento)) {
           revisados.current.add(elemento)
@@ -116,18 +117,28 @@ export function useCaminantesEnPantalla(contenedor: HTMLElement | null, recorrid
         encender(elemento, animaciones, seVe(punto) && !esperando.current.has(elemento), origen)
 
         if (humo) {
-          const cerca = Math.abs(progreso - progresoHumo) * duration < VENTANA_HUMO_MS
+          const cerca = Math.abs(progreso - progresoHumo) * duracion < VENTANA_HUMO_MS
           encender(humo, animacionesHumo, cerca && seVe(enProgreso(puntos, progresoHumo)), origen)
         }
       }
     }
 
+    /* El scroll dispara varios eventos por cuadro: con una revisión por cuadro alcanza. */
+    let pedido = 0
+    const alScrollear = () => {
+      if (!pedido) pedido = requestAnimationFrame(() => {
+        pedido = 0
+        revisar()
+      })
+    }
+
     revisar()
     const intervalo = window.setInterval(revisar, CADA_MS)
-    window.addEventListener('scroll', revisar, { passive: true })
+    window.addEventListener('scroll', alScrollear, { passive: true })
     return () => {
       window.clearInterval(intervalo)
-      window.removeEventListener('scroll', revisar)
+      cancelAnimationFrame(pedido)
+      window.removeEventListener('scroll', alScrollear)
     }
   }, [contenedor, recorridos, montados])
 }

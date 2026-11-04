@@ -7,8 +7,6 @@
   --animate-bob: lp-bob 3.6s ease-in-out infinite;
   --animate-jump: lp-jump 2.8s var(--ease-rebote) infinite;
   --animate-cinta: lp-cinta 36s linear infinite;
-  /* La duración y el desfase de cada pinz que camina salen del largo del camino. */
-  --animate-camino: lp-camino 1s linear infinite;
   --animate-paso: lp-paso 0.7s ease-in-out infinite;
   /* steps: si el navegador no entiende el linear() que les pone Camino, no hay explosión y nada se rompe. */
   --animate-llegada: lp-llegada 1s steps(1, end) infinite;
@@ -17,6 +15,7 @@
   --animate-asoma: pz-asoma 0.45s var(--ease-rebote) 1;
   --animate-ventana: pz-ventana 0.25s var(--ease-rebote) 1;
   --animate-fundido: pz-fundido 0.2s ease-out 1 both;
+  --animate-copiado: pz-copiado 1.8s var(--ease-rebote) 1 both;
   /* Arranca lento: el tramo que se ve al entrar se dibuja con calma y el resto de la página, de corrido. */
   --animate-trazar: lp-trazar 3s cubic-bezier(0.55, 0.055, 0.675, 0.19) 1 backwards;
 
@@ -47,15 +46,6 @@
   @keyframes lp-cinta {
     to {
       transform: translateX(-50%);
-    }
-  }
-
-  @keyframes lp-camino {
-    from {
-      offset-distance: 0%;
-    }
-    to {
-      offset-distance: 100%;
     }
   }
 
@@ -146,6 +136,22 @@
     }
   }
 
+  @keyframes pz-copiado {
+    0% {
+      transform: translateY(8px) scale(0.8);
+      opacity: 0;
+    }
+    15%,
+    80% {
+      transform: none;
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-6px);
+      opacity: 0;
+    }
+  }
+
   @keyframes pz-asoma {
     from {
       transform: translateY(6px) rotate(-6deg);
@@ -172,5 +178,20 @@
       transform-origin: left;
       animation: lp-barra 1.4s var(--ease-rebote) 0.3s both;
     }
+  }
+}
+
+/* Un bloque que se abre y se cierra animando el alto: la fila de la grilla pasa de 0fr a 1fr. */
+@utility despliegue {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease-out;
+
+  &[data-abierta='true'] {
+    grid-template-rows: 1fr;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
   }
 }

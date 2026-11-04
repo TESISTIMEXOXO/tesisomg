@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLocation } from 'react-router-dom'
 import { ComprobanteSlot } from '../../components/slots/ComprobanteSlot'
@@ -13,6 +14,12 @@ import type { Persona } from '../../types/persona'
 import type { Etapa } from '../../types/viaje'
 
 const PROPINAS = [0, 10, 15]
+
+const CASILLA_MARCADA: Record<Etapa, string> = {
+  previaje: 'peer-checked:bg-sol',
+  viaje: 'peer-checked:bg-mar',
+  post: 'peer-checked:bg-lavanda',
+}
 
 const aNumero = (texto: string) => (texto ? Number(texto.replace(/\./g, '')) : 0)
 const soloNumeros = (texto: string) => texto.replace(/[^\d.]/g, '')
@@ -165,15 +172,25 @@ export function FormularioGasto({ viajeId, etapa, personas, gasto, onListo }: Pr
             const elegida = participantes.includes(persona.id)
             return (
               <div key={persona.id} className="flex min-h-toque items-center gap-3">
-                <label className="flex flex-1 items-center gap-2">
+                <label className="flex min-h-toque flex-1 cursor-pointer items-center gap-3">
                   <input
                     type="checkbox"
                     checked={elegida}
                     onChange={(evento) => setParticipantes((actuales) =>
                       evento.target.checked ? [...actuales, persona.id] : actuales.filter((id) => id !== persona.id),
                     )}
+                    className="peer sr-only"
                   />
-                  {persona.nombre}{persona.esVos ? ' (vos)' : ''}
+                  <span
+                    aria-hidden
+                    className={`grid size-7 flex-none place-items-center rounded-sm trazo bg-papel-elevado text-tinta shadow-chica transition-[translate,box-shadow,background-color] duration-120 ease-rebote peer-checked:translate-0.5 peer-checked:shadow-none peer-focus-visible:outline-3 peer-focus-visible:outline-offset-3 motion-reduce:transition-none ${elegida ? 'tema-claro' : ''} ${CASILLA_MARCADA[etapa]}`}
+                  >
+                    {elegida && <Check size={18} strokeWidth={2} />}
+                  </span>
+                  <span className="font-display font-black">
+                    {persona.nombre}
+                    {persona.esVos && <span className="font-texto font-semibold text-tinta-suave"> (vos)</span>}
+                  </span>
                 </label>
                 {division === 'consumo' && elegida && (
                   <input

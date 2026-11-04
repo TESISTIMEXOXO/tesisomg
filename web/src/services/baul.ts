@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { bajarArchivo, pedir } from '../lib/api'
+import { pedir, traerArchivo } from '../lib/api'
 import { DocumentoSchema } from '../types/documento'
 import { RequisitoSchema } from '../types/tarea'
 
@@ -42,7 +42,7 @@ export function subirDocumentoPersonal(archivo: File) {
   return pedir('/documentos-personales', { method: 'POST', body: form, schema: DocumentoSchema })
 }
 
-/** El backend devuelve el link (o la copia guardada en el dispositivo, sin conexión). */
-export function abrirDocumento(id: string) {
-  return bajarArchivo(`/documentos/${encodeURIComponent(id)}`)
+/** El archivo del documento, para verlo en la app, bajarlo o compartirlo. */
+export function archivoDocumento(id: string) {
+  return traerArchivo(`/documentos/${encodeURIComponent(id)}`)
 }

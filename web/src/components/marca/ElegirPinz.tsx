@@ -5,14 +5,18 @@ import { Pin } from './Pin'
 type ElegirPinzProps = {
   valor: PinzId | null
   onElegir: (pinz: PinzId) => void
+  leyenda?: string
 }
 
-/** La grilla para elegir personalidad. Es la única pantalla de la app donde los pinz van grandes. */
-export function ElegirPinz({ valor, onElegir }: ElegirPinzProps) {
+/**
+ * La grilla para elegir personalidad. Es la única pantalla de la app donde los pinz van grandes.
+ * Mide su propio ancho y no el de la pantalla: cinco por fila si entran, si no dos. Con diez, las filas siempre quedan parejas.
+ */
+export function ElegirPinz({ valor, onElegir, leyenda = 'Elegí tu pinz' }: ElegirPinzProps) {
   return (
-    <fieldset>
-      <legend className="mb-3 text-etiqueta">Elegí tu pinz</legend>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+    <fieldset className="@container">
+      <legend className="mb-3 text-etiqueta">{leyenda}</legend>
+      <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-5">
         {PINZ_IDS.map((pinz) => {
           const elegido = pinz === valor
           return (
