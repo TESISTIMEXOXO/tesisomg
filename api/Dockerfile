@@ -2,6 +2,10 @@ FROM node:22-alpine
 
 WORKDIR /app
 
+# Copia el código con las imágenes de src/correo/encabezados/: así la imagen funciona sin el volumen
+# de docker-compose (en desarrollo, el volumen ./api:/app la tapa con los archivos locales).
+COPY . .
+
 EXPOSE 4000
 
 # Instala dependencias al arrancar (usa package-lock.json si existe) y corre el script "dev"
