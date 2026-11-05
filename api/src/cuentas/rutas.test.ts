@@ -523,3 +523,95 @@ test("un lector no puede escanear; un tipo no permitido da 400; una foto pesada,
   assert.equal((await subirComprobante("Nacho", viajeId, "image/jpeg", 4 * 1024 * 1024)).status, 413);
   assert.equal((await subirComprobante("Nacho", viajeId, "image/jpeg", 9 * 1024 * 1024)).status, 413);
 });
+
+type PersonaDelViaje = { id: string; nombre: string; rol: string };
+
+async function personasDe(viajeId: string, quien = "Nacho") {
+  return (await api<{ personas: PersonaDelViaje[] }>(quien, "GET", `/viajes/${viajeId}`)).cuerpo.personas;
+}
+
+test("el único organizador elige a quién deja la organización antes de salir", async () => {
+  const viajeId = await viajeVacio();
+  const salir = (cuerpo?: unknown) => api<{ error?: string }>("Nacho", "DELETE", `/viajes/${viajeId}/miembros/yo`, cuerpo);
+
+  const sinElegir = await salir();
+  assert.equal(sinElegir.status, 409);
+  assert.deepEqual(sinElegir.cuerpo, { error: "elegir-nuevo-organizador" });
+  // Alguien que no es del viaje no sirve como sucesor.
+  assert.equal((await salir({ nuevoOrganizador: new mongoose.Types.ObjectId().toString() })).status, 409);
+
+  assert.equal((await salir({ nuevoOrganizador: idDe("Fede") })).status, 204);
+  const personas = await personasDe(viajeId, "Fede");
+  assert.ok(!personas.some((persona) => persona.nombre === "Nacho"));
+  assert.equal(personas.find((persona) => persona.nombre === "Fede")?.rol, "organizador");
+});
+
+test("si queda otro organizador, se puede salir sin elegir", async () => {
+  const viajeId = await viajeVacio();
+  await api("Nacho", "PATCH", `/viajes/${viajeId}/miembros/${idDe("Santi")}`, { rol: "organizador" });
+  assert.equal((await api("Nacho", "DELETE", `/viajes/${viajeId}/miembros/yo`)).status, 204);
+});
+
+test("solo un organizador puede echar a alguien, y no con plata pendiente", async () => {
+  const viajeId = await viajeVacio();
+  const echar = (quien: string, a: string) => api<{ error?: string }>(quien, "DELETE", `/viajes/${viajeId}/miembros/${idDe(a)}`);
+
+  assert.equal((await echar("Fede", "Santi")).status, 403);
+  assert.equal((await echar("Nacho", "Nacho")).status, 400);
+
+  await api("Santi", "POST", `/viajes/${viajeId}/gastos`, { descripcion: "Taxi", monto: 400, division: "iguales", participantes: [idDe("Santi"), idDe("Pedro")] });
+  const conDeuda = await echar("Nacho", "Pedro");
+  assert.equal(conDeuda.status, 409);
+  assert.deepEqual(conDeuda.cuerpo, { error: "saldo-pendiente" });
+
+  assert.equal((await echar("Nacho", "Fede")).status, 200);
+  assert.ok(!(await personasDe(viajeId)).some((persona) => persona.nombre === "Fede"));
+  // Ya no es del viaje: no lo puede ver, y la respuesta le dice que lo sacaron y quién.
+  const visto = await api("Fede", "GET", `/viajes/${viajeId}`);
+  assert.equal(visto.status, 410);
+  assert.deepEqual(visto.cuerpo, { error: "te-sacaron", viaje: "Cabaña", por: "Nacho", baneado: false });
+  // A alguien que nunca estuvo le sigue diciendo que no existe.
+  assert.equal((await api("Pedro", "GET", `/viajes/${new mongoose.Types.ObjectId().toString()}`)).status, 404);
+});
+
+test("a la tercera vez que lo sacan, ya no puede volver al viaje", async () => {
+  const viajeId = await viajeVacio();
+  const codigo = crypto.randomUUID().replaceAll("-", "").slice(0, 6).toUpperCase();
+  await Viaje.updateOne({ _id: viajeId }, { $set: { codigoInvitacion: codigo } });
+  const echar = () => api("Nacho", "DELETE", `/viajes/${viajeId}/miembros/${idDe("Fede")}`);
+  const volver = () => api<{ error?: string }>("Fede", "POST", "/viajes/unirse", { codigo });
+  const vecesQueVe = async (quien: string) =>
+    (await personasDe(viajeId, quien)).find((persona) => persona.nombre === "Fede") as PersonaDelViaje & { vecesSacado?: number };
+
+  // Dos strikes: lo sacan y vuelve con el link guardado.
+  for (const vez of [1, 2]) {
+    assert.equal((await echar()).status, 200);
+    assert.equal((await volver()).status, 200);
+    // El organizador ve cuántas veces lo sacaron; el resto del grupo, no.
+    assert.equal((await vecesQueVe("Nacho")).vecesSacado, vez);
+    assert.equal((await vecesQueVe("Santi")).vecesSacado, undefined);
+  }
+  // Si después sale solo, no se le avisa como si lo hubieran sacado.
+  assert.equal((await api("Fede", "GET", `/viajes/${viajeId}`)).status, 200);
+
+  // Tercer strike: baneado.
+  assert.equal((await echar()).status, 200);
+  const visto = await api("Fede", "GET", `/viajes/${viajeId}`);
+  assert.equal(visto.status, 410);
+  assert.deepEqual(visto.cuerpo, { error: "te-sacaron", viaje: "Cabaña", por: "Nacho", baneado: true });
+
+  const otraVez = await volver();
+  assert.equal(otraVez.status, 403);
+  assert.deepEqual(otraVez.cuerpo, { error: "baneado", viaje: "Cabaña" });
+  assert.equal((await api("Fede", "GET", `/viajes/invitacion/${codigo}`)).status, 403);
+  assert.ok(!(await personasDe(viajeId)).some((persona) => persona.nombre === "Fede"));
+
+  // Tampoco se lo puede invitar por mail.
+  const invitacion = await api("Nacho", "POST", `/viajes/${viajeId}/invitar`, { email: "Fede@prueba.pinz" });
+  assert.equal(invitacion.status, 409);
+  assert.deepEqual(invitacion.cuerpo, { error: "persona-baneada" });
+
+  // A otro sí lo dejan volver.
+  assert.equal((await api("Nacho", "DELETE", `/viajes/${viajeId}/miembros/${idDe("Santi")}`)).status, 200);
+  assert.equal((await api("Santi", "POST", "/viajes/unirse", { codigo })).status, 200);
+});

@@ -18,6 +18,11 @@ export const config = {
   mongoUri,
   /** Dónde vive el front: CORS. */
   webUrl: process.env.WEB_URL || process.env.CORS_ORIGIN || "http://localhost:5173",
+  /**
+   * Desde dónde llega el navegador a la API (https://api.pinz.app): arma el link del calendario al que se
+   * suscriben Google y el iPhone. Sin esto, se usa el host del pedido.
+   */
+  apiUrlPublica: process.env.API_URL_PUBLICA?.trim() || null,
   /** Firma las cookies de sesión. En desarrollo hay uno fijo para no trabar a nadie. */
   sesionSecreto: produccion ? requerida("SESION_SECRETO") : process.env.SESION_SECRETO || "desarrollo-no-usar-en-produccion",
   superadminEmail: "pinz.tesis@gmail.com",

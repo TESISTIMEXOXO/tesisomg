@@ -4,11 +4,12 @@ import { z } from "zod";
 import { mandarInvitacion } from "../auth/mail.js";
 import { requiereSesion } from "../auth/sesion.js";
 import { netosDe } from "../cuentas/delViaje.js";
+import { estaBaneado, MAX_EXPULSIONES, vecesSacado } from "../expulsiones.js";
 import { conListasAlDia, listasDe } from "../listasDelViaje.js";
 import { Usuario } from "../modelos/Usuario.js";
 import { UbicacionCompartida } from "../modelos/UbicacionCompartida.js";
 import { Viaje } from "../modelos/Viaje.js";
-import { etapasDelViaje, filtroMiembro, puedeEditarViaje, registrarMovimiento, viajeDelMiembro, viajePublico } from "../viajePublico.js";
+import { esOrganizador, etapasDelViaje, filtroMiembro, puedeEditarViaje, registrarMovimiento, viajeDelMiembro, viajePublico } from "../viajePublico.js";
 
 export const rutasViajes = Router();
 rutasViajes.use(requiereSesion);
@@ -80,6 +81,11 @@ rutasViajes.get("/invitacion/:codigo", async (req, res) => {
     return;
   }
   const usuarioId = res.locals.usuarioId as string;
+  // El link guardado en un mail o un chat no sirve para volver: ni siquiera se muestra el viaje.
+  if (estaBaneado(viaje, usuarioId) && !viaje.miembros.some((miembro) => miembro.usuarioId.toString() === usuarioId)) {
+    res.status(403).json({ error: "baneado", viaje: viaje.nombre });
+    return;
+  }
   const quienInvita = await Usuario.findById(viaje.creadoPor).select("nombre").exec();
   const resumen = viajePublico(viaje, usuarioId);
   res.json({
@@ -120,6 +126,10 @@ rutasViajes.post("/unirse", async (req, res) => {
     return;
   }
   if (!viaje.miembros.some((miembro) => miembro.usuarioId.toString() === usuarioId)) {
+    if (estaBaneado(viaje, usuarioId)) {
+      res.status(403).json({ error: "baneado", viaje: viaje.nombre });
+      return;
+    }
     viaje.miembros.push({
       usuarioId: usuario._id,
       nombre: usuario.nombre || "Integrante",
@@ -127,6 +137,9 @@ rutasViajes.post("/unirse", async (req, res) => {
       rol: "miembro",
     });
     registrarMovimiento(viaje, `${usuario.nombre || "Alguien"} se sumó al viaje`);
+    // Si lo habían sacado y vuelve con el código, ya no hay nada que avisarle. Las veces quedan: cuentan para el baneo.
+    const expulsion = viaje.expulsados.find((expulsado) => expulsado.usuarioId.toString() === usuarioId);
+    if (expulsion) expulsion.avisar = false;
     await viaje.save();
   }
   res.json(viajePublico(viaje, usuarioId));
@@ -252,6 +265,10 @@ rutasViajes.post("/:id/invitar", async (req, res) => {
     res.status(409).json({ error: "ya-es-miembro" });
     return;
   }
+  if (yaEsMiembro && estaBaneado(viaje, yaEsMiembro.id)) {
+    res.status(409).json({ error: "persona-baneada" });
+    return;
+  }
   await mandarInvitacion(correo, { nombre: viaje.nombre, destino: viaje.destino, codigo: viaje.codigoInvitacion }, quienInvita.nombre);
   res.status(204).end();
 });
@@ -314,7 +331,17 @@ rutasViajes.patch("/:id/miembros/:personaId", async (req, res) => {
   res.json(viajePublico(viaje, usuarioId));
 });
 
+/*
+ * Salir del viaje. Si quien sale es el único organizador y queda gente, tiene que elegir a quién le deja
+ * la organización (nuevoOrganizador): se pasa y se sale en el mismo guardado, así el viaje nunca queda sin
+ * organizador.
+ */
 rutasViajes.delete("/:id/miembros/yo", async (req, res) => {
+  const pedido = z.object({ nuevoOrganizador: z.string().optional() }).safeParse(req.body ?? {});
+  if (!pedido.success) {
+    res.status(400).json({ error: "datos-invalidos" });
+    return;
+  }
   const usuarioId = res.locals.usuarioId as string;
   const viaje = await viajeDelMiembro(req.params.id, usuarioId);
   if (!viaje) {
@@ -326,8 +353,11 @@ rutasViajes.delete("/:id/miembros/yo", async (req, res) => {
     res.status(404).json({ error: "no-existe" });
     return;
   }
-  if (miembro.rol === "organizador" && viaje.miembros.length > 1) {
-    res.status(409).json({ error: "transferir-organizacion-antes-de-salir" });
+  const otros = viaje.miembros.filter((persona) => persona.usuarioId.toString() !== usuarioId);
+  const quedaOrganizador = otros.some((persona) => persona.rol === "organizador");
+  const sucesor = otros.find((persona) => persona.usuarioId.toString() === pedido.data.nuevoOrganizador);
+  if (miembro.rol === "organizador" && otros.length > 0 && !quedaOrganizador && !sucesor) {
+    res.status(409).json({ error: "elegir-nuevo-organizador" });
     return;
   }
   if ((netosDe(viaje).get(usuarioId) ?? 0) !== 0) {
@@ -335,17 +365,68 @@ rutasViajes.delete("/:id/miembros/yo", async (req, res) => {
     return;
   }
   await UbicacionCompartida.deleteOne({ viajeId: viaje._id, usuarioId }).exec();
-  if (viaje.miembros.length === 1) {
+  if (otros.length === 0) {
     await Promise.all([
       viaje.deleteOne(),
       UbicacionCompartida.deleteMany({ viajeId: viaje._id }).exec(),
     ]);
   }
   else {
-    viaje.miembros = viaje.miembros.filter((persona) => persona.usuarioId.toString() !== usuarioId);
+    if (miembro.rol === "organizador" && !quedaOrganizador && sucesor) {
+      sucesor.rol = "organizador";
+      registrarMovimiento(viaje, `${miembro.nombre} le dejó la organización a ${sucesor.nombre}`);
+    }
+    viaje.miembros = otros;
+    registrarMovimiento(viaje, `${miembro.nombre} salió del viaje`);
     await viaje.save();
   }
   res.status(204).end();
+});
+
+/** Echar a alguien del viaje: solo un organizador, y no a sí mismo (para eso está salir). */
+rutasViajes.delete("/:id/miembros/:personaId", async (req, res) => {
+  const usuarioId = res.locals.usuarioId as string;
+  const viaje = await viajeDelMiembro(req.params.id, usuarioId);
+  if (!viaje) {
+    res.status(404).json({ error: "no-existe" });
+    return;
+  }
+  if (!esOrganizador(viaje, usuarioId)) {
+    res.status(403).json({ error: "sin-permiso" });
+    return;
+  }
+  if (req.params.personaId === usuarioId) {
+    res.status(400).json({ error: "usa-salir" });
+    return;
+  }
+  const persona = viaje.miembros.find((miembro) => miembro.usuarioId.toString() === req.params.personaId);
+  if (!persona) {
+    res.status(404).json({ error: "no-existe" });
+    return;
+  }
+  // Igual que al salir: con plata pendiente, las cuentas del grupo quedarían sin cerrar.
+  if ((netosDe(viaje).get(req.params.personaId) ?? 0) !== 0) {
+    res.status(409).json({ error: "saldo-pendiente" });
+    return;
+  }
+  const quienEcha = viaje.miembros.find((miembro) => miembro.usuarioId.toString() === usuarioId);
+  viaje.miembros = viaje.miembros.filter((miembro) => miembro.usuarioId.toString() !== req.params.personaId);
+  const veces = vecesSacado(viaje, req.params.personaId) + 1;
+  viaje.expulsados = [
+    ...viaje.expulsados.filter((expulsado) => expulsado.usuarioId.toString() !== req.params.personaId),
+    { usuarioId: persona.usuarioId, por: quienEcha?.nombre ?? "Alguien del grupo", en: new Date(), veces, avisar: true },
+  ];
+  registrarMovimiento(
+    viaje,
+    veces >= MAX_EXPULSIONES
+      ? `${quienEcha?.nombre ?? "Alguien"} sacó a ${persona.nombre} del viaje por ${veces}.ª vez: ya no puede volver`
+      : `${quienEcha?.nombre ?? "Alguien"} sacó a ${persona.nombre} del viaje`,
+  );
+  await Promise.all([
+    viaje.save(),
+    UbicacionCompartida.deleteOne({ viajeId: viaje._id, usuarioId: persona.usuarioId }).exec(),
+  ]);
+  res.json(viajePublico(viaje, usuarioId));
 });
 
 rutasViajes.post("/:id/repetir", async (req, res) => {
@@ -410,6 +491,17 @@ rutasViajes.get("/:id", async (req, res) => {
   const usuarioId = res.locals.usuarioId as string;
   const viaje = await viajeDelMiembro(req.params.id, usuarioId);
   if (!viaje) {
+    // Si lo sacaron, se le dice (410) para que el front le avise; si no, el viaje no existe para él.
+    const delQueLoSacaron = mongoose.isValidObjectId(req.params.id)
+      ? await Viaje.findOne({ _id: req.params.id, "expulsados.usuarioId": usuarioId }).select("nombre expulsados").exec()
+      : null;
+    const expulsion = delQueLoSacaron?.expulsados.find((expulsado) => expulsado.usuarioId.toString() === usuarioId);
+    // Al baneado se le avisa siempre; a los demás, hasta que vuelven a sumarse (después pudieron salir solos).
+    const baneado = (expulsion?.veces ?? 0) >= MAX_EXPULSIONES;
+    if (delQueLoSacaron && expulsion && (expulsion.avisar || baneado)) {
+      res.status(410).json({ error: "te-sacaron", viaje: delQueLoSacaron.nombre, por: expulsion.por, baneado });
+      return;
+    }
     res.status(404).json({ error: "no-existe" });
     return;
   }

@@ -8,7 +8,7 @@ import { rutasAdmin } from "./rutas/admin.js";
 import { rutasContacto } from "./rutas/contacto.js";
 import { rutasArchivo, rutasDocumentosPersonales, rutasDocumentosViaje } from "./rutas/documentos.js";
 import { rutasGastos } from "./rutas/gastos.js";
-import { rutasItinerario } from "./rutas/itinerario.js";
+import { rutasCalendarioPublico, rutasItinerario } from "./rutas/itinerario.js";
 import { rutasListas } from "./rutas/listas.js";
 import { rutasLugares } from "./rutas/lugares.js";
 import { rutasPerfil } from "./rutas/perfil.js";
@@ -31,6 +31,8 @@ app.get("/health", (_req, res) => {
 });
 app.use("/auth", rutasAuth);
 app.use("/contacto", rutasContacto);
+// Sin sesión: los calendarios piden el feed solos, con el token del link en vez de la cookie.
+app.use("/calendario", rutasCalendarioPublico);
 app.use("/admin", rutasAdmin);
 app.use("/perfil", rutasPerfil);
 app.use("/lugares", requiereSesion, rutasLugares);

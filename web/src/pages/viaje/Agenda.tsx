@@ -1,34 +1,58 @@
-import { CalendarPlus, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { CalendarDays, Clock, MapPin, Plus } from 'lucide-react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { Calendario } from '../../components/calendario/Calendario'
+import type { ActividadCalendario, TramoCalendario, VistaCalendario } from '../../components/calendario/tipos'
+import { ORDEN_TONOS, tramoDelDia } from '../../components/calendario/utilidades'
 import { NoCargo } from '../../components/marca/Estados'
 import { TituloPantalla } from '../../components/marca/TituloPantalla'
 import { MapaSlot } from '../../components/slots/MapaSlot'
 import { Button } from '../../components/ui/Button'
 import { CampoFecha } from '../../components/ui/CampoFecha'
-import { Chip } from '../../components/ui/Chip'
-import { ItineraryItem } from '../../components/ui/ItineraryItem'
 import { SelectorLugar } from '../../components/ui/SelectorLugar'
 import { TextField } from '../../components/ui/TextField'
+import { Ventana } from '../../components/ui/Ventana'
 import { useAhora } from '../../hooks/ahora'
-import { useAgregarActividad, useExportarCalendario, useItinerario } from '../../hooks/itinerario'
+import { useAgregarActividad, useEnlaceCalendario, useExportarCalendario, useItinerario } from '../../hooks/itinerario'
 import { useZonasHorarias } from '../../hooks/viajes'
 import { useViajeActual } from '../../layouts/contextoViaje'
-import { diaCorto, diasDeLaSemana, hoyISO, leerFecha, mesYAnio, semanasDelMes, sumarDias, sumarMeses, yaPaso } from '../../lib/fechas'
+import { diaCorto, hoyISO, leerFecha, yaPaso } from '../../lib/fechas'
 import { numerarParadas } from '../../lib/paradas'
-import { conMayuscula } from '../../lib/texto'
 import { relojEn } from '../../lib/zonasHorarias'
 import type { EtapaViaje } from '../../types/viaje'
 import { DestinosYFechas } from './DestinosYFechas'
 import { puedeEditar } from './nombres'
 
-function AgregarActividad({ viajeId }: { viajeId: string }) {
-  const agregar = useAgregarActividad(viajeId)
-  const [abierto, setAbierto] = useState(false)
-  const [datos, setDatos] = useState({ fecha: '', hora: '', titulo: '', lugar: '', lat: null as number | null, lng: null as number | null })
-  const [error, setError] = useState<string>()
-  const [errorLugar, setErrorLugar] = useState<string>()
+type ValoresIniciales = { fecha: string; hora: string }
 
-  function cambiar(campo: 'fecha' | 'hora' | 'titulo' | 'lugar', valor: string) {
+type AgregarActividadProps = {
+  viajeId: string
+  /** Con valores (tocar un horario vacío del calendario), el formulario abre con el día y la hora cargados. */
+  iniciales: ValoresIniciales | null
+  abierto: boolean
+  onAbrir: () => void
+  onCerrar: () => void
+}
+
+const VACIO = { fecha: '', hora: '', horaFin: '', titulo: '', lugar: '', lat: null as number | null, lng: null as number | null }
+
+function AgregarActividad({ viajeId, iniciales, abierto, onAbrir, onCerrar }: AgregarActividadProps) {
+  const agregar = useAgregarActividad(viajeId)
+  const [datos, setDatos] = useState(() => ({ ...VACIO, ...iniciales }))
+  const [error, setError] = useState<string>()
+  const [errorHoraFin, setErrorHoraFin] = useState<string>()
+  const [errorLugar, setErrorLugar] = useState<string>()
+  const formulario = useRef<HTMLFormElement>(null)
+
+  /* Al abrirse se lleva el foco (y la pantalla): al primer campo vacío, que con día y hora cargados es "Qué van a hacer". */
+  useEffect(() => {
+    if (!abierto) return
+    const campo = formulario.current?.querySelector<HTMLInputElement>(iniciales ? '[data-campo="titulo"]' : 'input')
+    campo?.focus()
+    formulario.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [abierto, iniciales])
+
+  function cambiar(campo: 'fecha' | 'hora' | 'horaFin' | 'titulo' | 'lugar', valor: string) {
     setDatos((anteriores) => ({ ...anteriores, [campo]: valor }))
   }
 
@@ -38,18 +62,23 @@ function AgregarActividad({ viajeId }: { viajeId: string }) {
       setError('Poné el día, la hora y qué van a hacer.')
       return
     }
+    setError(undefined)
+    if (datos.horaFin && datos.horaFin <= datos.hora) {
+      setErrorHoraFin('Tiene que terminar después de la hora de inicio.')
+      return
+    }
+    setErrorHoraFin(undefined)
     if (datos.lugar.trim() && (datos.lat === null || datos.lng === null)) {
       setErrorLugar('Elegí el lugar de las sugerencias para agregarlo al mapa.')
       return
     }
-    setError(undefined)
     setErrorLugar(undefined)
     agregar.mutate(
-      { ...datos, lugar: datos.lugar.trim() || null },
+      { ...datos, horaFin: datos.horaFin || null, lugar: datos.lugar.trim() || null },
       {
         onSuccess: () => {
-          setDatos({ fecha: '', hora: '', titulo: '', lugar: '', lat: null, lng: null })
-          setAbierto(false)
+          setDatos(VACIO)
+          onCerrar()
         },
       },
     )
@@ -57,19 +86,35 @@ function AgregarActividad({ viajeId }: { viajeId: string }) {
 
   if (!abierto) {
     return (
-      <Button variant="secundario" icon={Plus} className="self-start" onClick={() => setAbierto(true)}>
+      <Button variant="secundario" icon={Plus} className="self-start" onClick={onAbrir}>
         Agregar actividad
       </Button>
     )
   }
 
   return (
-    <form onSubmit={enviar} noValidate className="flex flex-col gap-4 rounded-lg trazo bg-papel-hundido p-5">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <form ref={formulario} onSubmit={enviar} noValidate className="flex scroll-mt-6 flex-col gap-4 rounded-lg trazo bg-papel-hundido p-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <CampoFecha label="Día" value={datos.fecha} onChange={(fecha) => cambiar('fecha', fecha)} />
         <TextField label="Hora" type="time" value={datos.hora} onChange={(evento) => cambiar('hora', evento.target.value)} />
+        <TextField
+          label="Hasta (opcional)"
+          type="time"
+          value={datos.horaFin}
+          error={errorHoraFin}
+          onChange={(evento) => {
+            setErrorHoraFin(undefined)
+            cambiar('horaFin', evento.target.value)
+          }}
+        />
       </div>
-      <TextField label="Qué van a hacer" value={datos.titulo} error={error} onChange={(evento) => cambiar('titulo', evento.target.value)} />
+      <TextField
+        label="Qué van a hacer"
+        data-campo="titulo"
+        value={datos.titulo}
+        error={error}
+        onChange={(evento) => cambiar('titulo', evento.target.value)}
+      />
       <SelectorLugar
         label="Dónde (opcional)"
         value={datos.lugar}
@@ -93,11 +138,57 @@ function AgregarActividad({ viajeId }: { viajeId: string }) {
         <Button type="submit" variant="secundario" disabled={agregar.isPending}>
           Agregar
         </Button>
-        <Button variant="fantasma" onClick={() => setAbierto(false)}>
+        <Button variant="fantasma" onClick={onCerrar}>
           Cancelar
         </Button>
       </div>
     </form>
+  )
+}
+
+/** Lo que se ve al tocar una actividad del calendario, con el atajo a su día. */
+function DetalleActividad({ actividad, onCerrar, onVerDia }: { actividad: ActividadCalendario | null; onCerrar: () => void; onVerDia: (fecha: string) => void }) {
+  const ventana = useRef<HTMLDialogElement>(null)
+  const idTitulo = useId()
+
+  useEffect(() => {
+    if (actividad && !ventana.current?.open) ventana.current?.showModal()
+  }, [actividad])
+
+  return (
+    <Ventana ventanaRef={ventana} idTitulo={idTitulo} onClose={onCerrar}>
+      {actividad && (
+        <div className="flex flex-col gap-5 pr-10">
+          <h2 id={idTitulo} className="font-display text-titulo-1 font-black text-balance">
+            {actividad.titulo}
+          </h2>
+          <div className="flex flex-col gap-2">
+            <p className="flex items-center gap-2 font-bold numeros">
+              <Clock size={20} strokeWidth={2} aria-hidden />
+              {diaCorto(actividad.fecha)}, {actividad.hora}
+              {actividad.horaFin && ` – ${actividad.horaFin}`}
+            </p>
+            {actividad.lugar && (
+              <p className="flex items-center gap-2">
+                <MapPin size={20} strokeWidth={2} aria-hidden />
+                {actividad.lugar}
+              </p>
+            )}
+          </div>
+          <Button
+            variant="secundario"
+            icon={CalendarDays}
+            className="self-start"
+            onClick={() => {
+              onVerDia(actividad.fecha)
+              ventana.current?.close()
+            }}
+          >
+            Ver el día
+          </Button>
+        </div>
+      )}
+    </Ventana>
   )
 }
 
@@ -111,63 +202,81 @@ function etapaDelDia(etapas: Pick<EtapaViaje, 'fechaIda'>[], dia: string) {
   return empezadas.at(-1) ?? 0
 }
 
-type Vista = 'dia' | 'semana' | 'mes'
+const VISTAS: VistaCalendario[] = ['dia', 'semana', 'mes']
 
-const VISTAS: { id: Vista; nombre: string }[] = [
-  { id: 'dia', nombre: 'Día' },
-  { id: 'semana', nombre: 'Semana' },
-  { id: 'mes', nombre: 'Mes' },
-]
-
-/* Lo que resalta es que haya actividades; el día en el que estás parado lleva solo un anillo. */
-function CeldaDia({ fecha, cantidad, elegido, mesActual = true, onElegir }: { fecha: string; cantidad: number; elegido: boolean; mesActual?: boolean; onElegir: () => void }) {
-  return (
-    <button
-      type="button"
-      aria-label={`${diaCorto(fecha)}: ${cantidad === 1 ? '1 actividad' : `${cantidad} actividades`}`}
-      aria-pressed={elegido}
-      onClick={onElegir}
-      className={`flex min-h-toque flex-col items-center justify-center rounded-sm trazo-fino numeros ${cantidad > 0 ? 'tema-claro bg-coral' : 'bg-papel-elevado'} ${
-        elegido ? 'ring-3 ring-tinta ring-offset-2 ring-offset-papel' : ''
-      } ${mesActual ? '' : 'opacity-50'}`}
-    >
-      <span className="font-bold">{leerFecha(fecha).getDate()}</span>
-      {cantidad > 0 && <span aria-hidden className="size-1.5 rounded-full bg-tinta" />}
-    </button>
-  )
+function esVista(valor: string | null): valor is VistaCalendario {
+  return VISTAS.includes(valor as VistaCalendario)
 }
 
-/** Agenda: el plan día por día, con vistas de semana y mes y el mapa del día elegido. */
+/** AAAA-MM-DD de verdad: "2026-02-31" no pasa. */
+function esFecha(valor: string | null): valor is string {
+  if (!valor || !/^\d{4}-\d{2}-\d{2}$/.test(valor)) return false
+  const d = leerFecha(valor)
+  return !Number.isNaN(d.getTime()) && `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` === valor
+}
+
+/** Agenda: el plan del grupo como calendario de día, semana y mes, con el mapa del día elegido. */
 export function Agenda() {
   const { viaje, etapa } = useViajeActual()
   const itinerario = useItinerario(viaje.id)
-  const exportar = useExportarCalendario(viaje.id)
-  const [vista, setVista] = useState<Vista>('dia')
-  const [fechaElegida, setFechaElegida] = useState<string | null>(null)
+  const descargar = useExportarCalendario(viaje.id)
+  const enlace = useEnlaceCalendario(viaje.id)
+  const [parametros, setParametros] = useSearchParams()
+  const [formulario, setFormulario] = useState<{ abierto: boolean; iniciales: ValoresIniciales | null; vez: number }>({ abierto: false, iniciales: null, vez: 0 })
+  const [abierta, setAbierta] = useState<ActividadCalendario | null>(null)
   const soloLectura = etapa === 'post' || !puedeEditar(viaje.personas)
   const etapas = viaje.etapas.length
     ? viaje.etapas
     : viaje.ubicacion
       ? [{ id: 'destino', destino: viaje.destino, fechaIda: viaje.fechaIda, fechaVuelta: viaje.fechaVuelta, ubicacion: viaje.ubicacion }]
       : []
-  const actividades = itinerario.data ?? []
-  const fechas = actividades.map((actividad) => actividad.fecha).sort()
+  const datos = itinerario.data ?? []
+  const fechas = datos.map((actividad) => actividad.fecha).sort()
   const hoy = hoyISO()
   /* Abre en lo más próximo: hoy, o el próximo día con actividades; si ya pasaron todas, el último. */
   const primera = fechas.find((dia) => dia >= hoy) ?? fechas.at(-1) ?? viaje.fechaIda ?? hoy
-  const fecha = fechaElegida ?? primera
+  const vistaEnUrl = parametros.get('vista')
+  const fechaEnUrl = parametros.get('fecha')
+  const vista: VistaCalendario = esVista(vistaEnUrl) ? vistaEnUrl : 'semana'
+  const fecha = esFecha(fechaEnUrl) ? fechaEnUrl : primera
+
   const ahora = useAhora()
   const zonas = useZonasHorarias(etapas.map((etapaViaje) => etapaViaje.ubicacion))
   /* Las horas se cargan en la hora del destino de ese día: con su reloj se sabe si ya pasaron. */
+  const relojDe = (dia: string) => {
+    const indice = etapaDelDia(etapas, dia)
+    return relojEn(indice === null ? null : (zonas[indice] ?? null), ahora)
+  }
   const destinoDelDia = etapaDelDia(etapas, fecha)
-  const zonaDelDia = destinoDelDia === null ? null : zonas[destinoDelDia]
-  const relojDelDia = relojEn(zonaDelDia, ahora)
-  /* Lo que viene, de lo más próximo a lo más lejano; lo que ya pasó se tilda solo y baja al final. */
-  const delDia = actividades
-    .filter((actividad) => actividad.fecha === fecha)
-    .map((actividad) => ({ ...actividad, hecha: actividad.estado === 'hecho' || yaPaso(actividad.fecha, actividad.hora, relojDelDia) }))
-    .sort((a, b) => Number(a.hecha) - Number(b.hecha) || a.hora.localeCompare(b.hora))
-  const cantidad = (dia: string) => actividades.filter((actividad) => actividad.fecha === dia).length
+  const zonaDelDia = destinoDelDia === null ? null : (zonas[destinoDelDia] ?? null)
+
+  const tramos: TramoCalendario[] = etapas
+    .filter((etapaViaje) => etapaViaje.fechaIda && etapaViaje.fechaVuelta)
+    .map((etapaViaje, i) => ({
+      id: etapaViaje.id,
+      destino: etapaViaje.destino,
+      desde: etapaViaje.fechaIda!,
+      hasta: etapaViaje.fechaVuelta!,
+      tono: ORDEN_TONOS[i % ORDEN_TONOS.length]!,
+    }))
+
+  /* El backend marca "ahora" a todo lo de hoy que ya empezó: en el calendario va una sola, la última que empezó. */
+  const enCurso = etapa === 'viaje'
+    ? datos.filter((actividad) => actividad.estado === 'ahora').sort((a, b) => `${a.fecha}T${a.hora}`.localeCompare(`${b.fecha}T${b.hora}`)).at(-1)?.id
+    : undefined
+
+  const actividades: ActividadCalendario[] = datos.map((actividad) => ({
+    id: actividad.id,
+    fecha: actividad.fecha,
+    hora: actividad.hora,
+    horaFin: actividad.horaFin,
+    titulo: actividad.titulo,
+    lugar: actividad.lugar,
+    hecha: actividad.estado === 'hecho' || yaPaso(actividad.fecha, actividad.hora, relojDe(actividad.fecha)),
+    ahora: actividad.id === enCurso,
+    tono: tramoDelDia(tramos, actividad.fecha)?.tono ?? 'lavanda',
+  }))
+
   const centroMapa = etapas[0]?.ubicacion ?? viaje.ubicacion
   const puntosMapa = numerarParadas([
     ...etapas.map((etapaViaje) => ({
@@ -177,107 +286,123 @@ export function Agenda() {
       lng: etapaViaje.ubicacion.lng,
       tipo: 'alojamiento' as const,
     })),
-    ...delDia.flatMap((actividad) => actividad.lat !== null && actividad.lng !== null
-      ? [{
-          id: actividad.id,
-          nombre: actividad.lugar ?? actividad.titulo,
-          lat: actividad.lat,
-          lng: actividad.lng,
-          tipo: 'actividad' as const,
-        }]
-      : []),
-  ], delDia.filter((actividad) => !actividad.hecha))
+    ...datos
+      .filter((actividad) => actividad.fecha === fecha)
+      .flatMap((actividad) => actividad.lat !== null && actividad.lng !== null
+        ? [{
+            id: actividad.id,
+            nombre: actividad.lugar ?? actividad.titulo,
+            lat: actividad.lat,
+            lng: actividad.lng,
+            tipo: 'actividad' as const,
+          }]
+        : []),
+  ], actividades
+    .filter((actividad) => actividad.fecha === fecha && !actividad.hecha)
+    .sort((a, b) => a.hora.localeCompare(b.hora)))
 
-  function mover(direccion: 1 | -1) {
-    if (vista === 'dia') setFechaElegida(sumarDias(fecha, direccion))
-    else if (vista === 'semana') setFechaElegida(sumarDias(fecha, direccion * 7))
-    else setFechaElegida(sumarMeses(fecha, direccion))
+  /*
+   * Vista y fecha viven en la URL: se pueden compartir y sobreviven a recargar. replace: las flechas no llenan el historial.
+   * Elegir un día cambia la fecha y la vista en el mismo click: los dos cambios se juntan y se escriben una sola vez.
+   * Con dos setParametros seguidos, el segundo parte de la URL vieja y pisa la fecha del primero.
+   */
+  const pendientes = useRef<URLSearchParams | null>(null)
+
+  function cambiar(campo: 'vista' | 'fecha', valor: string) {
+    const nuevos = pendientes.current ?? new URLSearchParams(parametros)
+    nuevos.set(campo, valor)
+    if (!nuevos.has('fecha')) nuevos.set('fecha', fecha)
+    if (pendientes.current) return
+    pendientes.current = nuevos
+    queueMicrotask(() => {
+      pendientes.current = null
+      setParametros(nuevos, { replace: true })
+    })
   }
 
-  function abrirDia(dia: string) {
-    setFechaElegida(dia)
-    setVista('dia')
+  function verDia(dia: string) {
+    cambiar('fecha', dia)
+    cambiar('vista', 'dia')
+  }
+
+  function abrirFormulario(iniciales: ValoresIniciales | null) {
+    // "vez" remonta el formulario: así toma los valores nuevos aunque ya estuviera abierto.
+    setFormulario((anterior) => ({ abierto: true, iniciales, vez: anterior.vez + 1 }))
+  }
+
+  /*
+   * El link de suscripción se pide una vez y queda guardado. La pestaña de Google se abre antes de pedirlo,
+   * en el mismo click: si se abriera después de esperar al backend, el navegador la bloquearía.
+   */
+  async function conEnlace(usar: (url: string) => void, pestana?: Window | null) {
+    try {
+      usar(enlace.data ?? (await enlace.mutateAsync()))
+    } catch {
+      pestana?.close()
+    }
+  }
+
+  const webcal = (url: string) => url.replace(/^https?:\/\//, 'webcal://')
+
+  const exportar = {
+    onGoogle: () => {
+      const pestana = window.open('', '_blank')
+      if (pestana) pestana.opener = null
+      void conEnlace((url) => {
+        const destino = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcal(url))}`
+        if (pestana) pestana.location.href = destino
+        else window.open(destino, '_blank', 'noopener')
+      }, pestana)
+    },
+    onIphone: () => void conEnlace((url) => window.location.assign(webcal(url))),
+    onDescargar: () => descargar.mutate(),
+    cargando: enlace.isPending || descargar.isPending,
   }
 
   return (
     <>
       <TituloPantalla titulo="El plan, día por día" pinz="brujula" />
       <div className="flex flex-col gap-12">
-        <section aria-labelledby="itinerario" className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="flex flex-col gap-5">
-            <h3 id="itinerario" className="sr-only">Actividades</h3>
-            <div className="flex gap-2" role="group" aria-label="Cómo ver la agenda">
-              {VISTAS.map(({ id, nombre }) => (
-                <Chip key={id} tone={etapa} selected={vista === id} onClick={() => setVista(id)}>
-                  {nombre}
-                </Chip>
-              ))}
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <Button variant="fantasma" size="sm" icon={ChevronLeft} aria-label="Anterior" onClick={() => mover(-1)} />
-              <p aria-live="polite" className="font-bold">
-                {vista === 'dia' && conMayuscula(diaCorto(fecha))}
-                {vista === 'semana' && `Semana del ${diaCorto(diasDeLaSemana(fecha)[0] ?? fecha)}`}
-                {vista === 'mes' && mesYAnio(fecha)}
-              </p>
-              <Button variant="fantasma" size="sm" icon={ChevronRight} aria-label="Siguiente" onClick={() => mover(1)} />
-            </div>
-            {vista === 'dia' && destinoDelDia !== null && zonaDelDia && (
-              <p className="-mt-3 text-center text-meta text-tinta-suave">Horarios en hora local de {etapas[destinoDelDia].destino}</p>
-            )}
-            {itinerario.isPending && <p className="text-tinta-suave">Cargando el itinerario…</p>}
-            {itinerario.error && <NoCargo error={itinerario.error} onReintentar={() => itinerario.refetch()} />}
-            {vista === 'dia' && itinerario.data && (
-              delDia.length === 0 ? (
-                <p className="text-tinta-suave">No hay actividades para este día.</p>
-              ) : (
-                <ol aria-label="El día">
-                  {delDia.map((item, i) => (
-                    <ItineraryItem
-                      key={item.id}
-                      time={item.hora}
-                      title={item.titulo}
-                      place={item.lugar}
-                      ubicacion={item.lat !== null && item.lng !== null ? { lat: item.lat, lng: item.lng } : null}
-                      done={item.hecha}
-                      current={etapa === 'viaje' && item.estado === 'ahora' && !item.hecha}
-                      last={i === delDia.length - 1}
-                    />
-                  ))}
-                </ol>
-              )
-            )}
-            {vista === 'semana' && (
-              <div className="grid grid-cols-7 gap-1">
-                {diasDeLaSemana(fecha).map((dia) => (
-                  <CeldaDia key={dia} fecha={dia} cantidad={cantidad(dia)} elegido={dia === fecha} onElegir={() => abrirDia(dia)} />
-                ))}
-              </div>
-            )}
-            {vista === 'mes' && (
-              <div className="grid grid-cols-7 gap-1">
-                {semanasDelMes(fecha).map((dia) => (
-                  <CeldaDia key={dia} fecha={dia} cantidad={cantidad(dia)} elegido={dia === fecha} mesActual={dia.slice(0, 7) === fecha.slice(0, 7)} onElegir={() => abrirDia(dia)} />
-                ))}
-              </div>
-            )}
-            {!soloLectura && <AgregarActividad viajeId={viaje.id} />}
-            <Button
-              variant="secundario"
-              size="sm"
-              icon={CalendarPlus}
-              className="self-start"
-              disabled={exportar.isPending || !actividades.length}
-              onClick={() => exportar.mutate()}
-            >
-              Sincronizar con el calendario
-            </Button>
-          </div>
-          <MapaSlot puntos={puntosMapa} personas={[]} centro={centroMapa} alto="grande" />
+        <section aria-labelledby="itinerario" className="flex flex-col gap-5">
+          <h3 id="itinerario" className="sr-only">Actividades</h3>
+          {itinerario.error && <NoCargo error={itinerario.error} onReintentar={() => itinerario.refetch()} />}
+          <Calendario
+            vista={vista}
+            fecha={fecha}
+            hoy={hoy}
+            ahora={relojEn(zonaDelDia, ahora)}
+            actividades={actividades}
+            tramos={tramos}
+            onCambiarVista={(nueva) => cambiar('vista', nueva)}
+            onCambiarFecha={(nueva) => cambiar('fecha', nueva)}
+            onAbrirActividad={setAbierta}
+            onCrear={soloLectura ? undefined : (dia, hora) => abrirFormulario({ fecha: dia, hora })}
+            exportar={exportar}
+            lateral={<MapaSlot puntos={puntosMapa} personas={[]} centro={centroMapa} alto="grande" />}
+          />
+          {(enlace.isError || descargar.isError) && (
+            <p role="alert" className="font-semibold text-negativo">
+              No pudimos armar tu calendario. Revisá la conexión y probá de nuevo.
+            </p>
+          )}
+          {vista === 'dia' && destinoDelDia !== null && zonaDelDia && (
+            <p className="text-meta text-tinta-suave">Horarios en hora local de {etapas[destinoDelDia]?.destino}</p>
+          )}
+          {!soloLectura && (
+            <AgregarActividad
+              key={formulario.vez}
+              viajeId={viaje.id}
+              iniciales={formulario.iniciales}
+              abierto={formulario.abierto}
+              onAbrir={() => abrirFormulario(null)}
+              onCerrar={() => setFormulario((anterior) => ({ ...anterior, abierto: false, iniciales: null }))}
+            />
+          )}
         </section>
 
         <DestinosYFechas viaje={viaje} soloLectura={soloLectura} />
       </div>
+      <DetalleActividad actividad={abierta} onCerrar={() => setAbierta(null)} onVerDia={verDia} />
     </>
   )
 }

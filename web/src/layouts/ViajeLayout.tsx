@@ -8,7 +8,9 @@ import { BottomNav, type ItemNav } from '../components/ui/BottomNav'
 import { ButtonLink } from '../components/ui/Button'
 import { useViaje } from '../hooks/viajes'
 import { etapaDelViaje } from '../lib/etapa'
+import { expulsionDe } from '../lib/expulsion'
 import type { Etapa } from '../types/viaje'
+import { AvisoExpulsion } from './AvisoExpulsion'
 import type { ContextoViaje } from './contextoViaje'
 import { BarraSuperior } from './BarraSuperior'
 import { EncabezadoViaje } from './EncabezadoViaje'
@@ -34,8 +36,11 @@ export function ViajeLayout() {
 
   let contenido
   let compartirUbicacion = null
+  const expulsion = expulsionDe(error)
   // Emergencias nunca lleva pinz, ni siquiera mientras carga.
-  if (isPending) contenido = enEmergencias ? <p role="status">Cargando el viaje…</p> : <Cargando />
+  // Si lo sacaron del grupo (aunque fuera mientras miraba el viaje), el aviso tapa todo lo demás.
+  if (expulsion) contenido = <AvisoExpulsion expulsion={expulsion} />
+  else if (isPending) contenido = enEmergencias ? <p role="status">Cargando el viaje…</p> : <Cargando />
   else if (error) {
     contenido = enEmergencias ? (
       <p role="alert" className="font-bold">No pudimos cargar el viaje. Si es urgente, llamá al 112 (en Argentina, al 911).</p>

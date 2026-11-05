@@ -37,6 +37,7 @@ services:
       SMTP_URL: ${SMTP_URL:-}
       MAIL_FROM: ${MAIL_FROM:-}
       CONTACTO_EQUIPO: ${CONTACTO_EQUIPO:-}
+      API_URL_PUBLICA: ${API_URL_PUBLICA:-}
       CHOKIDAR_USEPOLLING: "true"
     ports:
       - "4000:4000"

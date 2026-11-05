@@ -8,10 +8,27 @@ type ListaTarea = "compartida" | "personal";
 
 type UbicacionDoc = { nombre: string; lat: number; lng: number };
 type TramoViajeDoc = { id: string; destino: string; fechaIda: string | null; fechaVuelta: string | null; ubicacion: UbicacionDoc };
-type MiembroDoc = { usuarioId: mongoose.Types.ObjectId; nombre: string; pinz: (typeof PINZ_IDS)[number] | null; rol: RolViaje };
+type MiembroDoc = {
+  usuarioId: mongoose.Types.ObjectId;
+  nombre: string;
+  pinz: (typeof PINZ_IDS)[number] | null;
+  rol: RolViaje;
+  /** Abre el feed .ics del itinerario sin sesión. Se crea la primera vez que la persona lo pide. */
+  calendarioToken?: string;
+};
 type OpcionDoc = { id: string; nombre: string; detalle: string | null; votantes: mongoose.Types.ObjectId[] };
 type VotacionDoc = { id: string; pregunta: string; categoria: CategoriaVotacion; estado: "abierta" | "cerrada"; cierre: string | null; opciones: OpcionDoc[]; ganadoraId: string | null };
-type ActividadDoc = { id: string; fecha: string; hora: string; titulo: string; lugar: string | null; lat: number | null; lng: number | null; hecha: boolean };
+type ExpulsadoDoc = {
+  usuarioId: mongoose.Types.ObjectId;
+  /** Quién lo sacó la última vez. */
+  por: string;
+  en: Date;
+  /** Cuántas veces lo sacaron de este viaje: a la tercera no puede volver (ver expulsiones.ts). */
+  veces: number;
+  /** Si todavía no se enteró: se apaga cuando vuelve a sumarse. */
+  avisar: boolean;
+};
+type ActividadDoc = { id: string; fecha: string; hora: string; horaFin: string | null; titulo: string; lugar: string | null; lat: number | null; lng: number | null; hecha: boolean };
 type ParteDoc = { personaId: mongoose.Types.ObjectId; monto: number };
 type GastoDoc = { id: string; descripcion: string; monto: number; pagoId: mongoose.Types.ObjectId; fecha: string; division: TipoDivision; participantes: mongoose.Types.ObjectId[]; partes: ParteDoc[]; consumos: ParteDoc[]; propina: number; propinaPorcentaje: number; creadoPorId: mongoose.Types.ObjectId | null };
 type PagoDoc = { id: string; deudorId: mongoose.Types.ObjectId; acreedorId: mongoose.Types.ObjectId; monto: number; fecha: string; estado: "pendiente" | "confirmado" | "rechazado"; resueltoEn: Date | null };
@@ -38,6 +55,8 @@ export type ViajeData = {
   etapas: TramoViajeDoc[];
   creadoPor: mongoose.Types.ObjectId;
   miembros: MiembroDoc[];
+  /** A quién sacaron del viaje, quién y cuántas veces: para avisarle y para no dejarlo volver a la tercera. */
+  expulsados: ExpulsadoDoc[];
   moneda: (typeof MONEDAS)[number];
   cuentasSimplificadas: boolean;
   codigoInvitacion: string;
@@ -68,6 +87,7 @@ const miembroSchema = new mongoose.Schema<MiembroDoc>(
     nombre: { type: String, required: true },
     pinz: { type: String, enum: [...PINZ_IDS, null], default: null },
     rol: { type: String, enum: ["organizador", "miembro", "lector"], required: true },
+    calendarioToken: { type: String },
   },
   { _id: false },
 );
@@ -111,6 +131,7 @@ const actividadSchema = new mongoose.Schema<ActividadDoc>(
     id: { type: String, required: true, default: () => new mongoose.Types.ObjectId().toString() },
     fecha: { type: String, required: true },
     hora: { type: String, required: true },
+    horaFin: { type: String, default: null },
     titulo: { type: String, required: true },
     lugar: { type: String, default: null },
     lat: { type: Number, default: null },
@@ -225,6 +246,19 @@ const viajeSchema = new mongoose.Schema<ViajeData>(
     etapas: { type: [etapaViajeSchema], default: [] },
     creadoPor: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario", required: true },
     miembros: { type: [miembroSchema], default: [] },
+    expulsados: {
+      type: [new mongoose.Schema<ExpulsadoDoc>(
+        {
+          usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario", required: true },
+          por: { type: String, required: true },
+          en: { type: Date, required: true },
+          veces: { type: Number, default: 1 },
+          avisar: { type: Boolean, default: true },
+        },
+        { _id: false },
+      )],
+      default: [],
+    },
     moneda: { type: String, enum: MONEDAS, default: "ARS" },
     cuentasSimplificadas: { type: Boolean, default: false },
     codigoInvitacion: { type: String, required: true, unique: true, index: true },
@@ -252,6 +286,10 @@ const viajeSchema = new mongoose.Schema<ViajeData>(
   },
   { timestamps: true },
 );
+
+/* El feed público busca el viaje por el token de un miembro. Sin unique: en un arreglo, los miembros sin
+   token cuentan como null y chocarían entre viajes. Con 32 bytes al azar, dos tokens iguales no pasan. */
+viajeSchema.index({ "miembros.calendarioToken": 1 }, { sparse: true });
 
 export type DocViaje = mongoose.HydratedDocument<ViajeData>;
 

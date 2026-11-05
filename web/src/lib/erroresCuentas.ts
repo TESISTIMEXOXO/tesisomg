@@ -24,9 +24,28 @@ function codigoDe(error: unknown) {
 
 /** Por qué no se pudo salir del grupo. */
 export function mensajeAlSalir(error: unknown) {
-  return codigoDe(error) === 'saldo-pendiente'
-    ? 'Todavía tenés plata pendiente en Cuentas: quedá a mano y salí del grupo.'
-    : 'No pudimos salir del grupo. Si sos organizador, primero transferí la organización.'
+  switch (codigoDe(error)) {
+    case 'saldo-pendiente':
+      return 'Todavía tenés plata pendiente en Cuentas: quedá a mano y salí del grupo.'
+    case 'elegir-nuevo-organizador':
+      return 'Elegí quién va a organizar el viaje cuando te vayas.'
+    default:
+      return 'No pudimos salir del grupo. Revisá la conexión y probá de nuevo.'
+  }
+}
+
+/** Por qué no se pudo sacar a alguien del grupo. */
+export function mensajeAlEchar(error: unknown, nombre: string) {
+  switch (codigoDe(error)) {
+    case 'saldo-pendiente':
+      return `${nombre} todavía tiene plata pendiente en Cuentas: cuando quede a mano, lo vas a poder sacar.`
+    case 'sin-permiso':
+      return 'Solo quien organiza el viaje puede sacar a alguien.'
+    case 'no-existe':
+      return `${nombre} ya no está en el viaje. Actualizá la pantalla.`
+    default:
+      return `No pudimos sacar a ${nombre}. Revisá la conexión y probá de nuevo.`
+  }
 }
 
 /** El mensaje para cada código de error de las cuentas. */
