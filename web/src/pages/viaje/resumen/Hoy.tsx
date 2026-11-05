@@ -22,10 +22,16 @@ export function Hoy() {
   const enElLugar = personasUbicadas.length
   const etapaDeHoy = viaje.etapas.find((etapa) => etapa.fechaIda && etapa.fechaVuelta && etapa.fechaIda <= hoy.fecha && etapa.fechaVuelta >= hoy.fecha)
   const centroMapa = etapaDeHoy?.ubicacion ?? viaje.ubicacion
+  // El backend marca "ahora" a todo lo de hoy que ya empezó. La que va es la última que arrancó; las anteriores ya pasaron.
+  const idActual = hoy.items.findLast((item) => item.estado === 'ahora')?.id
+  const actividades = hoy.items.map((item) => ({ ...item, hecha: item.estado === 'hecho' || (item.estado === 'ahora' && item.id !== idActual) }))
+  // Como en la Agenda: arriba lo que viene, de lo más próximo a lo más lejano, y lo que ya pasó baja al final.
+  const delDia = [...actividades.filter((item) => !item.hecha), ...actividades.filter((item) => item.hecha)]
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-7">
-      <div className="flex flex-col gap-4">
+    <div className="grid grid-cols-1 gap-x-7 gap-y-4 lg:grid-cols-2">
+      {/* El encabezado ocupa las dos columnas en desktop: así el mapa y el itinerario arrancan a la misma altura. */}
+      <div className="flex flex-col gap-4 lg:col-span-2">
         <span className="self-start rounded-full trazo-fino bg-papel-elevado px-3 py-1 text-sobretitulo uppercase">
           Día {hoy.dia} de {hoy.totalDias} · {diaCorto(hoy.fecha)}
         </span>
@@ -36,24 +42,25 @@ export function Hoy() {
           </p>
         )}
         {ubicaciones.error && <p role="alert" className="text-meta text-negativo">No pudimos actualizar las ubicaciones compartidas.</p>}
-        <MapaSlot puntos={hoy.puntos} personas={personasUbicadas} centro={centroMapa} />
         {enElLugar > 0 && (
           <p className="text-meta text-tinta-suave">
             {enElLugar} de {viaje.personas.length} compartiendo su ubicación
           </p>
         )}
       </div>
-      <div className="flex flex-col gap-4">
+      {/* En desktop el mapa crece hasta el alto del itinerario y los botones bajan hasta su borde de abajo. */}
+      <MapaSlot puntos={hoy.puntos} personas={personasUbicadas} centro={centroMapa} className="lg:h-auto lg:min-h-90" />
+      <div className="mt-4 flex flex-col gap-4 lg:mt-0 lg:justify-between">
         <ol aria-label="El día">
-          {hoy.items.map((item, i) => (
+          {delDia.map((item, i) => (
             <ItineraryItem
               key={item.id}
               time={item.hora}
               title={item.titulo}
               place={item.lugar}
-              done={item.estado === 'hecho'}
-              current={item.estado === 'ahora'}
-              last={i === hoy.items.length - 1}
+              done={item.hecha}
+              current={item.id === idActual}
+              last={i === delDia.length - 1}
             />
           ))}
         </ol>

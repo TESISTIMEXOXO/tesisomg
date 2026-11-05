@@ -69,7 +69,7 @@ web/
       ViajeLayout       dentro de un viaje: encabezado de etapa, BottomNav con SOS (Emergencias), botón de gasto
       BarraSuperior     la marca (a Mis viajes), tu pin (a tu perfil) y el +, en la app y dentro de un viaje. En etapa Viaje suma, antes del pin, el botón de CompartirUbicacion
       MenuAgregar       el + naranja de la barra: despliega "Armar un viaje" y "Unirme con código", y cada uno se abre en una Ventana con FormularioViaje o FormularioCodigo (los mismos de /viajes/nuevo y /unirse)
-      EncabezadoViaje   nombre, fechas, avatares (abren Grupo), "Salir del viaje" en rojo, solo en Grupo (`pages/viaje/SalirDelViaje.tsx`, confirma en una `Ventana`), "Editar viaje" (lleva a Grupo; no lo ven los lectores), caminos sutiles de fondo y, solo en dev, el StageSwitch
+      EncabezadoViaje   nombre, fechas, avatares (abren Grupo), "Salir del viaje" en rojo, solo en Grupo (`pages/viaje/SalirDelViaje.tsx`, confirma en una `Ventana`), "Editar viaje" (lleva a Grupo; no lo ven los lectores; ya en Grupo, en su lugar aparece "Volver al viaje", que lleva a Inicio y lo ven todos), caminos sutiles de fondo y, solo en dev, el StageSwitch
       contextoViaje.ts  useViajeActual(): el viaje y la etapa que se está mirando
     pages/              una carpeta por pantalla (ver la tabla de abajo)
     types/              esquemas zod por entidad: el contrato con el backend
