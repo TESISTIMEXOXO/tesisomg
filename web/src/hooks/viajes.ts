@@ -1,4 +1,5 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ErrorApi } from '../lib/api'
 import { zonaHoraria } from '../lib/zonasHorarias'
 import * as lugares from '../services/viajes'
 import { useSesion } from './auth'
@@ -25,12 +26,19 @@ export function useBuscarLugares(consulta: string) {
   })
 }
 
+/*
+ * Se vuelve a pedir cada 30 segundos con la pestaña a la vista: así, si a la persona la sacan del grupo,
+ * se entera sola (el backend responde 410). Un 4xx no se reintenta: el viaje no va a aparecer.
+ */
 export function useViaje(id: string) {
   const { data: sesion } = useSesion()
   return useQuery({
     queryKey: ['viajes', sesion?.id, id],
     queryFn: () => viajes.obtener(id),
     enabled: Boolean(sesion?.id && id),
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+    retry: (intentos, error) => !(error instanceof ErrorApi && error.status >= 400 && error.status < 500) && intentos < 1,
   })
 }
 

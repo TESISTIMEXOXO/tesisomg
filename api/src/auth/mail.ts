@@ -15,6 +15,16 @@ const transporte = config.mail.smtpUrl ? nodemailer.createTransport(config.mail.
 const ENCABEZADOS = ["cielo", "lavanda", "mar", "rosa", "sol"].map((color) =>
   fileURLToPath(new URL(`../correo/encabezados/encabezado-${color}.png`, import.meta.url)),
 );
+type EncabezadoFijo = { ruta: string; alt: string };
+/* Mails que llevan siempre el mismo encabezado, sin sorteo. */
+const ENCABEZADO_CONSULTA: EncabezadoFijo = {
+  ruta: fileURLToPath(new URL("../correo/encabezado-consulta.png", import.meta.url)),
+  alt: "Pinz",
+};
+const ENCABEZADO_INVITACION: EncabezadoFijo = {
+  ruta: fileURLToPath(new URL("../correo/encabezado-invitacion.png", import.meta.url)),
+  alt: "Te invitaron a un viaje",
+};
 const CID_ENCABEZADO = "pinz-encabezado";
 
 let ultimoEncabezado = -1;
@@ -32,10 +42,12 @@ export function encabezadorandom() {
 /**
  * Envuelve el cuerpo del mail en un diseño de 600px con un encabezado de Pinz arriba. Sólo tablas y
  * estilos en línea, que es lo que respetan los clientes de correo. La imagen va adjunta (cid), no como
- * URL externa ni data: URI, porque Gmail las bloquea.
+ * URL externa ni data: URI, porque Gmail las bloquea. Con `encabezadoFijo` se usa esa imagen (y su alt)
+ * en vez de sortear una.
  */
-function conEncabezado(cuerpo: string) {
-  const encabezado = encabezadorandom();
+function conEncabezado(cuerpo: string, encabezadoFijo?: EncabezadoFijo) {
+  const encabezado = encabezadoFijo?.ruta ?? encabezadorandom();
+  const alt = encabezadoFijo?.alt ?? "Pinz";
   const nombre = basename(encabezado);
   console.info(`[mail] Encabezado: ${nombre}`);
   return {
@@ -45,7 +57,7 @@ function conEncabezado(cuerpo: string) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f6eedf">
 <tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#fff8ee;border:3px solid #1c1b22;border-radius:16px;border-collapse:separate;overflow:hidden">
-<tr><td style="padding:0;line-height:0;font-size:0"><img src="cid:${CID_ENCABEZADO}" width="600" alt="Pinz" style="display:block;width:100%;height:auto;border:0"></td></tr>
+<tr><td style="padding:0;line-height:0;font-size:0"><img src="cid:${CID_ENCABEZADO}" width="600" alt="${escaparHtml(alt)}" style="display:block;width:100%;height:auto;border:0"></td></tr>
 <tr><td style="padding:24px 28px;color:#1c1b22;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5">
 ${cuerpo}
 </td></tr>
@@ -112,12 +124,26 @@ export async function mandarInvitacion(email: string, viaje: { nombre: string; d
     console.info(`[invitación sin SMTP] Enlace para ${email}: ${link}`);
     return;
   }
+  // Sin saltos de línea en el asunto: no se pueden colar encabezados.
+  const enAsunto = (texto: string) => texto.replace(/\s+/g, " ").trim();
+  const linkHtml = escaparHtml(link);
   await transporte.sendMail({
     from: config.mail.remitente,
     to: email,
-    subject: `${invita} te invitó a ${viaje.nombre}`,
+    subject: `${enAsunto(invita)} te invitó a ${enAsunto(viaje.nombre)}`,
     text: `${invita} te invitó a organizar ${viaje.nombre} (${viaje.destino}) en Pinz.\n\nUnite desde este enlace: ${link}`,
-    ...conEncabezado(`<p>${invita} te invitó a organizar <strong>${viaje.nombre}</strong> (${viaje.destino}) en Pinz.</p><p><a href="${link}">Unirme al viaje</a></p>`),
+    ...conEncabezado(
+      `<p style="margin:0 0 4px;font-size:22px;font-weight:bold;line-height:1.3">${escaparHtml(invita)} te invitó a ${escaparHtml(viaje.nombre)}</p>
+<p style="margin:0 0 16px;color:#6b6678">${escaparHtml(viaje.destino)}</p>
+<p style="margin:0 0 24px">Unite al viaje en Pinz para votar planes, ver la agenda y dividir los gastos con el grupo.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;border-collapse:separate">
+<tr><td align="center" style="background:#ff8a66;border:3px solid #1c1b22;border-radius:12px">
+<a href="${linkHtml}" style="display:inline-block;padding:12px 24px;color:#1c1b22;font-weight:bold;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-size:16px">Unirme al viaje</a>
+</td></tr>
+</table>
+<p style="margin:0;color:#6b6678;font-size:13px">Si el botón no funciona, copiá este enlace:<br><a href="${linkHtml}" style="color:#6b6678;word-break:break-all">${linkHtml}</a></p>`,
+      ENCABEZADO_INVITACION,
+    ),
   });
 }
 
@@ -157,10 +183,17 @@ export async function avisarConsultaAlEquipo(consulta: { email: string; asunto: 
     from: config.mail.remitente,
     to: config.mail.equipo,
     replyTo: consulta.email,
-    subject: `Consulta nueva: ${asunto}`,
+    subject: `📬 Consulta nueva: ${asunto}`,
     text: `De: ${consulta.email}\nAsunto: ${asunto}\n\n${consulta.descripcion}`,
-    ...conEncabezado(`<p><strong>De:</strong> ${escaparHtml(consulta.email)}<br><strong>Asunto:</strong> ${escaparHtml(asunto)}</p>
-<p style="white-space:pre-wrap">${escaparHtml(consulta.descripcion)}</p>`),
+    ...conEncabezado(
+      `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px">
+<tr><td style="padding:0 16px 6px 0;color:#6b6678;vertical-align:top">De</td><td style="padding:0 0 6px">${escaparHtml(consulta.email)}</td></tr>
+<tr><td style="padding:0 16px 0 0;color:#6b6678;vertical-align:top">Asunto</td><td style="font-weight:bold">${escaparHtml(asunto)}</td></tr>
+</table>
+<div style="background:#f6eedf;border-left:4px solid #ff8a66;border-radius:8px;padding:16px 18px;white-space:pre-wrap">${escaparHtml(consulta.descripcion)}</div>
+<p style="margin:16px 0 0;color:#6b6678;font-size:13px">Respondé este mail y le llega directo a la persona.</p>`,
+      ENCABEZADO_CONSULTA,
+    ),
   });
 }
 

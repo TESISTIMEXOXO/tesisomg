@@ -1,15 +1,46 @@
 import { MapPin } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { useDejarDeCompartir, useEnviarUbicacion } from '../../hooks/ubicaciones'
+import { ErrorApi } from '../../lib/api'
 
-function posicionActual(): Promise<{ lat: number; lng: number }> {
+function pedirPosicion(opciones: PositionOptions): Promise<{ lat: number; lng: number }> {
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => resolve({ lat: coords.latitude, lng: coords.longitude }),
       reject,
-      { enableHighAccuracy: true, maximumAge: 15_000, timeout: 15_000 },
+      opciones,
     )
   })
+}
+
+/**
+ * Pide primero la ubicación precisa (GPS). En una compu sin GPS esa suele vencer o fallar, así que si no
+ * es un permiso denegado, reintenta con la aproximada (wifi/red), que alcanza para el grupo.
+ */
+async function posicionActual() {
+  try {
+    return await pedirPosicion({ enableHighAccuracy: true, maximumAge: 15_000, timeout: 15_000 })
+  } catch (problema) {
+    if (problema instanceof GeolocationPositionError && problema.code === problema.PERMISSION_DENIED) throw problema
+    return pedirPosicion({ enableHighAccuracy: false, maximumAge: 60_000, timeout: 20_000 })
+  }
+}
+
+function mensajeDeError(problema: unknown) {
+  if (problema instanceof GeolocationPositionError) {
+    if (problema.code === problema.PERMISSION_DENIED) {
+      return window.isSecureContext
+        ? 'No tenemos permiso para acceder a tu ubicación. Habilitalo en el navegador (el ícono a la izquierda de la dirección) e intentá de nuevo.'
+        : 'El navegador solo permite la ubicación en páginas seguras. Entrá por https o por localhost.'
+    }
+    return 'Tu dispositivo no pudo obtener la ubicación. Revisá que la ubicación esté activada en el sistema e intentá de nuevo.'
+  }
+  if (problema instanceof ErrorApi) {
+    if (problema.status === 409) return 'Solo se puede compartir la ubicación durante las fechas del viaje.'
+    if (problema.status === 404) return 'No encontramos este viaje en tu cuenta.'
+    if (problema.status === 401) return 'Tu sesión venció. Volvé a iniciar sesión.'
+  }
+  return 'No pudimos compartir tu ubicación. Revisá la conexión e intentá de nuevo.'
 }
 
 /**
@@ -32,8 +63,8 @@ export function CompartirUbicacion({ viajeId }: { viajeId: string }) {
         const posicion = await posicionActual()
         if (activo) await enviarUbicacion(posicion)
         if (activo) setError('')
-      } catch {
-        if (activo) setError('No pudimos actualizar tu ubicación. Revisá el permiso del navegador y la conexión.')
+      } catch (problema) {
+        if (activo) setError(mensajeDeError(problema))
       }
     }
     void actualizar()
@@ -63,9 +94,7 @@ export function CompartirUbicacion({ viajeId }: { viajeId: string }) {
       await enviarUbicacion(await posicionActual())
       setCompartiendo(true)
     } catch (problema) {
-      setError(problema instanceof GeolocationPositionError
-        ? 'No tenemos permiso para acceder a tu ubicación. Habilitalo en el navegador e intentá de nuevo.'
-        : 'No pudimos compartir tu ubicación. Revisá la conexión e intentá de nuevo.')
+      setError(mensajeDeError(problema))
     }
   }
 

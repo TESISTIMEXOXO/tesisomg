@@ -1,4 +1,4 @@
-import { Copy } from 'lucide-react'
+import { UserMinus } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Cargando, NoCargo } from '../../components/marca/Estados'
@@ -11,8 +11,11 @@ import { useCambiarRol, useInvitacionGrupo, useInvitarPorMail, useMovimientos, u
 import { useViajeActual } from '../../layouts/contextoViaje'
 import { cuandoEnDias } from '../../lib/fechas'
 import { ELENCO } from '../../pinz/elenco'
-import { RolSchema, type Rol } from '../../types/persona'
+import { codigoDeError } from '../../services/auth'
+import { RolSchema, type Persona, type Rol } from '../../types/persona'
+import { CompartirInvitacion } from './CompartirInvitacion'
 import { DestinosYFechas } from './DestinosYFechas'
+import { SacarDelViaje } from './SacarDelViaje'
 import { esOrganizador, puedeEditar } from './nombres'
 
 const ROLES: Record<Rol, string> = { organizador: 'Organizador', miembro: 'Miembro', lector: 'Solo lectura' }
@@ -23,6 +26,22 @@ const ROLES: Record<Rol, string> = { organizador: 'Organizador', miembro: 'Miemb
  * Con tabIndex también se recorren con el teclado.
  */
 const LISTA_CON_SCROLL = 'flex max-h-72 flex-col overflow-y-auto overscroll-contain rounded-sm pr-2 lg:max-h-none lg:min-h-0 lg:flex-1'
+
+/** Cada rechazo del backend dice qué pasó; "revisá el correo" queda solo para fallas de verdad. */
+function mensajeErrorInvitacion(error: unknown) {
+  switch (codigoDeError(error)) {
+    case 'ya-es-miembro':
+      return 'Esa persona ya está en el viaje.'
+    case 'persona-baneada':
+      return 'A esa persona la sacaron tres veces de este viaje: ya no puede volver.'
+    case 'sin-permiso':
+      return 'Con solo lectura no podés invitar. Pedile a quien organiza que te cambie el rol.'
+    case 'email-invalido':
+      return 'Revisá el mail: tiene que ser como nombre@mail.com.'
+    default:
+      return 'No pudimos enviar la invitación. Revisá la conexión e intentá de nuevo.'
+  }
+}
 
 function InvitarPorMail({ viajeId }: { viajeId: string }) {
   const invitar = useInvitarPorMail(viajeId)
@@ -50,7 +69,7 @@ function InvitarPorMail({ viajeId }: { viajeId: string }) {
           Listo, le mandamos la invitación.
         </p>
       )}
-      {invitar.isError && <p role="alert" className="text-meta font-semibold text-negativo">No pudimos enviar la invitación. Revisá el correo e intentá de nuevo.</p>}
+      {invitar.isError && <p role="alert" className="text-meta font-semibold text-negativo">{mensajeErrorInvitacion(invitar.error)}</p>}
     </form>
   )
 }
@@ -64,15 +83,10 @@ export function Grupo() {
   const repetir = useRepetirViaje(viaje.id)
   const cambiarRol = useCambiarRol(viaje.id)
   const puedeAdministrarRoles = esOrganizador(viaje.personas)
-  const [copiado, setCopiado] = useState(false)
+  const [aSacar, setASacar] = useState<Persona | null>(null)
 
   function repetirViaje(modo: 'mismas-personas' | 'mismo-destino') {
     repetir.mutate(modo, { onSuccess: (nuevo) => navigate(`/viajes/${nuevo.id}`) })
-  }
-
-  async function copiarLink(link: string) {
-    await navigator.clipboard.writeText(link)
-    setCopiado(true)
   }
 
   return (
@@ -116,10 +130,24 @@ export function Grupo() {
                   ) : (
                     <span className="rounded-full trazo-fino bg-papel-hundido px-2.5 py-0.5 text-meta font-extrabold">{ROLES[persona.rol]}</span>
                   )}
+                  {puedeAdministrarRoles && !persona.esVos && (
+                    <Button
+                      variant="fantasma"
+                      size="icono"
+                      icon={UserMinus}
+                      aria-label={`Sacar a ${persona.nombre} del viaje`}
+                      aria-haspopup="dialog"
+                      title="Sacar del viaje"
+                      onClick={() => setASacar(persona)}
+                    />
+                  )}
                 </li>
               ))}
             </ul>
             {cambiarRol.isError && <p role="alert" className="mt-3 text-meta font-semibold text-negativo">No pudimos cambiar el rol. Revisá que siga habiendo al menos una persona organizadora.</p>}
+            {puedeAdministrarRoles && (
+              <SacarDelViaje viajeId={viaje.id} nombreViaje={viaje.nombre} persona={aSacar} onCerrar={() => setASacar(null)} />
+            )}
           </Tarjeta>
 
           <Tarjeta titulo="Últimos movimientos" className="lg:min-h-0 lg:flex-1">
@@ -146,15 +174,11 @@ export function Grupo() {
               <div className="flex justify-center py-1">
                 <QrSlot valor={invitacion.data.link} className="max-w-72" />
               </div>
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <p className="flex flex-col">
-                  <span className="text-sobretitulo uppercase">Código</span>
-                  <span className="font-display text-display font-black tracking-widest">{invitacion.data.codigo}</span>
-                </p>
-                <Button variant="secundario" size="sm" icon={Copy} onClick={() => copiarLink(invitacion.data.link)}>
-                  {copiado ? 'Link copiado' : 'Copiar el link'}
-                </Button>
-              </div>
+              <p className="flex flex-col">
+                <span className="text-sobretitulo uppercase">Código</span>
+                <span className="font-display text-display font-black tracking-widest">{invitacion.data.codigo}</span>
+              </p>
+              <CompartirInvitacion link={invitacion.data.link} codigo={invitacion.data.codigo} viaje={viaje} />
             </>
           )}
           <InvitarPorMail viajeId={viaje.id} />

@@ -32,7 +32,15 @@ export function useCambiarRol(viajeId: string) {
 export function useSalirDelGrupo(viajeId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => grupo.salir(viajeId),
+    mutationFn: (nuevoOrganizador?: string) => grupo.salir(viajeId, nuevoOrganizador),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['viajes'] }),
+  })
+}
+
+export function useEcharDelGrupo(viajeId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (personaId: string) => grupo.echar(viajeId, personaId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['viajes'] }),
   })
 }

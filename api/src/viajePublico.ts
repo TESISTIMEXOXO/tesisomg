@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { netosDe } from "./cuentas/delViaje.js";
+import { vecesSacado } from "./expulsiones.js";
 import { Viaje, type DocViaje } from "./modelos/Viaje.js";
 
 type EtapaViaje = NonNullable<DocViaje["etapas"]>[number];
@@ -49,6 +50,8 @@ export function etapasDelViaje(viaje: DocViaje): EtapaViaje[] {
 
 export function viajePublico(viaje: DocViaje, usuarioId: string) {
   const etapas = etapasDelViaje(viaje);
+  // Cuántas veces sacaron a cada uno solo lo ve quien puede sacar gente: para avisarle antes del tercer strike.
+  const veOrganizador = esOrganizador(viaje, usuarioId);
   const primeraEtapa = etapas[0];
   const ultimaEtapa = etapas.at(-1);
   return {
@@ -71,6 +74,7 @@ export function viajePublico(viaje: DocViaje, usuarioId: string) {
       pinz: miembro.pinz ?? null,
       rol: miembro.rol,
       esVos: miembro.usuarioId.toString() === usuarioId,
+      ...(veOrganizador ? { vecesSacado: vecesSacado(viaje, miembro.usuarioId.toString()) } : {}),
     })),
     pendiente: null,
     estadoCuentas: estadoDeCuentas(viaje),
