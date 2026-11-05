@@ -80,3 +80,17 @@ export function viajePublico(viaje: DocViaje, usuarioId: string) {
     estadoCuentas: estadoDeCuentas(viaje),
   };
 }
+
+/**
+ * Si el viaje ya terminó: tiene ida y vuelta, y la vuelta es anterior a hoy. Es la misma regla que la etapa
+ * "post" del front (lib/etapa.ts). El front usa la fecha del dispositivo; acá "hoy" es la fecha más adelantada
+ * del planeta (UTC+14), así nunca se rechaza un viaje que en la pantalla de alguien ya figura como pasado.
+ */
+export function viajeYaPaso(viaje: DocViaje, ahora = new Date()) {
+  const etapas = etapasDelViaje(viaje);
+  const fechaIda = etapas[0]?.fechaIda ?? viaje.fechaIda ?? null;
+  const fechaVuelta = etapas.at(-1)?.fechaVuelta ?? viaje.fechaVuelta ?? null;
+  if (!fechaIda || !fechaVuelta) return false;
+  const hoyMasAdelantado = new Date(ahora.getTime() + 14 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  return fechaVuelta < hoyMasAdelantado;
+}

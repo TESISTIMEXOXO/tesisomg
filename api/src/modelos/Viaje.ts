@@ -15,6 +15,8 @@ type MiembroDoc = {
   rol: RolViaje;
   /** Abre el feed .ics del itinerario sin sesión. Se crea la primera vez que la persona lo pide. */
   calendarioToken?: string;
+  /** Lo borró de su lista (solo un viaje que ya pasó): sigue siendo del grupo, pero no le aparece en Mis viajes. */
+  oculto?: boolean;
 };
 type OpcionDoc = { id: string; nombre: string; detalle: string | null; votantes: mongoose.Types.ObjectId[] };
 type VotacionDoc = { id: string; pregunta: string; categoria: CategoriaVotacion; estado: "abierta" | "cerrada"; cierre: string | null; opciones: OpcionDoc[]; ganadoraId: string | null };
@@ -27,6 +29,8 @@ type ExpulsadoDoc = {
   veces: number;
   /** Si todavía no se enteró: se apaga cuando vuelve a sumarse. */
   avisar: boolean;
+  /** Lo borró de "Viajes de los que te sacaron" en su lista. */
+  oculto: boolean;
 };
 type ActividadDoc = { id: string; fecha: string; hora: string; horaFin: string | null; titulo: string; lugar: string | null; lat: number | null; lng: number | null; hecha: boolean };
 type ParteDoc = { personaId: mongoose.Types.ObjectId; monto: number };
@@ -88,6 +92,7 @@ const miembroSchema = new mongoose.Schema<MiembroDoc>(
     pinz: { type: String, enum: [...PINZ_IDS, null], default: null },
     rol: { type: String, enum: ["organizador", "miembro", "lector"], required: true },
     calendarioToken: { type: String },
+    oculto: { type: Boolean, default: false },
   },
   { _id: false },
 );
@@ -254,6 +259,7 @@ const viajeSchema = new mongoose.Schema<ViajeData>(
           en: { type: Date, required: true },
           veces: { type: Number, default: 1 },
           avisar: { type: Boolean, default: true },
+          oculto: { type: Boolean, default: false },
         },
         { _id: false },
       )],

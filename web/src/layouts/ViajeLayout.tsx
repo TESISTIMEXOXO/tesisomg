@@ -6,7 +6,8 @@ import { Cargando, NoCargo } from '../components/marca/Estados'
 import { CompartirUbicacion } from '../components/slots/CompartirUbicacion'
 import { BottomNav, type ItemNav } from '../components/ui/BottomNav'
 import { ButtonLink } from '../components/ui/Button'
-import { useViaje } from '../hooks/viajes'
+import { useSesion } from '../hooks/auth'
+import { claveDelViaje, useViaje } from '../hooks/viajes'
 import { etapaDelViaje } from '../lib/etapa'
 import { expulsionDe } from '../lib/expulsion'
 import type { Etapa } from '../types/viaje'
@@ -28,6 +29,7 @@ function secciones(id: string): ItemNav[] {
 /** Adentro de un viaje: encabezado con la etapa, las cinco secciones y la alarma fijas y, en Viaje, el gasto a mano. */
 export function ViajeLayout() {
   const { id = '' } = useParams()
+  const { data: sesion } = useSesion()
   const { data: viaje, isPending, error, refetch } = useViaje(id)
   const enEmergencias = useMatch('/viajes/:id/emergencias') !== null
   const [etapaElegida, setEtapaElegida] = useState<{ viajeId: string; etapa: Etapa } | null>(null)
@@ -39,7 +41,7 @@ export function ViajeLayout() {
   const expulsion = expulsionDe(error)
   // Emergencias nunca lleva pinz, ni siquiera mientras carga.
   // Si lo sacaron del grupo (aunque fuera mientras miraba el viaje), el aviso tapa todo lo demás.
-  if (expulsion) contenido = <AvisoExpulsion expulsion={expulsion} />
+  if (expulsion) contenido = <AvisoExpulsion expulsion={expulsion} queryKey={claveDelViaje(sesion?.id, id)} />
   else if (isPending) contenido = enEmergencias ? <p role="status">Cargando el viaje…</p> : <Cargando />
   else if (error) {
     contenido = enEmergencias ? (

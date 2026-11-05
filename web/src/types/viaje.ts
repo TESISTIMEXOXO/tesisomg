@@ -60,6 +60,18 @@ export const InvitacionSchema = z.object({
   yaEsMiembro: z.boolean(),
 })
 
+/** Un viaje del que sacaron a quien usa la app: aparece en Mis viajes hasta que lo borra de su lista. */
+export const ViajeSacadoSchema = z.object({
+  id: z.string(),
+  nombre: z.string(),
+  destino: z.string(),
+  /** Quién lo sacó la última vez. */
+  por: z.string(),
+  en: z.string(),
+  /** Lo sacaron tres veces: ya no puede volver. */
+  baneado: z.boolean(),
+})
+
 export const ResumenViajeSchema = z.object({
   viajeId: z.string(),
   /** Pendientes de quien usa la app: votaciones, tareas a su nombre, requisitos. */
@@ -96,6 +108,7 @@ export const PaisSchema = z.object({
 
 export type Etapa = z.infer<typeof EtapaSchema>
 export type Viaje = z.infer<typeof ViajeSchema>
+export type ViajeSacado = z.infer<typeof ViajeSacadoSchema>
 export type LugarViaje = z.infer<typeof LugarViajeSchema>
 export type EtapaViaje = z.infer<typeof EtapaViajeSchema>
 export type SugerenciaLugar = z.infer<typeof SugerenciaLugarSchema>
