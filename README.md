@@ -62,8 +62,6 @@ El proyecto tiene un front en `React` con `Vite` y una API en `Express` con `Mon
 
 - **Ingreso**: con Google o con un código que llega por mail.
 
-- **Panel de administración**: `/admin`, reservado a `pinz.tesis@gmail.com`, para responder las consultas de "Escribinos" y ver resúmenes, usuarios y viajes. La API valida el correo de la sesión en cada ruta administrativa.
-
 - **Tema claro y oscuro**.
 
 ## 🖥️ Tecnologías
