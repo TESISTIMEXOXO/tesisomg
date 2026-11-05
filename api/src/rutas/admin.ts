@@ -163,7 +163,7 @@ rutasAdmin.get("/usuarios", async (req, res) => {
     : { createdAt: orden.data === "nuevo" ? -1 as const : 1 as const, _id: orden.data === "nuevo" ? -1 as const : 1 as const };
   const [usuarios, total] = await Promise.all([
     Usuario.find(filtro)
-    .select("email nombre pinz createdAt")
+    .select("email nombre pinz baneado createdAt")
     .sort(ordenamiento)
     .skip((pagina - 1) * USUARIOS_POR_PAGINA)
     .limit(USUARIOS_POR_PAGINA)
@@ -177,12 +177,37 @@ rutasAdmin.get("/usuarios", async (req, res) => {
     email: usuario.email,
     nombre: usuario.nombre,
     pinz: usuario.pinz ?? null,
+    baneado: usuario.baneado ?? false,
     creadoEn: usuario.createdAt,
     })),
     total,
     pagina,
     porPagina: USUARIOS_POR_PAGINA,
   });
+});
+
+rutasAdmin.patch("/usuarios/:id/baneo", async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    res.status(404).json({ error: "no-existe" });
+    return;
+  }
+  const datos = z.object({ baneado: z.boolean() }).safeParse(req.body);
+  if (!datos.success) {
+    res.status(400).json({ error: "datos-invalidos" });
+    return;
+  }
+  const usuario = await Usuario.findById(req.params.id).select("email baneado").exec();
+  if (!usuario) {
+    res.status(404).json({ error: "no-existe" });
+    return;
+  }
+  if (usuario.email.toLowerCase() === config.superadminEmail) {
+    res.status(403).json({ error: "no-se-puede-banear-superadmin" });
+    return;
+  }
+  usuario.baneado = datos.data.baneado;
+  await usuario.save();
+  res.json({ id: usuario.id, baneado: usuario.baneado });
 });
 
 rutasAdmin.get("/viajes", async (req, res) => {

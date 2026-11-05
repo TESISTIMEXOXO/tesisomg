@@ -52,6 +52,10 @@ rutasAuth.post("/registro/verificar", async (req, res) => {
     return;
   }
   const usuario = await usuarioPorEmail(resultado.email);
+  if (usuario.baneado) {
+    res.status(403).json({ error: "usuario-baneado" });
+    return;
+  }
   usuario.contrasenaHash = resultado.contrasenaHash;
   await usuario.save();
   await abrirSesion(res, usuario.id);
@@ -70,6 +74,10 @@ rutasAuth.post("/ingresar", async (req, res) => {
   const usuario = await Usuario.findOne({ email: pedido.data.email.toLowerCase() });
   if (!usuario) {
     res.status(401).json({ error: "sin-cuenta" });
+    return;
+  }
+  if (usuario.baneado) {
+    res.status(403).json({ error: "usuario-baneado" });
     return;
   }
   if (!usuario.contrasenaHash) {
@@ -123,6 +131,10 @@ rutasAuth.post("/recuperar/verificar", async (req, res) => {
     res.status(404).json({ error: "sin-cuenta" });
     return;
   }
+  if (usuario.baneado) {
+    res.status(403).json({ error: "usuario-baneado" });
+    return;
+  }
   await abrirSesion(res, usuario.id);
   res.json(usuarioPublico(usuario));
 });
@@ -141,6 +153,11 @@ rutasAuth.post("/google", async (req, res) => {
   }
   try {
     const identidad = await identidadDesdeCodigo(pedido.data.code);
+    const existente = await Usuario.findOne({ email: identidad.email.toLowerCase() }).select("baneado").exec();
+    if (existente?.baneado) {
+      res.status(403).json({ error: "usuario-baneado" });
+      return;
+    }
     const usuario = await usuarioPorEmail(identidad.email, { nombre: "google", id: identidad.id }, identidad.nombre);
     await abrirSesion(res, usuario.id);
     res.json(usuarioPublico(usuario));

@@ -30,6 +30,7 @@ export const UsuarioAdminSchema = z.object({
   email: z.email(),
   nombre: z.string(),
   pinz: z.string().nullable(),
+  baneado: z.boolean(),
   creadoEn: z.iso.datetime(),
 })
 

@@ -8,6 +8,7 @@ const usuarioSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     /** Vacío hasta que completa la bienvenida. */
     nombre: { type: String, default: "" },
+    baneado: { type: Boolean, default: false },
     pinz: { type: String, enum: [...PINZ_IDS, null], default: null },
     moneda: { type: String, enum: MONEDAS, default: "ARS" },
     tema: { type: String, enum: ["claro", "oscuro", "sistema"], default: "claro" },

@@ -42,6 +42,13 @@ export function usuarios(pagina: number, busqueda: string, orden: OrdenUsuarios)
   return pedir(`/admin/usuarios?${parametros.toString()}`, { schema: PaginaAdminSchema(UsuarioAdminSchema) })
 }
 
+export function cambiarBaneoUsuario(id: string, baneado: boolean) {
+  return pedir(`/admin/usuarios/${encodeURIComponent(id)}/baneo`, {
+    method: 'PATCH',
+    body: { baneado },
+  })
+}
+
 export function viajes(pagina: number) {
   return pedir(`/admin/viajes?pagina=${pagina}`, { schema: PaginaAdminSchema(ViajeAdminSchema) })
 }
