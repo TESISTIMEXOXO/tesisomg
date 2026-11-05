@@ -84,7 +84,7 @@ web/
 | Ruta | Archivo | Qué usa |
 | --- | --- | --- |
 | `/` | `pages/landing/Landing.tsx` (una sección por archivo en la misma carpeta; ver "La landing") | `Camino`, `Pin`, `Logo`, `Button`, `PollOption`, `BalanceRow`, `ItineraryItem`, `AvatarStack` |
-| `/ingresar` | `pages/ingresar/Ingresar.tsx`, una `Ventana` sobre la landing: es ruta hija de `Landing` y al cerrarla vuelve a `/` (bypass temporal: en desarrollo, cualquier proveedor lleva a `/viajes`). Con `?paso=ingreso` abre directo en "Iniciá sesión", que también ofrece "Iniciar con Google" | `AuthSlot`, `useIngresar` |
+| `/ingresar` | `pages/ingresar/Ingresar.tsx`, una `Ventana` sobre la landing: es ruta hija de `Landing` y al cerrarla vuelve a `/` (bypass temporal: en desarrollo, cualquier proveedor lleva a `/viajes`). Con `?paso=ingreso` abre directo en "Iniciá sesión", que también ofrece "Iniciar con Google". Si el mail no tiene cuenta o la contraseña no coincide, dice lo mismo: "El mail o la contraseña son incorrectos" | `AuthSlot`, `CampoContrasena`, `useIngresar` |
 | `/test` | `pages/test/TestPinz.tsx`, otra `Ventana` sobre la landing y sin cuenta: tres preguntas y el pinz que salió. "Quiero ser …" guarda el resultado en la pestaña (`lib/pinzDelTest.ts`) y lleva a `/ingresar`. Las preguntas y el puntaje están en `pinz/test.ts`; en un empate gana la última respuesta | `Pin`, `Button`, `CaminosDeLaVentana` |
 | `/bienvenida` | `pages/bienvenida/Bienvenida.tsx`. Si la persona hizo el test, llega con ese pinz elegido | `TextField`, `Chip`, `ElegirPinz`, `useGuardarPerfil` |
 | `/unirse` | `pages/unirse/Unirse.tsx`, con `FormularioCodigo.tsx` (el mismo formulario que abre el + de la barra en una ventana) | `TextField`, `Button` |
@@ -114,7 +114,8 @@ Cada pantalla resuelve sus estados de carga, vacío y error con `Cargando`, `NoC
 | `Button` / `ButtonLink` | `components/ui/Button.tsx` | `variant` (`primario` · `secundario` · `fantasma` · `emergencia`), `size` (`md` 50px · `sm` 44px · `icono` círculo de 44px, solo con un ícono y su `aria-label`), `icon`, `iconRight`, `full`; `ButtonLink` suma `to` | Toda acción. Un solo primario por pantalla. Las clases están en `estilosBoton.ts` por si un `<a>` o un `<label>` tiene que verse como botón |
 | `Chip` | `components/ui/Chip.tsx` | `selected`, `tone` (`neutro` o la etapa), `icon` | Filtros y opciones; seleccionado queda hundido y con check |
 | `StageSwitch` | `components/ui/StageSwitch.tsx` | `value`, `defaultValue`, `onChange` | Elegir qué etapa mirar |
-| `TextField` | `components/ui/TextField.tsx` | `label`, `hint`, `error` + props de `<input>` | Campos con label siempre visible |
+| `TextField` | `components/ui/TextField.tsx` | `label`, `hint`, `error`, `accion` (un botón adentro, a la derecha) + props de `<input>` | Campos con label siempre visible |
+| `CampoContrasena` | `components/ui/CampoContrasena.tsx` | las de `TextField`, sin `type` | Contraseña con el ojo para mostrarla u ocultarla. La usan el ingreso, el registro y el cambio de contraseña |
 | `PollOption` | `components/ui/PollOption.tsx` | `label`, `detail`, `votes`, `total`, `voted`, `onVote` | Una opción de votación con barra punteada |
 | `BalanceRow` | `components/ui/BalanceRow.tsx` | `name`, `amount`, `direction`, `pinz`, `action` | Cómo quedás con alguien: signo, palabra y color |
 | `ItineraryItem` | `components/ui/ItineraryItem.tsx` | `time`, `title`, `place`, `done`, `current`, `last` | Un momento del día; es un `<li>`, va dentro de un `<ol>` |
