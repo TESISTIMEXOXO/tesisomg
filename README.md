@@ -258,7 +258,7 @@ Una vez adentro, creá un viaje y sumá al grupo. Así se ve la Agenda de un via
 
 # 📜 Licencia
 
-Este repositorio todavía no tiene licencia. Mientras no haya un archivo `LICENSE`, el código queda con todos los derechos reservados.
+© 2026 Mora Perez, Ignacio Lederhos y Tobias. **Todos los derechos reservados.** No se permite usar, copiar, modificar ni distribuir el código, el diseño ni las imágenes sin autorización escrita de los autores. Para más detalles, mirá el archivo [LICENSE](./LICENSE).
 
 # 👥 Autores
 
