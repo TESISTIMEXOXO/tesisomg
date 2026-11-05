@@ -615,3 +615,52 @@ test("a la tercera vez que lo sacan, ya no puede volver al viaje", async () => {
   assert.equal((await api("Nacho", "DELETE", `/viajes/${viajeId}/miembros/${idDe("Santi")}`)).status, 200);
   assert.equal((await api("Santi", "POST", "/viajes/unirse", { codigo })).status, 200);
 });
+
+type ViajeListado = { id: string };
+type Sacado = { id: string; nombre: string; por: string; baneado: boolean };
+
+test("un viaje que ya pasó se borra solo de la lista de quien lo pide", async () => {
+  const viajeId = await viajeVacio();
+  const ocultar = (quien: string) => api<{ error?: string }>(quien, "POST", `/viajes/${viajeId}/ocultar`);
+  const loVe = async (quien: string) => (await api<ViajeListado[]>(quien, "GET", "/viajes")).cuerpo.some((viaje) => viaje.id === viajeId);
+
+  // Sin fechas, o todavía sin terminar, no se puede.
+  const sinFechas = await ocultar("Nacho");
+  assert.equal(sinFechas.status, 409);
+  assert.deepEqual(sinFechas.cuerpo, { error: "viaje-no-paso" });
+  await Viaje.updateOne({ _id: viajeId }, { $set: { fechaIda: "2099-01-01", fechaVuelta: "2099-01-10" } });
+  assert.equal((await ocultar("Nacho")).status, 409);
+
+  await Viaje.updateOne({ _id: viajeId }, { $set: { fechaIda: "2020-01-01", fechaVuelta: "2020-01-10" } });
+  assert.equal((await ocultar("Nacho")).status, 204);
+  assert.equal(await loVe("Nacho"), false);
+  // Para el resto del grupo sigue igual, y el viaje sigue existiendo.
+  assert.equal(await loVe("Fede"), true);
+  assert.equal((await api("Nacho", "GET", `/viajes/${viajeId}`)).status, 200);
+
+  // Si alguien le cambia las fechas y deja de ser pasado, le vuelve a aparecer.
+  await Viaje.updateOne({ _id: viajeId }, { $set: { fechaVuelta: "2099-01-10" } });
+  assert.equal(await loVe("Nacho"), true);
+});
+
+test("los viajes de los que te sacaron se listan y se pueden borrar de la lista", async () => {
+  const viajeId = await viajeVacio();
+  const sacados = async (quien: string) => (await api<Sacado[]>(quien, "GET", "/viajes/sacados")).cuerpo.filter((viaje) => viaje.id === viajeId);
+
+  assert.deepEqual(await sacados("Fede"), []);
+  await api("Nacho", "DELETE", `/viajes/${viajeId}/miembros/${idDe("Fede")}`);
+  const [sacado] = await sacados("Fede");
+  assert.equal(sacado?.nombre, "Cabaña");
+  assert.equal(sacado?.por, "Nacho");
+  assert.equal(sacado?.baneado, false);
+
+  // No hace falta que el viaje haya pasado.
+  assert.equal((await api("Fede", "POST", `/viajes/${viajeId}/ocultar`)).status, 204);
+  assert.deepEqual(await sacados("Fede"), []);
+
+  // Alguien que nunca estuvo no puede tocarlo.
+  const ajeno = await Usuario.create({ email: `ajeno-${crypto.randomUUID()}@prueba.pinz`, nombre: "Ajeno" });
+  ids.Ajeno = ajeno.id as string;
+  assert.equal((await api("Ajeno", "POST", `/viajes/${viajeId}/ocultar`)).status, 404);
+  await ajeno.deleteOne();
+});

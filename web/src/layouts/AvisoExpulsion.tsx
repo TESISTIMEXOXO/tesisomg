@@ -7,7 +7,7 @@ import { Ventana } from '../components/ui/Ventana'
 import type { Expulsion } from '../lib/expulsion'
 
 /** Se abre sola cuando a la persona la sacan del viaje que está mirando. Al cerrarla, vuelve a Mis viajes. */
-export function AvisoExpulsion({ expulsion }: { expulsion: Expulsion }) {
+export function AvisoExpulsion({ expulsion, queryKey }: { expulsion: Expulsion; queryKey: readonly unknown[] }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const ventana = useRef<HTMLDialogElement>(null)
@@ -18,8 +18,11 @@ export function AvisoExpulsion({ expulsion }: { expulsion: Expulsion }) {
   }, [])
 
   function irAMisViajes() {
+    // Se olvida el "te sacaron" de este viaje: si vuelve a sumarse, al entrar no tiene que ver el aviso viejo.
+    queryClient.removeQueries({ queryKey, exact: true })
     // Mis viajes ya no tiene que mostrarlo.
     void queryClient.invalidateQueries({ queryKey: ['viajes'] })
+    void queryClient.invalidateQueries({ queryKey: ['viajes-sacados'] })
     navigate('/viajes', { replace: true })
   }
 

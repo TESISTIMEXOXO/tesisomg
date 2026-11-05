@@ -9,7 +9,7 @@ import { conListasAlDia, listasDe } from "../listasDelViaje.js";
 import { Usuario } from "../modelos/Usuario.js";
 import { UbicacionCompartida } from "../modelos/UbicacionCompartida.js";
 import { Viaje } from "../modelos/Viaje.js";
-import { esOrganizador, etapasDelViaje, filtroMiembro, puedeEditarViaje, registrarMovimiento, viajeDelMiembro, viajePublico } from "../viajePublico.js";
+import { esOrganizador, etapasDelViaje, filtroMiembro, puedeEditarViaje, registrarMovimiento, viajeDelMiembro, viajePublico, viajeYaPaso } from "../viajePublico.js";
 
 export const rutasViajes = Router();
 rutasViajes.use(requiereSesion);
@@ -125,7 +125,13 @@ rutasViajes.post("/unirse", async (req, res) => {
     res.status(404).json({ error: !viaje ? "invitacion-no-encontrada" : "sin-sesion" });
     return;
   }
-  if (!viaje.miembros.some((miembro) => miembro.usuarioId.toString() === usuarioId)) {
+  const yaEstaba = viaje.miembros.find((miembro) => miembro.usuarioId.toString() === usuarioId);
+  // Si lo había borrado de su lista y entra de nuevo con el código, vuelve a aparecerle.
+  if (yaEstaba?.oculto) {
+    yaEstaba.oculto = false;
+    await viaje.save();
+  }
+  if (!yaEstaba) {
     if (estaBaneado(viaje, usuarioId)) {
       res.status(403).json({ error: "baneado", viaje: viaje.nombre });
       return;
@@ -139,7 +145,10 @@ rutasViajes.post("/unirse", async (req, res) => {
     registrarMovimiento(viaje, `${usuario.nombre || "Alguien"} se sumó al viaje`);
     // Si lo habían sacado y vuelve con el código, ya no hay nada que avisarle. Las veces quedan: cuentan para el baneo.
     const expulsion = viaje.expulsados.find((expulsado) => expulsado.usuarioId.toString() === usuarioId);
-    if (expulsion) expulsion.avisar = false;
+    if (expulsion) {
+      expulsion.avisar = false;
+      expulsion.oculto = false;
+    }
     await viaje.save();
   }
   res.json(viajePublico(viaje, usuarioId));
@@ -148,7 +157,65 @@ rutasViajes.post("/unirse", async (req, res) => {
 rutasViajes.get("/", async (_req, res) => {
   const usuarioId = res.locals.usuarioId as string;
   const viajes = await Viaje.find(filtroMiembro(usuarioId)).sort({ createdAt: -1 }).exec();
-  res.json(viajes.map((viaje) => viajePublico(viaje, usuarioId)));
+  // Los que borró de su lista no aparecen, mientras sigan siendo pasados: si alguien les cambia las fechas, vuelven.
+  const visibles = viajes.filter((viaje) => {
+    const yo = viaje.miembros.find((miembro) => miembro.usuarioId.toString() === usuarioId);
+    return !(yo?.oculto && viajeYaPaso(viaje));
+  });
+  res.json(visibles.map((viaje) => viajePublico(viaje, usuarioId)));
+});
+
+/** Los viajes de los que sacaron a quien pregunta y no volvió, salvo los que ya borró de su lista. */
+rutasViajes.get("/sacados", async (_req, res) => {
+  const usuarioId = new mongoose.Types.ObjectId(res.locals.usuarioId as string);
+  const viajes = await Viaje.find({
+    expulsados: { $elemMatch: { usuarioId, avisar: true, oculto: { $ne: true } } },
+    "miembros.usuarioId": { $ne: usuarioId },
+  })
+    .select("nombre destino expulsados")
+    .exec();
+  res.json(viajes.flatMap((viaje) => {
+    const expulsion = viaje.expulsados.find((expulsado) => expulsado.usuarioId.equals(usuarioId));
+    if (!expulsion) return [];
+    return [{
+      id: viaje._id.toString(),
+      nombre: viaje.nombre,
+      destino: viaje.destino,
+      por: expulsion.por,
+      en: expulsion.en.toISOString(),
+      baneado: expulsion.veces >= MAX_EXPULSIONES,
+    }];
+  }).sort((a, b) => b.en.localeCompare(a.en)));
+});
+
+/**
+ * Borrar un viaje de la lista propia: solo desaparece para quien lo pide; el viaje y lo del grupo quedan.
+ * Se puede con un viaje que ya pasó o con uno del que lo sacaron.
+ */
+rutasViajes.post("/:id/ocultar", async (req, res) => {
+  const usuarioId = res.locals.usuarioId as string;
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    res.status(404).json({ error: "no-existe" });
+    return;
+  }
+  const viaje = await Viaje.findById(req.params.id).exec();
+  const yo = viaje?.miembros.find((miembro) => miembro.usuarioId.toString() === usuarioId);
+  const expulsion = viaje?.expulsados.find((expulsado) => expulsado.usuarioId.toString() === usuarioId);
+  if (!viaje || (!yo && !expulsion)) {
+    res.status(404).json({ error: "no-existe" });
+    return;
+  }
+  if (yo) {
+    if (!viajeYaPaso(viaje)) {
+      res.status(409).json({ error: "viaje-no-paso" });
+      return;
+    }
+    yo.oculto = true;
+  } else {
+    expulsion!.oculto = true;
+  }
+  await viaje.save();
+  res.status(204).end();
 });
 
 rutasViajes.post("/", async (req, res) => {
@@ -414,7 +481,7 @@ rutasViajes.delete("/:id/miembros/:personaId", async (req, res) => {
   const veces = vecesSacado(viaje, req.params.personaId) + 1;
   viaje.expulsados = [
     ...viaje.expulsados.filter((expulsado) => expulsado.usuarioId.toString() !== req.params.personaId),
-    { usuarioId: persona.usuarioId, por: quienEcha?.nombre ?? "Alguien del grupo", en: new Date(), veces, avisar: true },
+    { usuarioId: persona.usuarioId, por: quienEcha?.nombre ?? "Alguien del grupo", en: new Date(), veces, avisar: true, oculto: false },
   ];
   registrarMovimiento(
     viaje,

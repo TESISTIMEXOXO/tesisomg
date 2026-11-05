@@ -16,6 +16,26 @@ export function useViajes() {
   })
 }
 
+export function useViajesSacados() {
+  const { data: sesion } = useSesion()
+  return useQuery({
+    queryKey: ['viajes-sacados', sesion?.id],
+    queryFn: viajes.listarSacados,
+    enabled: Boolean(sesion?.id),
+  })
+}
+
+export function useOcultarViaje() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (viajeId: string) => viajes.ocultar(viajeId),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['viajes'] }),
+      queryClient.invalidateQueries({ queryKey: ['viajes-sacados'] }),
+    ]),
+  })
+}
+
 export function useBuscarLugares(consulta: string) {
   return useQuery({
     queryKey: ['lugares', consulta],
@@ -30,10 +50,15 @@ export function useBuscarLugares(consulta: string) {
  * Se vuelve a pedir cada 30 segundos con la pestaña a la vista: así, si a la persona la sacan del grupo,
  * se entera sola (el backend responde 410). Un 4xx no se reintenta: el viaje no va a aparecer.
  */
+/** La clave en caché de un viaje: es por cuenta, para no mezclar lo de dos sesiones en el mismo navegador. */
+export function claveDelViaje(sesionId: string | undefined, viajeId: string) {
+  return ['viajes', sesionId, viajeId] as const
+}
+
 export function useViaje(id: string) {
   const { data: sesion } = useSesion()
   return useQuery({
-    queryKey: ['viajes', sesion?.id, id],
+    queryKey: claveDelViaje(sesion?.id, id),
     queryFn: () => viajes.obtener(id),
     enabled: Boolean(sesion?.id && id),
     refetchInterval: 30_000,
@@ -106,8 +131,16 @@ export function useActualizarEtapas(viajeId: string) {
 
 export function useUnirse() {
   const queryClient = useQueryClient()
+  const { data: sesion } = useSesion()
   return useMutation({
     mutationFn: (codigo: string) => viajes.unirse(codigo),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['viajes'] }),
+    onSuccess: (viaje) => {
+      /*
+       * Si a la persona la habían sacado, en caché quedó el "te sacaron" (410) de este viaje. Sin pisarlo, al
+       * entrar se mostraría ese aviso viejo mientras se vuelve a pedir, y cerrarlo la mandaba a Mis viajes.
+       */
+      queryClient.setQueryData(claveDelViaje(sesion?.id, viaje.id), viaje)
+      return queryClient.invalidateQueries({ queryKey: ['viajes'] })
+    },
   })
 }

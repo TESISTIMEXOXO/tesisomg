@@ -5,6 +5,7 @@ import {
   InvitacionSchema,
   PaisSchema,
   ResumenViajeSchema,
+  ViajeSacadoSchema,
   ViajeSchema,
   type NuevoViaje,
   type EtapaViaje,
@@ -55,4 +56,14 @@ export function unirse(codigo: string) {
 
 export async function emergencias(id: string) {
   return pedir(`/viajes/${encodeURIComponent(id)}/emergencias`, { schema: EmergenciasSchema })
+}
+
+/** Los viajes de los que sacaron a quien usa la app y todavía no borró de su lista. */
+export async function listarSacados() {
+  return pedir('/viajes/sacados', { schema: z.array(ViajeSacadoSchema) })
+}
+
+/** Borra el viaje de la lista propia: un viaje que ya pasó o uno del que te sacaron. Para el grupo no cambia nada. */
+export function ocultar(viajeId: string) {
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/ocultar`, { method: 'POST' })
 }
