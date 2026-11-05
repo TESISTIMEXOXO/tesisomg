@@ -1,31 +1,23 @@
-import { useEffect } from 'react'
-import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet'
-import { ELENCO } from '../../pinz/elenco'
+import type { Map as MapaLeaflet } from 'leaflet'
+import { useEffect, useState } from 'react'
+import { CircleMarker, MapContainer, TileLayer, useMap } from 'react-leaflet'
+import type { ParadaMapa } from '../../lib/paradas'
 import type { PuntoMapa, Ubicacion } from '../../types/itinerario'
 import type { LugarViaje } from '../../types/viaje'
-import { AvatarStack } from '../ui/AvatarStack'
+import { AvatarPersona } from '../ui/AvatarStack'
+import { CapaActividades } from './CapaActividades'
+import { CapaPersonas } from './CapaPersonas'
+import { PopupMapa } from './PopupMapa'
 import { EsperaSlot } from './EsperaSlot'
 
 export type MapaSlotProps = {
-  puntos: PuntoMapa[]
+  /** Las actividades solo se dibujan si traen `orden` (ver numerarParadas): las que ya pasaron no van. */
+  puntos: ParadaMapa[]
   personas: Ubicacion[]
   centro?: LugarViaje | null
   onSeleccionarPunto?: (id: string) => void
   alto?: 'chico' | 'grande'
   className?: string
-}
-
-const coloresPinz = {
-  chispa: '#eab308',
-  brujula: '#38bdf8',
-  vuelto: '#fb923c',
-  siesta: '#14b8a6',
-  valija: '#f472b6',
-  postal: '#a78bfa',
-  nono: '#a8a29e',
-  trasnoche: '#334155',
-  morfi: '#eab308',
-  cumbre: '#15803d',
 }
 
 function AjustarMapa({ centro, puntos }: { centro: LugarViaje | PuntoMapa; puntos: PuntoMapa[] }) {
@@ -42,8 +34,17 @@ function AjustarMapa({ centro, puntos }: { centro: LugarViaje | PuntoMapa; punto
   return null
 }
 
+const ZOOM_PERSONA = 14
+
+function irA(mapa: MapaLeaflet, { lat, lng }: Ubicacion) {
+  const zoom = Math.max(mapa.getZoom(), ZOOM_PERSONA)
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) mapa.setView([lat, lng], zoom)
+  else mapa.flyTo([lat, lng], zoom, { duration: 0.8 })
+}
+
 export function MapaSlot({ puntos, personas, centro, onSeleccionarPunto, alto = 'chico', className = '' }: MapaSlotProps) {
   const centroMapa = centro ?? puntos[0]
+  const [mapa, setMapa] = useState<MapaLeaflet | null>(null)
   return (
     <section
       aria-label="Mapa"
@@ -54,6 +55,7 @@ export function MapaSlot({ puntos, personas, centro, onSeleccionarPunto, alto = 
           center={[centroMapa.lat, centroMapa.lng]}
           zoom={8}
           scrollWheelZoom={false}
+          ref={setMapa}
           className="z-0 size-full"
           aria-label={`Mapa de ${centro?.nombre ?? 'destino del viaje'}`}
         >
@@ -64,47 +66,52 @@ export function MapaSlot({ puntos, personas, centro, onSeleccionarPunto, alto = 
           />
           {centro && !puntos.some((punto) => punto.lat === centro.lat && punto.lng === centro.lng) && (
             <CircleMarker center={[centro.lat, centro.lng]} radius={10} pathOptions={{ color: '#1e293b', fillColor: '#f97316', fillOpacity: 0.9 }}>
-              <Popup>{centro.nombre}</Popup>
+              <PopupMapa>{centro.nombre}</PopupMapa>
             </CircleMarker>
           )}
-          {puntos.map((punto) => (
+          {puntos.filter((punto) => punto.tipo !== 'actividad').map((punto) => (
             <CircleMarker
               key={punto.id}
               center={[punto.lat, punto.lng]}
               radius={7}
               pathOptions={{
                 color: '#1e293b',
-                fillColor: punto.tipo === 'actividad' ? '#38bdf8' : '#f97316',
+                fillColor: '#f97316',
                 fillOpacity: 0.9,
               }}
             >
-              <Popup>{punto.nombre}</Popup>
+              <PopupMapa>{punto.nombre}</PopupMapa>
             </CircleMarker>
           ))}
-          {personas.map((persona) => (
-            <CircleMarker
-              key={persona.id}
-              center={[persona.lat, persona.lng]}
-              radius={7}
-              pathOptions={{
-                color: '#1e293b',
-                fillColor: persona.pinz ? coloresPinz[persona.pinz] : '#a78bfa',
-                fillOpacity: 0.9,
-              }}
-            >
-              <Popup>{persona.nombre}</Popup>
-              <Tooltip permanent>{persona.pinz ? ELENCO[persona.pinz].nombre : persona.nombre}</Tooltip>
-            </CircleMarker>
-          ))}
+          <CapaActividades paradas={puntos} />
+          <CapaPersonas personas={personas} />
         </MapContainer>
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4">
           <EsperaSlot titulo="Acá va el mapa">Elegí un destino para ver dónde queda el viaje.</EsperaSlot>
         </div>
       )}
-      {personas.length > 0 && (
-        <div className="pointer-events-none absolute right-3 top-3 z-10 rounded-full bg-papel-elevado p-1 shadow-chica">
-          <AvatarStack people={personas.map((persona) => ({ name: persona.nombre, pinz: persona.pinz }))} max={6} />
+      {personas.length > 0 && mapa && (
+        // Deja libre la izquierda para los botones de zoom de Leaflet; con mucha gente, la fila se desliza.
+        <div className="pointer-events-none absolute left-16 right-3 top-3 z-10 flex justify-end">
+          <ul
+            aria-label="Ir a la ubicación de"
+            className="pointer-events-auto flex overflow-x-auto rounded-full trazo-fino bg-papel-elevado p-0.5 shadow-chica"
+          >
+            {personas.map((persona, indice) => (
+              <li key={persona.id} className="flex-none">
+                <button
+                  type="button"
+                  onClick={() => irA(mapa, persona)}
+                  aria-label={`Ver dónde está ${persona.nombre}`}
+                  title={persona.nombre}
+                  className="grid size-toque place-items-center rounded-full transition-colors hover:bg-papel motion-reduce:transition-none"
+                >
+                  <AvatarPersona nombre={persona.nombre} pinz={persona.pinz} indice={indice} className="h-9 w-8" />
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
       {puntos.length > 0 && onSeleccionarPunto && (

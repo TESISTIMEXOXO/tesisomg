@@ -14,9 +14,9 @@ import { useAgregarActividad, useExportarCalendario, useItinerario } from '../..
 import { useZonasHorarias } from '../../hooks/viajes'
 import { useViajeActual } from '../../layouts/contextoViaje'
 import { diaCorto, diasDeLaSemana, hoyISO, leerFecha, mesYAnio, semanasDelMes, sumarDias, sumarMeses, yaPaso } from '../../lib/fechas'
+import { numerarParadas } from '../../lib/paradas'
 import { conMayuscula } from '../../lib/texto'
 import { relojEn } from '../../lib/zonasHorarias'
-import type { PuntoMapa } from '../../types/itinerario'
 import type { EtapaViaje } from '../../types/viaje'
 import { DestinosYFechas } from './DestinosYFechas'
 import { puedeEditar } from './nombres'
@@ -169,7 +169,7 @@ export function Agenda() {
     .sort((a, b) => Number(a.hecha) - Number(b.hecha) || a.hora.localeCompare(b.hora))
   const cantidad = (dia: string) => actividades.filter((actividad) => actividad.fecha === dia).length
   const centroMapa = etapas[0]?.ubicacion ?? viaje.ubicacion
-  const puntosMapa: PuntoMapa[] = [
+  const puntosMapa = numerarParadas([
     ...etapas.map((etapaViaje) => ({
       id: etapaViaje.id,
       nombre: etapaViaje.destino,
@@ -186,7 +186,7 @@ export function Agenda() {
           tipo: 'actividad' as const,
         }]
       : []),
-  ]
+  ], delDia.filter((actividad) => !actividad.hecha))
 
   function mover(direccion: 1 | -1) {
     if (vista === 'dia') setFechaElegida(sumarDias(fecha, direccion))
@@ -238,6 +238,7 @@ export function Agenda() {
                       time={item.hora}
                       title={item.titulo}
                       place={item.lugar}
+                      ubicacion={item.lat !== null && item.lng !== null ? { lat: item.lat, lng: item.lng } : null}
                       done={item.hecha}
                       current={etapa === 'viaje' && item.estado === 'ahora' && !item.hecha}
                       last={i === delDia.length - 1}

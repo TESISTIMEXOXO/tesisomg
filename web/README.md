@@ -57,7 +57,7 @@ web/
       marca/            Logo, BarraMarca (la barra con la marca de la landing y las pantallas públicas), Pin,
                         PinzNote, ElegirPinz, IconoInstagram, CaminosDeLaVentana, CaminosDeFondo y los estados Cargando / NoCargo
       landing/          Camino: la ruta celeste que recorre la landing
-      slots/            MapaSlot, SaldosSlot, AuthSlot, ArchivosSlot, ComprobanteSlot, QrSlot, CompartirUbicacion y EsperaSlot
+      slots/            MapaSlot (+ CapaActividades, CapaPersonas y PopupMapa), SaldosSlot, AuthSlot, ArchivosSlot, ComprobanteSlot, QrSlot, CompartirUbicacion y EsperaSlot
     pinz/
       elenco.ts         los 10 personajes: nombre, apodo, tono, sección, descripción y frase
       dibujos.ts        el dibujo de cada pinz, como datos (capas detrás, recortado y delante)
@@ -76,9 +76,9 @@ web/
     pages/              una carpeta por pantalla (ver la tabla de abajo)
     types/              esquemas zod por entidad: el contrato con el backend
     services/           una función async por operación; hoy devuelven los mocks
-    hooks/              React Query sobre cada servicio; las pantallas solo usan hooks. `ahora.ts`: la hora, renovada cada minuto
+    hooks/              React Query sobre cada servicio; las pantallas solo usan hooks. `ahora.ts`: la hora, renovada cada minuto. `escalaMarcadores.ts`: cuánto se achican los marcadores del mapa según el zoom
     mocks/datos.ts      todos los datos de ejemplo ("Bariloche con los chicos")
-    lib/                etapa (por fechas), fechas, moneda ($ 48.200), saldos, textos, guardarArchivo, zonasHorarias, pinzDelTest (guarda el resultado del test hasta Bienvenida) y el camino de la landing
+    lib/                etapa (por fechas), fechas, moneda ($ 48.200), saldos, textos, guardarArchivo, zonasHorarias, paradas (numera las actividades pendientes del mapa), pinzDelTest (guarda el resultado del test hasta Bienvenida) y el camino de la landing
 ```
 
 ## 4. Pantallas
@@ -123,7 +123,7 @@ Cada pantalla resuelve sus estados de carga, vacío y error con `Cargando`, `NoC
 | `CampoContrasena` | `components/ui/CampoContrasena.tsx` | las de `TextField`, sin `type` | Contraseña con el ojo para mostrarla u ocultarla. La usan el ingreso, el registro y el cambio de contraseña |
 | `PollOption` | `components/ui/PollOption.tsx` | `label`, `detail`, `votes`, `total`, `voted`, `onVote` | Una opción de votación con barra punteada |
 | `BalanceRow` | `components/ui/BalanceRow.tsx` | `name`, `amount`, `direction`, `pinz`, `action` | Cómo quedás con alguien: signo, palabra y color |
-| `ItineraryItem` | `components/ui/ItineraryItem.tsx` | `time`, `title`, `place`, `done`, `current`, `last` | Un momento del día; es un `<li>`, va dentro de un `<ol>` |
+| `ItineraryItem` | `components/ui/ItineraryItem.tsx` | `time`, `title`, `place`, `done`, `current`, `last`, `ubicacion` | Un momento del día; es un `<li>`, va dentro de un `<ol>`. Si tiene `ubicacion`, muestra a la derecha "Cómo llegar", que abre la ruta en Google Maps en otra pestaña. En una tarjeta angosta (container query) queda solo el ícono |
 | `TripCard` | `components/ui/TripCard.tsx` | `title`, `place`, `dates`, `stage`, `people`, `image`, `pending`, `to` | La card de un viaje en Mis viajes |
 | `AvatarStack` | `components/ui/AvatarStack.tsx` | `people` (nombres o `{ name, pinz }`), `max` | Siluetas de pin con inicial, en el tono del pinz |
 | `BottomNav` | `components/ui/BottomNav.tsx` | `items` (`{ id, label, icon, to, end }`, hasta 5), `sosTo` | La navegación de la app: barra flotante abajo, en todos los tamaños. Dentro de un viaje suma "SOS" en rojo, siempre al final: es el único acceso a Emergencias |
@@ -277,7 +277,7 @@ Una escritura igual: `crear(datos)` pasa de `sinBackend('viajes.crear', datos)` 
 
 | Slot | Archivo | Recibe | Emite | Dónde se monta |
 | --- | --- | --- | --- | --- |
-| Mapa | `components/slots/MapaSlot.tsx` | `puntos: { id, nombre, lat, lng, tipo }[]`, `personas: { id, nombre, pinz, lat, lng }[]`, `contenedorRef`, `alto` | `onSeleccionarPunto(id)` | `pages/viaje/resumen/Hoy.tsx`, `pages/viaje/Agenda.tsx` |
+| Mapa | `components/slots/MapaSlot.tsx` (las actividades que faltan se dibujan con `CapaActividades.tsx` como pins numerados por inmediatez, el 1 en coral; las que ya pasaron no van. La pantalla las numera con `numerarParadas` de `lib/paradas.ts`. Cada persona se dibuja con `CapaPersonas.tsx`: su pinz, o el genérico si no eligió, con su nombre abajo. Todos los marcadores se achican al alejar el mapa. Los globitos que se abren al tocar un marcador usan `PopupMapa.tsx`, con la tipografía de la app. Arriba a la derecha, un botón por persona centra el mapa en ella) | `puntos: { id, nombre, lat, lng, tipo, orden? }[]`, `personas: { id, nombre, pinz, lat, lng }[]`, `contenedorRef`, `alto` | `onSeleccionarPunto(id)` | `pages/viaje/resumen/Hoy.tsx`, `pages/viaje/Agenda.tsx` |
 | Saldos | `components/slots/SaldosSlot.tsx` | `saldos: { persona, monto }[]` ya calculados (o `null`), `moneda` | `onRegistrarPago(personaId)` | `pages/viaje/Cuentas.tsx`, `pages/viaje/resumen/ResumenPostViaje.tsx` |
 | Auth | `components/slots/AuthSlot.tsx` | `estado` (`listo` · `cargando` · `error`) | `onElegirProveedor('google' \| 'mail')` | `pages/ingresar/Ingresar.tsx` |
 | Archivos | `components/slots/ArchivosSlot.tsx` | `archivos: { id, nombre, tipo, tamano }[]`, `ayuda` | `onSubir(archivo)`, `onAbrir(archivo)` | `pages/viaje/Baul.tsx`, `pages/vos/Vos.tsx` |
