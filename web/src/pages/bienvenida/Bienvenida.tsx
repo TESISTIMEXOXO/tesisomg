@@ -6,6 +6,7 @@ import { Chip } from '../../components/ui/Chip'
 import { TextField } from '../../components/ui/TextField'
 import { useSesion } from '../../hooks/auth'
 import { useGuardarPerfil } from '../../hooks/perfil'
+import { destinoDespuesDeIngresar } from '../../lib/invitacionPendiente'
 import { leerPinzDelTest } from '../../lib/pinzDelTest'
 import type { PinzId } from '../../pinz/elenco'
 import { DatosPerfilSchema, MonedaSchema, type Moneda } from '../../types/perfil'
@@ -30,7 +31,7 @@ export function Bienvenida() {
       return
     }
     setErrorNombre(undefined)
-    guardar.mutate(datos.data, { onSuccess: () => navigate('/viajes') })
+    guardar.mutate(datos.data, { onSuccess: () => navigate(destinoDespuesDeIngresar()) })
   }
 
   return (

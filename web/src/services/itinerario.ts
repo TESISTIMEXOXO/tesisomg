@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { bajarArchivo, pedir } from '../lib/api'
-import { HoySchema, ItemItinerarioSchema, type NuevoItemItinerario } from '../types/itinerario'
+import { EnlaceCalendarioSchema, HoySchema, ItemItinerarioSchema, type NuevoItemItinerario } from '../types/itinerario'
 
 export async function listar(viajeId: string) {
   return pedir(`/viajes/${encodeURIComponent(viajeId)}/itinerario`, { schema: z.array(ItemItinerarioSchema) })
@@ -22,4 +22,13 @@ export function agregar(viajeId: string, datos: NuevoItemItinerario) {
 /** Devuelve el archivo .ics del itinerario para sumarlo al calendario. */
 export function exportarCalendario(viajeId: string) {
   return bajarArchivo(`/viajes/${encodeURIComponent(viajeId)}/itinerario/calendario`)
+}
+
+/** El link de suscripción al calendario del viaje: el mismo cada vez que se pide. */
+export async function enlaceCalendario(viajeId: string) {
+  const { url } = await pedir(`/viajes/${encodeURIComponent(viajeId)}/itinerario/calendario/enlace`, {
+    method: 'POST',
+    schema: EnlaceCalendarioSchema,
+  })
+  return url
 }

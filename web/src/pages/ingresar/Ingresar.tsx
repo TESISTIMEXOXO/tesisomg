@@ -16,6 +16,7 @@ import {
   useVerificarRegistro,
 } from '../../hooks/auth'
 import { GOOGLE_CLIENT_ID, GoogleCancelado, cargarGoogle } from '../../lib/google'
+import { destinoDespuesDeIngresar, hayInvitacionPendiente, olvidarInvitacion } from '../../lib/invitacionPendiente'
 import { codigoDeError, rechazoCodigo } from '../../services/auth'
 import { CodigoMailSchema, EmailSchema, IngresoSchema, RecuperarSchema, RegistroSchema, type Proveedor } from '../../types/auth'
 
@@ -45,12 +46,18 @@ export function Ingresar() {
   }, [])
 
   // Cubre el final de todos los caminos: al abrir sesión queda en caché y se sigue a la app.
-  if (sesion) return <Navigate to={sesion.perfilCompleto ? '/viajes' : '/bienvenida'} replace />
+  // Si llegó desde el link de una invitación, vuelve a ella (si la cuenta es nueva, después de la bienvenida).
+  if (sesion) return <Navigate to={sesion.perfilCompleto ? destinoDespuesDeIngresar() : '/bienvenida'} replace />
+
+  function cerrar() {
+    olvidarInvitacion()
+    navigate('/')
+  }
 
   const props = { onIrA: setPaso, email, onEmail: setEmail }
 
   return (
-    <Ventana ventanaRef={ventana} idTitulo={idTitulo} onClose={() => navigate('/')}>
+    <Ventana ventanaRef={ventana} idTitulo={idTitulo} onClose={cerrar}>
       <CaminosDeLaVentana />
       {/* Sin el contorno del foco: el campo activo ya se marca con su sombra más grande. */}
       <div className="relative flex flex-col gap-6 [&_input]:outline-none">
@@ -58,7 +65,13 @@ export function Ingresar() {
           <h1 id={idTitulo} className="font-display text-titulo-1 font-black">
             {TITULOS[paso]}
           </h1>
-          {paso === 'inicio' && <p className="text-tinta-suave">Entrá con tu cuenta de Google o creá una con tu mail.</p>}
+          {paso === 'inicio' && (
+            <p className="text-tinta-suave">
+              {hayInvitacionPendiente()
+                ? 'Te invitaron a un viaje. Para sumarte, entrá con tu cuenta de Google o creá una con tu mail.'
+                : 'Entrá con tu cuenta de Google o creá una con tu mail.'}
+            </p>
+          )}
         </div>
         {paso === 'inicio' && <Inicio onIrA={setPaso} />}
         {paso === 'registro' && <Registro {...props} />}

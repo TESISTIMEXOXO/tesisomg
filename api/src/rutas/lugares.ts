@@ -62,24 +62,49 @@ rutasLugares.get("/pais", async (req, res) => {
     res.status(400).json({ error: "coordenadas-invalidas" });
     return;
   }
-  const { lat, lng } = coordenadas.data;
+  try {
+    res.json(await paisEn(coordenadas.data.lat, coordenadas.data.lng));
+  } catch {
+    res.status(502).json({ error: "sin-geocodificador" });
+  }
+});
 
+type Pais = { codigo: string | null; nombre: string | null };
+
+/*
+ * Los países no se mudan: lo ya averiguado se guarda en memoria, por coordenadas redondeadas a ~1 km.
+ * Así el feed del calendario, que Google pide seguido, no le pega a Nominatim cada vez.
+ */
+const paisesConocidos = new Map<string, Pais>();
+const MAX_PAISES_CONOCIDOS = 5000;
+
+/** El país de unas coordenadas: Nominatim y, si no responde, Photon. Tira error si no responde ninguno. */
+export async function paisEn(lat: number, lng: number): Promise<Pais> {
+  const clave = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+  const conocido = paisesConocidos.get(clave);
+  if (conocido) return conocido;
+
+  let pais: Pais | null = null;
   if (Date.now() - nominatimFalloEn > PAUSA_NOMINATIM_MS) {
     try {
-      res.json(await paisEnNominatim(lat, lng));
-      return;
+      pais = await paisEnNominatim(lat, lng);
     } catch (error) {
       nominatimFalloEn = Date.now();
       console.warn("Nominatim no respondió, se usa Photon", error);
     }
   }
-  try {
-    res.json(await paisEnPhoton(lat, lng));
-  } catch (error) {
-    console.warn("Photon tampoco respondió", error);
-    res.status(502).json({ error: "sin-geocodificador" });
+  if (!pais) {
+    try {
+      pais = await paisEnPhoton(lat, lng);
+    } catch (error) {
+      console.warn("Photon tampoco respondió", error);
+      throw error;
+    }
   }
-});
+  if (paisesConocidos.size >= MAX_PAISES_CONOCIDOS) paisesConocidos.clear();
+  paisesConocidos.set(clave, pais);
+  return pais;
+}
 
 /** Sin país (en el mar, por ejemplo) responde codigo null. */
 async function paisEnNominatim(lat: number, lng: number) {

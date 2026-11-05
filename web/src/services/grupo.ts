@@ -23,9 +23,20 @@ export function cambiarRol(viajeId: string, personaId: string, rol: Rol) {
   })
 }
 
-/** El backend devuelve lo pendiente si hay deudas o reservas a nombre de quien sale. */
-export function salir(viajeId: string) {
-  return pedir(`/viajes/${encodeURIComponent(viajeId)}/miembros/yo`, { method: 'DELETE' })
+/**
+ * El backend devuelve lo pendiente si hay deudas o reservas a nombre de quien sale. Si sale el único
+ * organizador, nuevoOrganizador dice a quién le deja la organización.
+ */
+export function salir(viajeId: string, nuevoOrganizador?: string) {
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/miembros/yo`, {
+    method: 'DELETE',
+    body: nuevoOrganizador ? { nuevoOrganizador } : undefined,
+  })
+}
+
+/** Solo un organizador puede sacar a alguien del viaje. */
+export function echar(viajeId: string, personaId: string) {
+  return pedir(`/viajes/${encodeURIComponent(viajeId)}/miembros/${encodeURIComponent(personaId)}`, { method: 'DELETE' })
 }
 
 export function repetir(viajeId: string, modo: 'mismas-personas' | 'mismo-destino') {

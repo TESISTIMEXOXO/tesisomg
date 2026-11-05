@@ -7,6 +7,8 @@ export const ItemItinerarioSchema = z.object({
   fecha: z.iso.date(),
   /** Hora local del lugar, HH:MM. */
   hora: z.iso.time({ precision: -1 }),
+  /** Hasta qué hora, HH:MM. Sin ella, el calendario la dibuja de una hora. */
+  horaFin: z.iso.time({ precision: -1 }).nullable().default(null),
   titulo: z.string(),
   lugar: z.string().nullable(),
   lat: z.number().nullable().default(null),
@@ -18,6 +20,7 @@ export const ItemItinerarioSchema = z.object({
 export const NuevoItemItinerarioSchema = ItemItinerarioSchema.pick({
   fecha: true,
   hora: true,
+  horaFin: true,
   titulo: true,
   lugar: true,
 }).extend({
@@ -25,6 +28,9 @@ export const NuevoItemItinerarioSchema = ItemItinerarioSchema.pick({
   lng: z.number().min(-180).max(180).nullable().default(null),
 }).refine((item) => (item.lat === null) === (item.lng === null), {
   message: 'La latitud y longitud deben informarse juntas.',
+}).refine((item) => item.horaFin === null || item.horaFin > item.hora, {
+  message: 'Tiene que terminar después de la hora de inicio.',
+  path: ['horaFin'],
 })
 
 /** Una parada del mapa: lo que contrata el slot de mapa. */
@@ -58,6 +64,9 @@ export const HoySchema = z.object({
   /** Aviso de choque de horarios o cambio de huso; null si no hay. */
   aviso: z.string().nullable(),
 })
+
+/** El link al feed .ics de quien lo pide: Google Calendar y el iPhone se suscriben a él. */
+export const EnlaceCalendarioSchema = z.object({ url: z.url() })
 
 export type ItemItinerario = z.infer<typeof ItemItinerarioSchema>
 export type NuevoItemItinerario = z.infer<typeof NuevoItemItinerarioSchema>
