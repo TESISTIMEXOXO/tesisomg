@@ -262,5 +262,5 @@ Una vez adentro, creá un viaje y sumá al grupo. Así se ve la Agenda de un via
 
 # 👥 Autores
 
-| [<img src="https://github.com/mperezbacas-prog.png?size=85" width=85><br><sub>@mperezbacas-prog</sub>](https://github.com/mperezbacas-prog) | [<img src="https://github.com/ignaciolede.png?size=85" width=85><br><sub>@ignaciolede</sub>](https://github.com/ignaciolede) | [<img src="https://github.com/Tobiasmb7.png?size=85" width=85><br><sub>@Tobiasmb7</sub>](https://github.com/Tobiasmb7)
+| [<img src="https://github.com/mperezbacas-prog.png?size=85" width=85><br><sub>mirapxoxo</sub>](https://github.com/mperezbacas-prog) | [<img src="https://github.com/ignaciolede.png?size=85" width=85><br><sub>@ignaciolede</sub>](https://github.com/ignaciolede) | [<img src="https://github.com/Tobiasmb7.png?size=85" width=85><br><sub>@Tobiasmb7</sub>](https://github.com/Tobiasmb7)
 |:---:|:---:|:---:|
