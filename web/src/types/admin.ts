@@ -25,6 +25,14 @@ export const ConsultaAdminSchema = z.object({
   creadaEn: z.iso.datetime(),
 })
 
+/** Lo que se le contestó a una consulta desde el panel. La API guarda una copia de la consulta: sigue aunque se borre. */
+export const RespuestaAdminSchema = z.object({
+  id: z.string(),
+  texto: z.string(),
+  enviadaEn: z.iso.datetime(),
+  consulta: z.object({ id: z.string(), email: z.email(), asunto: z.string(), descripcion: z.string() }),
+})
+
 export const UsuarioAdminSchema = z.object({
   id: z.string(),
   email: z.email(),
@@ -46,5 +54,6 @@ export const ViajeAdminSchema = z.object({
 
 export type AdminResumen = z.infer<typeof AdminResumenSchema>
 export type ConsultaAdmin = z.infer<typeof ConsultaAdminSchema>
+export type RespuestaAdmin = z.infer<typeof RespuestaAdminSchema>
 export type UsuarioAdmin = z.infer<typeof UsuarioAdminSchema>
 export type ViajeAdmin = z.infer<typeof ViajeAdminSchema>

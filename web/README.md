@@ -64,11 +64,13 @@ web/
       tonos.ts          las clases de color de cada tono (fill-*, bg-*, bg-*-tinte)
       test.ts           el test "¿Qué pinz sos?": las tres preguntas y cómo se calcula el resultado
     layouts/
-      PublicLayout      bienvenida e invitaciones
+      ConSesion         pide sesión y perfil completo. La cuenta superadmin (`lib/admin.ts`, `esSuperadmin`) siempre termina en /admin
+      PublicLayout      bienvenida e invitaciones (la superadmin no entra: vuelve a /admin)
       AppLayout         fuera de un viaje: Mis viajes y Vos
+      AdminLayout       solo para la superadmin: la marca, el botón de modo oscuro (dura la sesión: esta cuenta no guarda perfil), "Cerrar sesión" y el panel. Sin viajes, sin + y sin perfil
       ViajeLayout       dentro de un viaje: encabezado de etapa, BottomNav con SOS (Emergencias), botón de gasto
       BarraSuperior     la marca (a Mis viajes), tu pin (a tu perfil) y el +, en la app y dentro de un viaje. En etapa Viaje suma, antes del pin, el botón de CompartirUbicacion
-      MenuAgregar       el + naranja de la barra: despliega "Armar un viaje" y "Unirme con código", y cada uno se abre en una Ventana con FormularioViaje o FormularioCodigo (los mismos de /viajes/nuevo y /unirse)
+      MenuAgregar       el + naranja de la barra: despliega "Armar un viaje" y "Unirme con código" (se abre y se cierra animado: queda montado e `inert` mientras está cerrado), y cada uno se abre en una Ventana con FormularioViaje o FormularioCodigo (los mismos de /viajes/nuevo y /unirse)
       EncabezadoViaje   nombre, fechas, avatares (abren Grupo), "Salir del viaje" en rojo, solo en Grupo (`pages/viaje/SalirDelViaje.tsx`, confirma en una `Ventana`), "Editar viaje" (lleva a Grupo; no lo ven los lectores; ya en Grupo, en su lugar aparece "Volver al viaje", que lleva a Inicio y lo ven todos), caminos sutiles de fondo y, solo en dev, el StageSwitch
       contextoViaje.ts  useViajeActual(): el viaje y la etapa que se está mirando
     pages/              una carpeta por pantalla (ver la tabla de abajo)
@@ -89,6 +91,7 @@ web/
 | `/bienvenida` | `pages/bienvenida/Bienvenida.tsx`. Si la persona hizo el test, llega con ese pinz elegido | `TextField`, `Chip`, `ElegirPinz`, `useGuardarPerfil` |
 | `/unirse` | `pages/unirse/Unirse.tsx`, con `FormularioCodigo.tsx` (el mismo formulario que abre el + de la barra en una ventana) | `TextField`, `Button` |
 | `/unirse/:codigo` | `pages/unirse/VistaInvitacion.tsx` | `Tarjeta`, `AvatarStack`, `useInvitacion`, `useUnirse` |
+| `/admin` | `pages/admin/Admin.tsx`, dentro de `AdminLayout`. Es la única pantalla de la cuenta superadmin: al iniciar sesión llega acá y cualquier otra ruta de la cuenta la trae de vuelta. Consultas, respuestas enviadas (`useAdminRespuestas`, `GET /admin/respuestas`: cada respuesta con la consulta que contesta), usuarios y viajes son secciones plegables (`SeccionPlegable`, con `Despliegue`). Abiertas, cada una muestra al lado del título un `Buscador` (consultas por mail o asunto, usuarios por nombre o mail, viajes por nombre o destino) y un `MenuOrden` (más nuevos, más antiguos, alfabético). Cada lista scrollea adentro de su sección (`ListaConScroll`) y la paginación queda abajo, fuera del scroll | `Tarjeta`, `Buscador`, `MenuOrden`, `useAdminResumen`, `useAdminConsultas`, `useAdminRespuestas`, `useAdminUsuarios`, `useAdminViajes` |
 | `/viajes` | `pages/viajes/MisViajes.tsx` | `TripCard`, `PinzNote` (vacío), `useViajes`, `usePerfil` |
 | `/viajes/nuevo` | `pages/viajes/NuevoViaje.tsx`, con `FormularioViaje.tsx` (el mismo formulario que abre el + de la barra en una ventana, sin la vista previa). Al crear el viaje, lleva a él | `TextField`, `TripCard` (vista previa en desktop), `useCrearViaje` |
 | `/vos` | `pages/vos/Vos.tsx`. Arriba, de ancho completo, `TuPinz.tsx`: tu nombre y tu pinz en su tinte, con su descripción y la sección que acompaña. "Cambiar tu pinz" abre una `Ventana` con `ElegirPinz` y guarda ahí mismo. Debajo, cuatro tarjetas en 2×2: preferencias, documentos, lugares y apariencia. `datosDelPerfil.ts` arma el perfil completo para guardar un solo cambio | `Pin`, `ElegirPinz`, `Ventana`, `Tarjeta`, `ArchivosSlot`, `VistaArchivo`, `usePerfil`, `useGuardarPerfil`, `useDocumentosPersonales` |
@@ -115,6 +118,8 @@ Cada pantalla resuelve sus estados de carga, vacío y error con `Cargando`, `NoC
 | `Chip` | `components/ui/Chip.tsx` | `selected`, `tone` (`neutro` o la etapa), `icon` | Filtros y opciones; seleccionado queda hundido y con check |
 | `StageSwitch` | `components/ui/StageSwitch.tsx` | `value`, `defaultValue`, `onChange` | Elegir qué etapa mirar |
 | `TextField` | `components/ui/TextField.tsx` | `label`, `hint`, `error`, `accion` (un botón adentro, a la derecha) + props de `<input>` | Campos con label siempre visible |
+| `Buscador` | `components/ui/Buscador.tsx` | `aria-label` (obligatorio) + props de `<input>` | Barra de búsqueda chica, con la lupa adentro y sin label visible. Para filtrar una lista desde su encabezado |
+| `MenuOrden` | `components/ui/MenuOrden.tsx` | `opciones` (`{ id, texto }[]`), `valor`, `onCambiar` | La flecha que despliega cómo ordenar una lista; se abre y se cierra animada |
 | `CampoContrasena` | `components/ui/CampoContrasena.tsx` | las de `TextField`, sin `type` | Contraseña con el ojo para mostrarla u ocultarla. La usan el ingreso, el registro y el cambio de contraseña |
 | `PollOption` | `components/ui/PollOption.tsx` | `label`, `detail`, `votes`, `total`, `voted`, `onVote` | Una opción de votación con barra punteada |
 | `BalanceRow` | `components/ui/BalanceRow.tsx` | `name`, `amount`, `direction`, `pinz`, `action` | Cómo quedás con alguien: signo, palabra y color |
@@ -124,7 +129,7 @@ Cada pantalla resuelve sus estados de carga, vacío y error con `Cargando`, `NoC
 | `BottomNav` | `components/ui/BottomNav.tsx` | `items` (`{ id, label, icon, to, end }`, hasta 5), `sosTo` | La navegación de la app: barra flotante abajo, en todos los tamaños. Dentro de un viaje suma "SOS" en rojo, siempre al final: es el único acceso a Emergencias |
 | `Ventana` | `components/ui/Ventana.tsx` | `ventanaRef`, `idTitulo`, `onClose`, `ancho` (`normal` · `amplia` · `pantalla`) | La ventana emergente con el fondo oscurecido (`dialog` nativo): el ingreso, el formulario de contacto y, en Listas, "Crear votación", "Proponer una opción" y "Editar votación". Con `ancho="amplia"` (800px) entra la grilla de pinz en Vos; con `ancho="pantalla"` ocupa toda la pantalla, para `VistaArchivo` |
 | `VistaArchivo` | `components/ui/VistaArchivo.tsx` | `nombre` (null = cerrada), `archivo`, `error`, `onReintentar`, `onClose` | Muestra un PDF o una foto en una `Ventana` de pantalla completa, con "Descargar" y "Compartir" (menú de compartir del dispositivo, solo si el navegador puede mandar archivos). Si el navegador no muestra PDFs adentro de la página (Chrome en Android), ofrece descargarlo. Se usa con `useVistaDocumento()` |
-| `Despliegue` | `components/ui/Despliegue.tsx` | `abierta`, `id` (para el `aria-controls` del botón) | El contenido de un menú desplegable: crece y se achica animando el alto (utilidad `despliegue`, en `animaciones.css`) y, cerrado, queda fuera del foco. Lo usan las votaciones cerradas, cada lista de Checklist y los plegables de Emergencias |
+| `Despliegue` | `components/ui/Despliegue.tsx` | `abierta`, `id` (para el `aria-controls` del botón) | El contenido de un menú desplegable: crece y se achica animando el alto (utilidad `despliegue`, en `animaciones.css`) y, cerrado, queda fuera del foco. Lo usan las votaciones cerradas, cada lista de Checklist, los plegables de Emergencias y las secciones del panel admin |
 | `Tarjeta` / `Etiqueta` | `components/ui/Tarjeta.tsx` | `titulo`, `extra`, `fondo` | El bloque de contenido de la app y su badge |
 | `Logo` | `components/marca/Logo.tsx` | `variant` (`marca` · `simbolo` · `icono`), `size` (en `marca`, el alto de la palabra), `ink`, `label` | La marca: el pinz genérico coral pegado a "pinz" en Archivo 900. El pin es siempre coral. Las versiones en curvas (`pinz-logo.svg`) son para documentos y Open Graph; en la interfaz se usa el componente |
 | `Pin` | `components/marca/Pin.tsx` | `pinz` (elenco o `generico`), `color`, `size`, `label` | El pinz ilustrado |
@@ -132,7 +137,7 @@ Cada pantalla resuelve sus estados de carga, vacío y error con `Cargando`, `NoC
 | `ElegirPinz` | `components/marca/ElegirPinz.tsx` | `valor`, `onElegir`, `leyenda` | La grilla para elegir personalidad. Usa una container query: cinco por fila si su caja mide 672px o más (la `Ventana` amplia de Vos), si no dos (Bienvenida). Así las filas siempre quedan parejas |
 | `Cargando` / `NoCargo` | `components/marca/Estados.tsx` | `pinz` / `error`, `onReintentar` | Estados de carga y error de las pantallas |
 | `CaminosDeLaVentana` | `components/marca/CaminosDeLaVentana.tsx` | — | Dos tramos del camino celeste en las esquinas de una `Ventana`, detrás del contenido: el ingreso y los popups de Listas. El contenido va en un bloque `relative` y el título con `pr-24` |
-| `CaminosDeFondo` | `components/marca/CaminosDeFondo.tsx` | — | El fondo de la app: bandas de camino en `papel-hundido` (apenas más oscuras que el fondo) que bajan con la página: bandas de lado a lado, una vuelta por costado y dos caminos que empalman un dibujo con el siguiente, sin cruzarse. El dibujo es la utilidad `fondo-caminos` (`index.css`), una máscara SVG que se repite hacia abajo. Lo ponen `AppLayout`, `ViajeLayout` (Emergencias incluida), `PublicLayout` y `NoEncontrada` dentro de un bloque `relative isolate` |
+| `CaminosDeFondo` | `components/marca/CaminosDeFondo.tsx` | — | El fondo de la app: bandas de camino en `papel-hundido` (apenas más oscuras que el fondo) que bajan con la página: bandas de lado a lado, una vuelta por costado y dos caminos que empalman un dibujo con el siguiente, sin cruzarse. El dibujo es la utilidad `fondo-caminos` (`index.css`), una máscara SVG que se repite hacia abajo. Lo ponen `AppLayout`, `ViajeLayout` (Emergencias incluida), `PublicLayout`, `AdminLayout` y `NoEncontrada` dentro de un bloque `relative isolate` |
 
 ## 6. Tokens
 

@@ -16,6 +16,7 @@ import {
   useSesion,
   useVerificarRegistro,
 } from '../../hooks/auth'
+import { esSuperadmin } from '../../lib/admin'
 import { GOOGLE_CLIENT_ID, GoogleCancelado, cargarGoogle } from '../../lib/google'
 import { codigoDeError, rechazoCodigo } from '../../services/auth'
 import { CodigoMailSchema, EmailSchema, IngresoSchema, RecuperarSchema, RegistroSchema, type Proveedor } from '../../types/auth'
@@ -46,7 +47,7 @@ export function Ingresar() {
   }, [])
 
   // Cubre el final de todos los caminos: al abrir sesión queda en caché y se sigue a la app.
-  if (sesion) return <Navigate to={sesion.perfilCompleto ? '/viajes' : '/bienvenida'} replace />
+  if (sesion) return <Navigate to={esSuperadmin(sesion.email) ? '/admin' : sesion.perfilCompleto ? '/viajes' : '/bienvenida'} replace />
 
   const props = { onIrA: setPaso, email, onEmail: setEmail }
 
@@ -284,8 +285,7 @@ function Ingreso({ onIrA, email, onEmail }: PasoConEmailProps) {
   if (motivo === 'contrasena-incorrecta' || motivo === 'sin-cuenta') {
     error = (
       <>
-        El mail o la contraseña son incorrectos. <LinkPaso onClick={() => onIrA('recuperar')}>¿Olvidaste tu contraseña?</LinkPaso>{' '}
-        <LinkPaso onClick={() => onIrA('registro')}>¿No tenés cuenta?</LinkPaso>
+        El mail o la contraseña son incorrectos. <LinkPaso onClick={() => onIrA('recuperar')}>¿Olvidaste tu contraseña?</LinkPaso>
       </>
     )
   } else if (motivo === 'sin-contrasena') {

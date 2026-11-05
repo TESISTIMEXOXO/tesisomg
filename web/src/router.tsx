@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { AdminLayout } from './layouts/AdminLayout'
 import { AppLayout } from './layouts/AppLayout'
 import { ConSesion } from './layouts/ConSesion'
 import { PublicLayout } from './layouts/PublicLayout'
@@ -44,8 +45,11 @@ export const router = createBrowserRouter([
               { path: 'viajes', lazy: () => import('./pages/viajes/MisViajes').then((m) => ({ Component: m.MisViajes })) },
               { path: 'viajes/nuevo', lazy: () => import('./pages/viajes/NuevoViaje').then((m) => ({ Component: m.NuevoViaje })) },
               { path: 'vos', lazy: () => import('./pages/vos/Vos').then((m) => ({ Component: m.Vos })) },
-              { path: 'admin', lazy: () => import('./pages/admin/Admin').then((m) => ({ Component: m.Admin })) },
             ],
+          },
+          {
+            element: <AdminLayout />,
+            children: [{ path: 'admin', lazy: () => import('./pages/admin/Admin').then((m) => ({ Component: m.Admin })) }],
           },
           {
             path: 'viajes/:id',

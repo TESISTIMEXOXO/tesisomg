@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { PinzNote } from '../components/marca/PinzNote'
 import { useSesion } from '../hooks/auth'
 import { usePerfil } from '../hooks/perfil'
+import { esSuperadmin } from '../lib/admin'
 import { elegirTema } from '../lib/tema'
 
 function TemaDeLaCuenta() {
@@ -13,7 +14,7 @@ function TemaDeLaCuenta() {
   return null
 }
 
-/** Las pantallas de la cuenta: sin sesión se va a ingresar; sin perfil completo, a la bienvenida. */
+/** Las pantallas de la cuenta: sin sesión se va a ingresar; la superadmin, siempre a su panel; sin perfil completo, a la bienvenida. */
 export function ConSesion() {
   const { data: sesion, isPending, isError, refetch } = useSesion()
   const { pathname } = useLocation()
@@ -29,6 +30,7 @@ export function ConSesion() {
     )
   }
   if (!sesion) return <Navigate to="/ingresar" replace />
+  if (esSuperadmin(sesion.email)) return pathname === '/admin' ? <Outlet /> : <Navigate to="/admin" replace />
   if (!sesion.perfilCompleto && pathname !== '/bienvenida') return <Navigate to="/bienvenida" replace />
   return (
     <>

@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as admin from '../services/admin'
-import type { OrdenUsuarios } from '../services/admin'
+import type { OrdenAdmin } from '../services/admin'
 
 export function useAdminResumen() {
   return useQuery({ queryKey: ['admin', 'resumen'], queryFn: admin.resumen })
 }
 
-export function useAdminConsultas(pagina: number) {
-  return useQuery({ queryKey: ['admin', 'consultas', pagina], queryFn: () => admin.consultas(pagina) })
+export function useAdminConsultas(pagina: number, busqueda: string, orden: OrdenAdmin) {
+  return useQuery({
+    queryKey: ['admin', 'consultas', pagina, busqueda, orden],
+    queryFn: () => admin.consultas(pagina, busqueda, orden),
+  })
 }
 
 export function useCambiarEstadoConsulta() {
@@ -19,8 +22,17 @@ export function useCambiarEstadoConsulta() {
 }
 
 export function useResponderConsulta() {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, respuesta }: { id: string; respuesta: string }) => admin.responderConsulta(id, respuesta),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'respuestas'] }),
+  })
+}
+
+export function useAdminRespuestas(pagina: number, busqueda: string, orden: OrdenAdmin) {
+  return useQuery({
+    queryKey: ['admin', 'respuestas', pagina, busqueda, orden],
+    queryFn: () => admin.respuestas(pagina, busqueda, orden),
   })
 }
 
@@ -32,13 +44,16 @@ export function useEliminarConsulta() {
   })
 }
 
-export function useAdminUsuarios(pagina: number, busqueda: string, orden: OrdenUsuarios) {
+export function useAdminUsuarios(pagina: number, busqueda: string, orden: OrdenAdmin) {
   return useQuery({
     queryKey: ['admin', 'usuarios', pagina, busqueda, orden],
     queryFn: () => admin.usuarios(pagina, busqueda, orden),
   })
 }
 
-export function useAdminViajes(pagina: number) {
-  return useQuery({ queryKey: ['admin', 'viajes', pagina], queryFn: () => admin.viajes(pagina) })
+export function useAdminViajes(pagina: number, busqueda: string, orden: OrdenAdmin) {
+  return useQuery({
+    queryKey: ['admin', 'viajes', pagina, busqueda, orden],
+    queryFn: () => admin.viajes(pagina, busqueda, orden),
+  })
 }
