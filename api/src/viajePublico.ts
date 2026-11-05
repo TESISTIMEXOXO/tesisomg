@@ -81,16 +81,20 @@ export function viajePublico(viaje: DocViaje, usuarioId: string) {
   };
 }
 
+/** La fecha de hoy (AAAA-MM-DD) desplazada esas horas respecto de UTC. */
+function fechaDesplazada(ahora: Date, horas: number) {
+  return new Date(ahora.getTime() + horas * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 /**
- * Si el viaje ya terminó: tiene ida y vuelta, y la vuelta es anterior a hoy. Es la misma regla que la etapa
- * "post" del front (lib/etapa.ts). El front usa la fecha del dispositivo; acá "hoy" es la fecha más adelantada
- * del planeta (UTC+14), así nunca se rechaza un viaje que en la pantalla de alguien ya figura como pasado.
+ * Si el viaje está en curso: ya empezó y no terminó (la etapa "viaje" del front, lib/etapa.ts). Sin fecha de
+ * ida, es un previaje. El front usa la fecha del dispositivo; acá cuenta como en curso si lo está en algún lugar
+ * del planeta (de UTC-12 a UTC+14), así nunca se deja borrar un viaje que en la pantalla de alguien ya empezó.
  */
-export function viajeYaPaso(viaje: DocViaje, ahora = new Date()) {
+export function viajeEnCurso(viaje: DocViaje, ahora = new Date()) {
   const etapas = etapasDelViaje(viaje);
   const fechaIda = etapas[0]?.fechaIda ?? viaje.fechaIda ?? null;
   const fechaVuelta = etapas.at(-1)?.fechaVuelta ?? viaje.fechaVuelta ?? null;
-  if (!fechaIda || !fechaVuelta) return false;
-  const hoyMasAdelantado = new Date(ahora.getTime() + 14 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  return fechaVuelta < hoyMasAdelantado;
+  if (!fechaIda) return false;
+  return fechaIda <= fechaDesplazada(ahora, 14) && (!fechaVuelta || fechaVuelta >= fechaDesplazada(ahora, -12));
 }

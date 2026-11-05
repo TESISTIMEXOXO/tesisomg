@@ -10,10 +10,25 @@ import { usePerfil } from '../../hooks/perfil'
 import { useOcultarViaje, useViajes, useViajesSacados } from '../../hooks/viajes'
 import { etapaDelViaje } from '../../lib/etapa'
 import { diasHasta, mesYAnio, rangoDeFechas } from '../../lib/fechas'
+import { codigoDeError } from '../../services/auth'
 import type { Viaje, ViajeSacado } from '../../types/viaje'
 
-/** Qué se quiere borrar de la lista: un viaje que ya pasó o uno del que te sacaron. */
-type ABorrar = { id: string; nombre: string; tipo: 'pasado' | 'sacado' }
+/** Qué se quiere borrar de la lista: un previaje, un viaje que ya pasó o uno del que te sacaron. */
+type ABorrar = { id: string; nombre: string; tipo: 'previaje' | 'pasado' | 'sacado' }
+
+const EXPLICACION: Record<ABorrar['tipo'], string> = {
+  previaje:
+    'Solo desaparece para vos: el resto del grupo lo sigue viendo y vos seguís en el grupo (para irte, entrá al viaje y tocá “Salir del viaje”). Si el viaje empieza, te vuelve a aparecer.',
+  pasado: 'Solo desaparece para vos: el resto del grupo lo sigue viendo, con sus gastos y documentos.',
+  sacado: 'Solo desaparece de tu lista. Si te invitan de nuevo y volvés a sumarte, lo vas a ver otra vez.',
+}
+
+/** Por qué no se pudo borrar: si justo empezó, se dice eso; si no, es una falla. */
+function mensajeAlBorrar(error: unknown) {
+  return codigoDeError(error) === 'viaje-en-curso'
+    ? 'Este viaje ya empezó: mientras esté en curso no se puede borrar de la lista.'
+    : 'No pudimos borrarlo. Revisá la conexión y probá de nuevo.'
+}
 
 function personasDe(viaje: Viaje) {
   return viaje.personas.map((p) => ({ name: p.nombre, pinz: p.pinz }))
@@ -121,14 +136,10 @@ function ConfirmarBorrar({ viaje, onCerrar }: { viaje: ABorrar | null; onCerrar:
           <h2 id={idTitulo} className="pr-12 font-display text-titulo-1 font-black text-balance">
             ¿Borrás “{viaje.nombre}” de tu lista?
           </h2>
-          <p>
-            {viaje.tipo === 'pasado'
-              ? 'Solo desaparece para vos: el resto del grupo lo sigue viendo, con sus gastos y documentos. Si alguien le cambia las fechas, te vuelve a aparecer.'
-              : 'Solo desaparece de tu lista. Si te invitan de nuevo y volvés a sumarte, lo vas a ver otra vez.'}
-          </p>
+          <p>{EXPLICACION[viaje.tipo]}</p>
           {ocultar.isError && (
             <p role="alert" className="font-semibold text-negativo">
-              No pudimos borrarlo. Revisá la conexión y probá de nuevo.
+              {mensajeAlBorrar(ocultar.error)}
             </p>
           )}
           <div className="flex flex-wrap gap-3">
@@ -150,14 +161,15 @@ function ConfirmarBorrar({ viaje, onCerrar }: { viaje: ABorrar | null; onCerrar:
   )
 }
 
-function Seccion({ titulo, viajes }: { titulo: string; viajes: Viaje[] }) {
+/** onBorrar: solo en Próximos. Los viajes en curso no se pueden borrar de la lista. */
+function Seccion({ titulo, viajes, onBorrar }: { titulo: string; viajes: Viaje[]; onBorrar?: (viaje: ABorrar) => void }) {
   if (viajes.length === 0) return null
   return (
     <section className="flex flex-col gap-4">
       <h2 className="font-display text-titulo-1 font-black">{titulo}</h2>
       <ul className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {viajes.map((viaje) => (
-          <li key={viaje.id}>
+          <li key={viaje.id} className="relative">
             <TripCard
               to={`/viajes/${viaje.id}`}
               title={viaje.nombre}
@@ -167,6 +179,19 @@ function Seccion({ titulo, viajes }: { titulo: string; viajes: Viaje[] }) {
               people={personasDe(viaje)}
               pending={pendienteDe(viaje)}
             />
+            {/* Al lado del link y no adentro (un botón no puede ir dentro de un link), arriba a la derecha de la cabecera. */}
+            {onBorrar && (
+              <Button
+                variant="secundario"
+                size="icono"
+                icon={Trash2}
+                aria-label={`Borrar “${viaje.nombre}” de mi lista`}
+                aria-haspopup="dialog"
+                title="Borrar de mi lista"
+                className="absolute top-3 right-3"
+                onClick={() => onBorrar({ id: viaje.id, nombre: viaje.nombre, tipo: 'previaje' })}
+              />
+            )}
           </li>
         ))}
       </ul>
@@ -174,7 +199,7 @@ function Seccion({ titulo, viajes }: { titulo: string; viajes: Viaje[] }) {
   )
 }
 
-/** HU-07: todos los viajes, en curso, próximos y pasados. Los pasados y los de los que te sacaron se pueden borrar de la lista. */
+/** HU-07: todos los viajes, en curso, próximos y pasados. Menos los en curso, todos se pueden borrar de la lista propia. */
 export function MisViajes() {
   const { data: perfil } = usePerfil()
   const { data: viajes, isPending, error, refetch } = useViajes()
@@ -222,7 +247,7 @@ export function MisViajes() {
         )}
       </div>
       <Seccion titulo="En curso" viajes={enCurso} />
-      <Seccion titulo="Próximos" viajes={proximos} />
+      <Seccion titulo="Próximos" viajes={proximos} onBorrar={setABorrar} />
       {pasados.length > 0 && (
         <section className="flex flex-col gap-4">
           <h2 className="font-display text-titulo-1 font-black">Viajes pasados</h2>
