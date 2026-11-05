@@ -258,9 +258,9 @@ Una vez adentro, creá un viaje y sumá al grupo. Así se ve la Agenda de un via
 
 # 📜 Licencia
 
-© 2026 Mora Perez, Ignacio Lederhos y Tobias. **Todos los derechos reservados.** No se permite usar, copiar, modificar ni distribuir el código, el diseño ni las imágenes sin autorización escrita de los autores. Para más detalles, mirá el archivo [LICENSE](./LICENSE).
+© 2026 Mora Pérez Bacas, Ignacio Lederhos y Tobias Muñoz. **Todos los derechos reservados.** No se permite usar, copiar, modificar ni distribuir el código, el diseño ni las imágenes sin autorización escrita de los autores. Para más detalles, mirá el archivo [LICENSE](./LICENSE).
 
 # 👥 Autores
 
-| [<img src="https://github.com/mirapxoxo.png?size=85" width=85><br><sub>Mora Perez</sub>](https://github.com/mirapxoxo) | [<img src="https://github.com/ignaciolede.png?size=85" width=85><br><sub>Ignacio Lederhos</sub>](https://github.com/ignaciolede) | [<img src="https://github.com/Tobiasmb7.png?size=85" width=85><br><sub>Tobias</sub>](https://github.com/Tobiasmb7)
+| [<img src="https://github.com/mperezbacas-prog.png?size=85" width=85><br><sub>@mperezbacas-prog</sub>](https://github.com/mperezbacas-prog) | [<img src="https://github.com/ignaciolede.png?size=85" width=85><br><sub>@ignaciolede</sub>](https://github.com/ignaciolede) | [<img src="https://github.com/Tobiasmb7.png?size=85" width=85><br><sub>@Tobiasmb7</sub>](https://github.com/Tobiasmb7)
 |:---:|:---:|:---:|
