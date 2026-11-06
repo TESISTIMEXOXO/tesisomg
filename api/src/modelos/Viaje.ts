@@ -15,7 +15,7 @@ type MiembroDoc = {
   rol: RolViaje;
   /** Abre el feed .ics del itinerario sin sesión. Se crea la primera vez que la persona lo pide. */
   calendarioToken?: string;
-  /** Lo borró de su lista (solo un viaje que ya pasó): sigue siendo del grupo, pero no le aparece en Mis viajes. */
+  /** Lo borró de su lista (un previaje o un viaje que ya pasó): sigue en el grupo, pero no le aparece en Mis viajes. */
   oculto?: boolean;
 };
 type OpcionDoc = { id: string; nombre: string; detalle: string | null; votantes: mongoose.Types.ObjectId[] };

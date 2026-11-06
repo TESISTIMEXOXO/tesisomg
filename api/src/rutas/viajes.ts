@@ -9,7 +9,7 @@ import { conListasAlDia, listasDe } from "../listasDelViaje.js";
 import { Usuario } from "../modelos/Usuario.js";
 import { UbicacionCompartida } from "../modelos/UbicacionCompartida.js";
 import { Viaje } from "../modelos/Viaje.js";
-import { esOrganizador, etapasDelViaje, filtroMiembro, puedeEditarViaje, registrarMovimiento, viajeDelMiembro, viajePublico, viajeYaPaso } from "../viajePublico.js";
+import { esOrganizador, etapasDelViaje, filtroMiembro, puedeEditarViaje, registrarMovimiento, viajeDelMiembro, viajeEnCurso, viajePublico } from "../viajePublico.js";
 
 export const rutasViajes = Router();
 rutasViajes.use(requiereSesion);
@@ -157,10 +157,10 @@ rutasViajes.post("/unirse", async (req, res) => {
 rutasViajes.get("/", async (_req, res) => {
   const usuarioId = res.locals.usuarioId as string;
   const viajes = await Viaje.find(filtroMiembro(usuarioId)).sort({ createdAt: -1 }).exec();
-  // Los que borró de su lista no aparecen, mientras sigan siendo pasados: si alguien les cambia las fechas, vuelven.
+  // Los que borró de su lista no aparecen. Si uno empieza (queda en curso), vuelve: ahí sí importa.
   const visibles = viajes.filter((viaje) => {
     const yo = viaje.miembros.find((miembro) => miembro.usuarioId.toString() === usuarioId);
-    return !(yo?.oculto && viajeYaPaso(viaje));
+    return !yo?.oculto || viajeEnCurso(viaje);
   });
   res.json(visibles.map((viaje) => viajePublico(viaje, usuarioId)));
 });
@@ -189,8 +189,9 @@ rutasViajes.get("/sacados", async (_req, res) => {
 });
 
 /**
- * Borrar un viaje de la lista propia: solo desaparece para quien lo pide; el viaje y lo del grupo quedan.
- * Se puede con un viaje que ya pasó o con uno del que lo sacaron.
+ * Borrar un viaje de la lista propia: solo desaparece para quien lo pide; el viaje y lo del grupo quedan, y
+ * sigue siendo del grupo (para irse está "Salir del viaje"). Se puede con un previaje, con uno que ya pasó o
+ * con uno del que lo sacaron; no con uno en curso.
  */
 rutasViajes.post("/:id/ocultar", async (req, res) => {
   const usuarioId = res.locals.usuarioId as string;
@@ -206,8 +207,8 @@ rutasViajes.post("/:id/ocultar", async (req, res) => {
     return;
   }
   if (yo) {
-    if (!viajeYaPaso(viaje)) {
-      res.status(409).json({ error: "viaje-no-paso" });
+    if (viajeEnCurso(viaje)) {
+      res.status(409).json({ error: "viaje-en-curso" });
       return;
     }
     yo.oculto = true;

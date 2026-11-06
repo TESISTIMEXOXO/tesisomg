@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import { config } from "../config.js";
+import { Usuario } from "../modelos/Usuario.js";
 
 export const COOKIE_SESION = "pinz_sesion";
 const DURACION_SEGUNDOS = 30 * 24 * 60 * 60;
@@ -43,7 +44,19 @@ export async function usuarioDeLaSesion(req: Request) {
 export async function requiereSesion(req: Request, res: Response, next: NextFunction) {
   const usuarioId = await usuarioDeLaSesion(req);
   if (!usuarioId) {
+    cerrarSesion(res);
     res.status(401).json({ error: "sin-sesion" });
+    return;
+  }
+  const usuario = await Usuario.findById(usuarioId).select("baneado").exec();
+  if (!usuario) {
+    cerrarSesion(res);
+    res.status(401).json({ error: "sin-sesion" });
+    return;
+  }
+  if (usuario.baneado) {
+    cerrarSesion(res);
+    res.status(401).json({ error: "usuario-baneado" });
     return;
   }
   res.locals.usuarioId = usuarioId;

@@ -53,6 +53,13 @@ export function usuarios(pagina: number, busqueda: string, orden: OrdenAdmin) {
   return pedir(`/admin/usuarios?${parametros.toString()}`, { schema: PaginaAdminSchema(UsuarioAdminSchema) })
 }
 
+export function cambiarBaneoUsuario(id: string, baneado: boolean) {
+  return pedir(`/admin/usuarios/${encodeURIComponent(id)}/baneo`, {
+    method: 'PATCH',
+    body: { baneado },
+  })
+}
+
 /** Con q busca por nombre o destino; alfabético ordena por nombre. */
 export function viajes(pagina: number, busqueda: string, orden: OrdenAdmin) {
   const parametros = new URLSearchParams({ pagina: String(pagina), orden })

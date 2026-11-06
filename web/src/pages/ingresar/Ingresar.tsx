@@ -147,10 +147,11 @@ function useIngresoConGoogle() {
   }
 
   const sinConfigurar = noDisponible || codigoDeError(google.error) === 'proveedor-no-disponible'
+  const baneado = codigoDeError(google.error) === 'usuario-baneado'
   // Cerrar la ventanita sin elegir cuenta no es un error.
   const fallo = noDisponible || (google.isError && !(google.error instanceof GoogleCancelado))
 
-  return { entrar, cargando: google.isPending, fallo, sinConfigurar }
+  return { entrar, cargando: google.isPending, fallo, sinConfigurar, baneado }
 }
 
 function Inicio({ onIrA }: PasoProps) {
@@ -165,7 +166,9 @@ function Inicio({ onIrA }: PasoProps) {
     <>
       <AuthSlot
         estado={google.cargando ? 'cargando' : google.fallo ? 'error' : 'listo'}
-        mensajeError={google.sinConfigurar ? 'El ingreso con Google todavía no está configurado. Creá una cuenta con tu mail.' : undefined}
+        mensajeError={google.baneado
+          ? 'Esta cuenta está baneada y no puede iniciar sesión.'
+          : google.sinConfigurar ? 'El ingreso con Google todavía no está configurado. Creá una cuenta con tu mail.' : undefined}
         onElegirProveedor={elegir}
       />
       <p className="text-center">
@@ -311,6 +314,8 @@ function Ingreso({ onIrA, email, onEmail }: PasoConEmailProps) {
         <LinkPaso onClick={() => onIrA('recuperar')}>creá una contraseña</LinkPaso>.
       </>
     )
+  } else if (motivo === 'usuario-baneado') {
+    error = 'Esta cuenta está baneada y no puede iniciar sesión.'
   } else if (ingresar.isError) {
     error = 'No pudimos iniciar sesión. Revisá la conexión y probá de nuevo.'
   }
@@ -339,7 +344,9 @@ function Ingreso({ onIrA, email, onEmail }: PasoConEmailProps) {
       </Button>
       {google.fallo && (
         <MensajeError>
-          {google.sinConfigurar ? 'El ingreso con Google todavía no está configurado. Entrá con tu mail y contraseña.' : 'No pudimos entrar con Google. Probá de nuevo.'}
+          {google.baneado
+            ? 'Esta cuenta está baneada y no puede iniciar sesión.'
+            : google.sinConfigurar ? 'El ingreso con Google todavía no está configurado. Entrá con tu mail y contraseña.' : 'No pudimos entrar con Google. Probá de nuevo.'}
         </MensajeError>
       )}
       <p className="text-center">

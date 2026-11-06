@@ -15,6 +15,7 @@ import {
   useAdminResumen,
   useAdminUsuarios,
   useAdminViajes,
+  useCambiarBaneoUsuario,
   useCambiarEstadoConsulta,
   useEliminarConsulta,
   useResponderConsulta,
@@ -244,6 +245,7 @@ function PanelAdmin({ email }: { email: string }) {
   const cambiarEstado = useCambiarEstadoConsulta()
   const eliminar = useEliminarConsulta()
   const responder = useResponderConsulta()
+  const cambiarBaneoUsuario = useCambiarBaneoUsuario()
 
   function enviarRespuesta(evento: FormEvent<HTMLFormElement>, id: string) {
     evento.preventDefault()
@@ -452,16 +454,39 @@ function PanelAdmin({ email }: { email: string }) {
         <ListaConScroll etiqueta="Lista de usuarios" key={`usuarios-${paginaUsuarios}`}>
         <ul className="flex flex-col divide-y divide-linea">
           {usuarios.data?.items.map((usuario) => (
-            <li key={usuario.id} className="flex flex-wrap justify-between gap-2 py-3">
+              <li key={usuario.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
               <span>
-                <span className="block font-bold">{usuario.nombre || 'Sin nombre'}</span>
+                <span className="flex flex-wrap items-center gap-2 font-bold">
+                  {usuario.nombre || 'Sin nombre'}
+                  {usuario.baneado && <Etiqueta fondo="bg-negativo-tinte">Baneado</Etiqueta>}
+                </span>
                 <a className="text-meta underline" href={`mailto:${usuario.email}`}>{usuario.email}</a>
               </span>
-              <span className="text-meta text-tinta-suave">Registrado {fechaHora(usuario.creadoEn)}</span>
+              <span className="flex flex-wrap items-center gap-3">
+                <span className="text-meta text-tinta-suave">Registrado {fechaHora(usuario.creadoEn)}</span>
+                <Button
+                  variant={usuario.baneado ? 'secundario' : 'fantasma'}
+                  size="sm"
+                  disabled={cambiarBaneoUsuario.isPending || esSuperadmin(usuario.email)}
+                  onClick={() => {
+                    const accion = usuario.baneado ? 'desbanear' : 'banear'
+                    if (window.confirm(`¿Querés ${accion} a ${usuario.email}?`)) {
+                      cambiarBaneoUsuario.mutate({ id: usuario.id, baneado: !usuario.baneado })
+                    }
+                  }}
+                >
+                  {usuario.baneado ? 'Desbanear' : 'Banear'}
+                </Button>
+              </span>
             </li>
           ))}
         </ul>
         </ListaConScroll>
+        {cambiarBaneoUsuario.isError && (
+          <p role="alert" className="text-meta font-semibold text-negativo">
+            No pudimos cambiar el estado del usuario. Actualizá la página y probá de nuevo.
+          </p>
+        )}
         {usuarios.data && (
           <Paginacion pagina={usuarios.data.pagina} total={usuarios.data.total} porPagina={usuarios.data.porPagina} cambiar={setPaginaUsuarios} />
         )}

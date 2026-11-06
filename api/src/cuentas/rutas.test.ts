@@ -619,28 +619,43 @@ test("a la tercera vez que lo sacan, ya no puede volver al viaje", async () => {
 type ViajeListado = { id: string };
 type Sacado = { id: string; nombre: string; por: string; baneado: boolean };
 
-test("un viaje que ya pasó se borra solo de la lista de quien lo pide", async () => {
+test("un previaje o un viaje que ya pasó se borra solo de la lista de quien lo pide; uno en curso, no", async () => {
   const viajeId = await viajeVacio();
   const ocultar = (quien: string) => api<{ error?: string }>(quien, "POST", `/viajes/${viajeId}/ocultar`);
   const loVe = async (quien: string) => (await api<ViajeListado[]>(quien, "GET", "/viajes")).cuerpo.some((viaje) => viaje.id === viajeId);
+  const fechas = (fechaIda: string | null, fechaVuelta: string | null) => Viaje.updateOne({ _id: viajeId }, { $set: { fechaIda, fechaVuelta } });
+  const hoy = new Date().toISOString().slice(0, 10);
 
-  // Sin fechas, o todavía sin terminar, no se puede.
-  const sinFechas = await ocultar("Nacho");
-  assert.equal(sinFechas.status, 409);
-  assert.deepEqual(sinFechas.cuerpo, { error: "viaje-no-paso" });
-  await Viaje.updateOne({ _id: viajeId }, { $set: { fechaIda: "2099-01-01", fechaVuelta: "2099-01-10" } });
+  // En curso no se puede: es el viaje que está pasando.
+  await fechas("2020-01-01", "2099-01-10");
+  const enCurso = await ocultar("Nacho");
+  assert.equal(enCurso.status, 409);
+  assert.deepEqual(enCurso.cuerpo, { error: "viaje-en-curso" });
+  // El día que empieza (en algún lugar del mundo ya es ese día) tampoco.
+  await fechas(hoy, null);
   assert.equal((await ocultar("Nacho")).status, 409);
 
-  await Viaje.updateOne({ _id: viajeId }, { $set: { fechaIda: "2020-01-01", fechaVuelta: "2020-01-10" } });
+  // Un previaje sin fechas sí: solo para quien lo pide.
+  await fechas(null, null);
   assert.equal((await ocultar("Nacho")).status, 204);
   assert.equal(await loVe("Nacho"), false);
-  // Para el resto del grupo sigue igual, y el viaje sigue existiendo.
   assert.equal(await loVe("Fede"), true);
+  // Sigue en el grupo: puede abrirlo con el link.
   assert.equal((await api("Nacho", "GET", `/viajes/${viajeId}`)).status, 200);
 
-  // Si alguien le cambia las fechas y deja de ser pasado, le vuelve a aparecer.
-  await Viaje.updateOne({ _id: viajeId }, { $set: { fechaVuelta: "2099-01-10" } });
+  // Si le ponen fechas y sigue sin empezar, o ya pasó, sigue borrado.
+  await fechas("2099-01-01", "2099-01-10");
+  assert.equal(await loVe("Nacho"), false);
+  await fechas("2020-01-01", "2020-01-10");
+  assert.equal(await loVe("Nacho"), false);
+  // Si queda en curso, vuelve a aparecer.
+  await fechas("2020-01-01", "2099-01-10");
   assert.equal(await loVe("Nacho"), true);
+
+  // Un viaje que ya pasó, también.
+  await fechas("2020-01-01", "2020-01-10");
+  assert.equal((await ocultar("Fede")).status, 204);
+  assert.equal(await loVe("Fede"), false);
 });
 
 test("los viajes de los que te sacaron se listan y se pueden borrar de la lista", async () => {

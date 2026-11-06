@@ -51,6 +51,14 @@ export function useAdminUsuarios(pagina: number, busqueda: string, orden: OrdenA
   })
 }
 
+export function useCambiarBaneoUsuario() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, baneado }: { id: string; baneado: boolean }) => admin.cambiarBaneoUsuario(id, baneado),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'usuarios'] }),
+  })
+}
+
 export function useAdminViajes(pagina: number, busqueda: string, orden: OrdenAdmin) {
   return useQuery({
     queryKey: ['admin', 'viajes', pagina, busqueda, orden],
