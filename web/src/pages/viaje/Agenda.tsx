@@ -17,8 +17,8 @@ import { useAgregarActividad, useEnlaceCalendario, useExportarCalendario, useIti
 import { useZonasHorarias } from '../../hooks/viajes'
 import { useViajeActual } from '../../layouts/contextoViaje'
 import { diaCorto, hoyISO, leerFecha, yaPaso } from '../../lib/fechas'
+import { numerarParadas } from '../../lib/paradas'
 import { relojEn } from '../../lib/zonasHorarias'
-import type { PuntoMapa } from '../../types/itinerario'
 import type { EtapaViaje } from '../../types/viaje'
 import { DestinosYFechas } from './DestinosYFechas'
 import { puedeEditar } from './nombres'
@@ -278,7 +278,7 @@ export function Agenda() {
   }))
 
   const centroMapa = etapas[0]?.ubicacion ?? viaje.ubicacion
-  const puntosMapa: PuntoMapa[] = [
+  const puntosMapa = numerarParadas([
     ...etapas.map((etapaViaje) => ({
       id: etapaViaje.id,
       nombre: etapaViaje.destino,
@@ -297,7 +297,9 @@ export function Agenda() {
             tipo: 'actividad' as const,
           }]
         : []),
-  ]
+  ], actividades
+    .filter((actividad) => actividad.fecha === fecha && !actividad.hecha)
+    .sort((a, b) => a.hora.localeCompare(b.hora)))
 
   /*
    * Vista y fecha viven en la URL: se pueden compartir y sobreviven a recargar. replace: las flechas no llenan el historial.

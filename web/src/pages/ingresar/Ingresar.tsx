@@ -4,6 +4,7 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { CaminosDeLaVentana } from '../../components/marca/CaminosDeLaVentana'
 import { AuthSlot } from '../../components/slots/AuthSlot'
 import { Button } from '../../components/ui/Button'
+import { CampoContrasena } from '../../components/ui/CampoContrasena'
 import { TextField } from '../../components/ui/TextField'
 import { Ventana } from '../../components/ui/Ventana'
 import {
@@ -15,6 +16,7 @@ import {
   useSesion,
   useVerificarRegistro,
 } from '../../hooks/auth'
+import { esSuperadmin } from '../../lib/admin'
 import { GOOGLE_CLIENT_ID, GoogleCancelado, cargarGoogle } from '../../lib/google'
 import { destinoDespuesDeIngresar, hayInvitacionPendiente, olvidarInvitacion } from '../../lib/invitacionPendiente'
 import { codigoDeError, rechazoCodigo } from '../../services/auth'
@@ -47,7 +49,10 @@ export function Ingresar() {
 
   // Cubre el final de todos los caminos: al abrir sesión queda en caché y se sigue a la app.
   // Si llegó desde el link de una invitación, vuelve a ella (si la cuenta es nueva, después de la bienvenida).
-  if (sesion) return <Navigate to={sesion.perfilCompleto ? destinoDespuesDeIngresar() : '/bienvenida'} replace />
+  if (sesion) {
+    const destino = esSuperadmin(sesion.email) ? '/admin' : sesion.perfilCompleto ? destinoDespuesDeIngresar() : '/bienvenida'
+    return <Navigate to={destino} replace />
+  }
 
   function cerrar() {
     olvidarInvitacion()
@@ -199,10 +204,9 @@ function Registro({ onIrA, email, onEmail }: PasoConEmailProps) {
   return (
     <form onSubmit={enviar} noValidate className="flex flex-col gap-4">
       <CampoEmail value={email} error={errores.email} onChange={onEmail} />
-      <TextField
+      <CampoContrasena
         label="Contraseña"
         hint="Al menos 6 caracteres y una mayúscula."
-        type="password"
         autoComplete="new-password"
         value={contrasena}
         error={errores.contrasena}
@@ -296,16 +300,11 @@ function Ingreso({ onIrA, email, onEmail }: PasoConEmailProps) {
 
   const motivo = codigoDeError(ingresar.error)
   let error: ReactNode = null
-  if (motivo === 'contrasena-incorrecta') {
+  // Mail que no existe y contraseña equivocada dicen lo mismo: así nadie averigua qué mails tienen cuenta.
+  if (motivo === 'contrasena-incorrecta' || motivo === 'sin-cuenta') {
     error = (
       <>
-        La contraseña es incorrecta. <LinkPaso onClick={() => onIrA('recuperar')}>¿Querés cambiarla?</LinkPaso>
-      </>
-    )
-  } else if (motivo === 'sin-cuenta') {
-    error = (
-      <>
-        No hay una cuenta con ese mail. <LinkPaso onClick={() => onIrA('registro')}>¿Querés crear una?</LinkPaso>
+        El mail o la contraseña son incorrectos. <LinkPaso onClick={() => onIrA('recuperar')}>¿Olvidaste tu contraseña?</LinkPaso>
       </>
     )
   } else if (motivo === 'sin-contrasena') {
@@ -325,9 +324,8 @@ function Ingreso({ onIrA, email, onEmail }: PasoConEmailProps) {
     <form onSubmit={enviar} noValidate className="flex flex-col gap-4">
       <CampoEmail value={email} error={errores.email} onChange={onEmail} />
       <div className="flex flex-col gap-2">
-        <TextField
+        <CampoContrasena
           label="Contraseña"
-          type="password"
           autoComplete="current-password"
           value={contrasena}
           error={errores.contrasena}
@@ -436,10 +434,9 @@ function CodigoRecuperar({ email, onCambiarMail }: CodigoRecuperarProps) {
     <form onSubmit={enviar} noValidate className="flex flex-col gap-4">
       <AvisoCodigo email={email} />
       <CampoCodigo value={codigo} error={errores.codigo} onChange={setCodigo} />
-      <TextField
+      <CampoContrasena
         label="Contraseña nueva"
         hint="Al menos 6 caracteres y una mayúscula."
-        type="password"
         autoComplete="new-password"
         value={contrasena}
         error={errores.contrasena}

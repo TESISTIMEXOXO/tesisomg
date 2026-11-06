@@ -1,4 +1,4 @@
-import type { TonoPinz } from './elenco'
+import { ELENCO, type PinzId, type TonoPinz } from './elenco'
 
 /*
  * Clases escritas enteras para que Tailwind las encuentre al compilar:
@@ -62,4 +62,12 @@ export const FONDO_DESTACADO: Record<TonoPinz, string> = {
   noche: 'tema-claro bg-noche',
   mostaza: 'tema-claro bg-mostaza',
   bosque: 'tema-claro bg-bosque',
+}
+
+/* Sin pinz elegido, los tonos rotan y no significan nada. */
+const TONOS_SIN_PINZ: TonoPinz[] = ['sol', 'mar', 'lavanda', 'coral']
+
+/** El tono de cada persona: el de su pinz o, sin pinz, uno que rota según su lugar en la lista. */
+export function tonoDePersona(pinz: PinzId | null | undefined, indice: number) {
+  return pinz ? ELENCO[pinz].tono : TONOS_SIN_PINZ[indice % TONOS_SIN_PINZ.length]
 }

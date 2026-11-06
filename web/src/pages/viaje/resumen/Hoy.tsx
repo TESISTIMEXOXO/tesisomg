@@ -8,6 +8,7 @@ import { useHoy } from '../../../hooks/itinerario'
 import { useUbicaciones } from '../../../hooks/ubicaciones'
 import { useViajeActual } from '../../../layouts/contextoViaje'
 import { diaCorto } from '../../../lib/fechas'
+import { numerarParadas } from '../../../lib/paradas'
 
 /** Viaje: ¿qué hacemos hoy y dónde nos encontramos? El botón de gasto flota en el layout. */
 export function Hoy() {
@@ -26,7 +27,8 @@ export function Hoy() {
   const idActual = hoy.items.findLast((item) => item.estado === 'ahora')?.id
   const actividades = hoy.items.map((item) => ({ ...item, hecha: item.estado === 'hecho' || (item.estado === 'ahora' && item.id !== idActual) }))
   // Como en la Agenda: arriba lo que viene, de lo más próximo a lo más lejano, y lo que ya pasó baja al final.
-  const delDia = [...actividades.filter((item) => !item.hecha), ...actividades.filter((item) => item.hecha)]
+  const pendientes = actividades.filter((item) => !item.hecha)
+  const delDia = [...pendientes, ...actividades.filter((item) => item.hecha)]
 
   return (
     <div className="grid grid-cols-1 gap-x-7 gap-y-4 lg:grid-cols-2">
@@ -49,7 +51,7 @@ export function Hoy() {
         )}
       </div>
       {/* En desktop el mapa crece hasta el alto del itinerario y los botones bajan hasta su borde de abajo. */}
-      <MapaSlot puntos={hoy.puntos} personas={personasUbicadas} centro={centroMapa} className="lg:h-auto lg:min-h-90" />
+      <MapaSlot puntos={numerarParadas(hoy.puntos, pendientes)} personas={personasUbicadas} centro={centroMapa} className="lg:h-auto lg:min-h-90" />
       <div className="mt-4 flex flex-col gap-4 lg:mt-0 lg:justify-between">
         <ol aria-label="El día">
           {delDia.map((item, i) => (
@@ -58,6 +60,7 @@ export function Hoy() {
               time={item.hora}
               title={item.titulo}
               place={item.lugar}
+              ubicacion={item.lat !== null && item.lng !== null ? { lat: item.lat, lng: item.lng } : null}
               done={item.hecha}
               current={item.id === idActual}
               last={i === delDia.length - 1}

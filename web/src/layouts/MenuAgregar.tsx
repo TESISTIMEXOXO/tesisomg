@@ -70,25 +70,27 @@ export function MenuAgregar() {
             className={`transition-transform duration-200 motion-reduce:transition-none ${abierto ? 'rotate-45' : ''}`}
           />
         </button>
-        {abierto && (
-          <ul
-            id={idMenu}
-            className="absolute top-full right-0 z-30 mt-2 flex w-60 flex-col gap-1 rounded-lg trazo bg-papel-elevado p-2 shadow-dura motion-safe:animate-ventana"
-          >
-            <li>
-              <button type="button" aria-haspopup="dialog" onClick={() => abrir('viaje')} className={OPCION}>
-                <Plus size={20} strokeWidth={2} aria-hidden />
-                Armar un viaje
-              </button>
-            </li>
-            <li>
-              <button type="button" aria-haspopup="dialog" onClick={() => abrir('codigo')} className={OPCION}>
-                <Ticket size={20} strokeWidth={2} aria-hidden />
-                Unirme con código
-              </button>
-            </li>
-          </ul>
-        )}
+        {/* Queda montado para animar también al cerrarse; cerrado, no se ve ni recibe foco. */}
+        <ul
+          id={idMenu}
+          inert={!abierto}
+          className={`absolute top-full right-0 z-30 mt-2 flex w-60 origin-top-right flex-col gap-1 rounded-lg trazo bg-papel-elevado p-2 shadow-dura transition-[opacity,scale,translate,visibility] duration-200 ease-rebote motion-reduce:transition-none ${
+            abierto ? 'visible opacity-100' : 'invisible -translate-y-2 scale-95 opacity-0'
+          }`}
+        >
+          <li>
+            <button type="button" aria-haspopup="dialog" onClick={() => abrir('viaje')} className={OPCION}>
+              <Plus size={20} strokeWidth={2} aria-hidden />
+              Armar un viaje
+            </button>
+          </li>
+          <li>
+            <button type="button" aria-haspopup="dialog" onClick={() => abrir('codigo')} className={OPCION}>
+              <Ticket size={20} strokeWidth={2} aria-hidden />
+              Unirme con código
+            </button>
+          </li>
+        </ul>
       </div>
 
       {/* Cerrar la ventana dispara su onClose, que desmonta el formulario: la próxima vez arranca vacío. */}

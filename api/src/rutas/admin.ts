@@ -5,6 +5,7 @@ import { requiereSesion } from "../auth/sesion.js";
 import { correoConfigurado, mandarRespuestaConsulta } from "../auth/mail.js";
 import { config } from "../config.js";
 import { Consulta } from "../modelos/Consulta.js";
+import { RespuestaConsulta } from "../modelos/RespuestaConsulta.js";
 import { Usuario, type DatosUsuario } from "../modelos/Usuario.js";
 import { Viaje } from "../modelos/Viaje.js";
 
@@ -23,7 +24,7 @@ rutasAdmin.use(requiereSesion, requiereSuperadmin);
 
 const paginaSchema = z.coerce.number().int().min(1).default(1);
 const busquedaSchema = z.string().trim().max(100).default("");
-const ordenUsuarioSchema = z.enum(["nuevo", "antiguo", "alfabetico"]).default("nuevo");
+const ordenSchema = z.enum(["nuevo", "antiguo", "alfabetico"]).default("nuevo");
 const POR_PAGINA = 5;
 const USUARIOS_POR_PAGINA = 10;
 
@@ -34,6 +35,36 @@ function paginacion(req: Request, res: Response) {
     return null;
   }
   return resultado.data;
+}
+
+/** Lee ?q= y ?orden= de las listas del panel. El texto vuelve escapado, listo para un $regex. */
+function busquedaYOrden(req: Request, res: Response) {
+  const busqueda = busquedaSchema.safeParse(req.query.q);
+  if (!busqueda.success) {
+    res.status(400).json({ error: "busqueda-invalida" });
+    return null;
+  }
+  const orden = ordenSchema.safeParse(req.query.orden);
+  if (!orden.success) {
+    res.status(400).json({ error: "orden-invalido" });
+    return null;
+  }
+  return { texto: busqueda.data.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), orden: orden.data };
+}
+
+/** Busca el texto, sin distinguir mayúsculas, en cualquiera de los campos. Sin texto no filtra. */
+function buscarEn(campos: string[], texto: string) {
+  return texto ? { $or: campos.map((campo) => ({ [campo]: { $regex: texto, $options: "i" } })) } : {};
+}
+
+/** Para el orden alfabético: sin distinguir mayúsculas ni tildes. */
+const ORDEN_ESPANOL = { locale: "es", strength: 1 };
+
+/** nuevo y antiguo van por fecha de creación; alfabético, por el campo que se pase. */
+function ordenarPor(orden: z.infer<typeof ordenSchema>, campoAlfabetico: string) {
+  if (orden === "alfabetico") return { [campoAlfabetico]: 1 as const, _id: 1 as const };
+  const sentido = orden === "nuevo" ? -1 as const : 1 as const;
+  return { createdAt: sentido, _id: sentido };
 }
 
 function respuestaPaginada<T>(items: T[], total: number, pagina: number) {
@@ -53,15 +84,19 @@ rutasAdmin.get("/resumen", async (_req, res) => {
 rutasAdmin.get("/consultas", async (req, res) => {
   const pagina = paginacion(req, res);
   if (pagina === null) return;
+  const lista = busquedaYOrden(req, res);
+  if (lista === null) return;
+  const filtro = buscarEn(["email", "asunto"], lista.texto);
   const [consultas, total] = await Promise.all([
-    Consulta.find()
+    Consulta.find(filtro)
       .select("email asunto descripcion atendida confirmacionEnviada avisoEnviado createdAt")
-      .sort({ createdAt: -1, _id: -1 })
+      .sort(ordenarPor(lista.orden, "email"))
+      .collation(ORDEN_ESPANOL)
       .skip((pagina - 1) * POR_PAGINA)
       .limit(POR_PAGINA)
       .lean()
       .exec(),
-    Consulta.countDocuments().exec(),
+    Consulta.countDocuments(filtro).exec(),
   ]);
   res.json(respuestaPaginada(consultas.map((consulta) => ({
     id: consulta._id.toString(),
@@ -107,7 +142,7 @@ rutasAdmin.post("/consultas/:id/responder", async (req, res) => {
     res.status(400).json({ error: "respuesta-invalida" });
     return;
   }
-  const consulta = await Consulta.findById(req.params.id).select("email asunto descripcion").lean().exec();
+  const consulta = await Consulta.findById(req.params.id).select("_id email asunto descripcion").lean().exec();
   if (!consulta) {
     res.status(404).json({ error: "no-existe" });
     return;
@@ -123,7 +158,44 @@ rutasAdmin.post("/consultas/:id/responder", async (req, res) => {
     res.status(502).json({ error: "no-se-pudo-enviar" });
     return;
   }
+  // Solo queda guardado lo que de verdad salió por mail.
+  await RespuestaConsulta.create({
+    consultaId: consulta._id,
+    email: consulta.email,
+    asunto: consulta.asunto,
+    descripcion: consulta.descripcion,
+    texto: datos.data.respuesta,
+  });
   res.json({ ok: true });
+});
+
+rutasAdmin.get("/respuestas", async (req, res) => {
+  const pagina = paginacion(req, res);
+  if (pagina === null) return;
+  const lista = busquedaYOrden(req, res);
+  if (lista === null) return;
+  const filtro = buscarEn(["email", "asunto", "texto"], lista.texto);
+  const [respuestas, total] = await Promise.all([
+    RespuestaConsulta.find(filtro)
+      .sort(ordenarPor(lista.orden, "email"))
+      .collation(ORDEN_ESPANOL)
+      .skip((pagina - 1) * POR_PAGINA)
+      .limit(POR_PAGINA)
+      .lean()
+      .exec(),
+    RespuestaConsulta.countDocuments(filtro).exec(),
+  ]);
+  res.json(respuestaPaginada(respuestas.map((respuesta) => ({
+    id: respuesta._id.toString(),
+    texto: respuesta.texto,
+    enviadaEn: respuesta.createdAt,
+    consulta: {
+      id: respuesta.consultaId.toString(),
+      email: respuesta.email,
+      asunto: respuesta.asunto,
+      descripcion: respuesta.descripcion,
+    },
+  })), total, pagina));
 });
 
 rutasAdmin.delete("/consultas/:id", async (req, res) => {
@@ -142,29 +214,18 @@ rutasAdmin.delete("/consultas/:id", async (req, res) => {
 rutasAdmin.get("/usuarios", async (req, res) => {
   const pagina = paginacion(req, res);
   if (pagina === null) return;
-  const busqueda = busquedaSchema.safeParse(req.query.q);
-  if (!busqueda.success) {
-    res.status(400).json({ error: "busqueda-invalida" });
-    return;
-  }
-  const orden = ordenUsuarioSchema.safeParse(req.query.orden);
-  if (!orden.success) {
-    res.status(400).json({ error: "orden-invalido" });
-    return;
-  }
-  const filtros: mongoose.QueryFilter<DatosUsuario>[] = [];
-  if (busqueda.data) {
-    const textoSeguro = busqueda.data.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    filtros.push({ $or: [{ nombre: { $regex: textoSeguro, $options: "i" } }, { email: { $regex: textoSeguro, $options: "i" } }] });
-  }
-  const filtro = filtros[0] ?? {};
-  const ordenamiento = orden.data === "alfabetico"
+  const lista = busquedaYOrden(req, res);
+  if (lista === null) return;
+  const filtro: mongoose.QueryFilter<DatosUsuario> = buscarEn(["nombre", "email"], lista.texto);
+  // Dos personas con el mismo nombre quedan ordenadas por mail.
+  const ordenamiento = lista.orden === "alfabetico"
     ? { nombre: 1 as const, email: 1 as const, _id: 1 as const }
-    : { createdAt: orden.data === "nuevo" ? -1 as const : 1 as const, _id: orden.data === "nuevo" ? -1 as const : 1 as const };
+    : ordenarPor(lista.orden, "nombre");
   const [usuarios, total] = await Promise.all([
     Usuario.find(filtro)
     .select("email nombre pinz baneado createdAt")
     .sort(ordenamiento)
+    .collation(ORDEN_ESPANOL)
     .skip((pagina - 1) * USUARIOS_POR_PAGINA)
     .limit(USUARIOS_POR_PAGINA)
     .lean()
@@ -213,15 +274,19 @@ rutasAdmin.patch("/usuarios/:id/baneo", async (req, res) => {
 rutasAdmin.get("/viajes", async (req, res) => {
   const pagina = paginacion(req, res);
   if (pagina === null) return;
+  const lista = busquedaYOrden(req, res);
+  if (lista === null) return;
+  const filtro = buscarEn(["nombre", "destino"], lista.texto);
   const [viajes, total] = await Promise.all([
-    Viaje.find()
+    Viaje.find(filtro)
       .select("nombre destino fechaIda fechaVuelta creadoPor miembros createdAt")
-      .sort({ createdAt: -1, _id: -1 })
+      .sort(ordenarPor(lista.orden, "nombre"))
+      .collation(ORDEN_ESPANOL)
       .skip((pagina - 1) * POR_PAGINA)
       .limit(POR_PAGINA)
       .lean()
       .exec(),
-    Viaje.countDocuments().exec(),
+    Viaje.countDocuments(filtro).exec(),
   ]);
   const creadorIds = [...new Set(viajes.map((viaje) => viaje.creadoPor.toString()))];
   const creadores = await Usuario.find({ _id: { $in: creadorIds } }).select("email nombre").lean().exec();
